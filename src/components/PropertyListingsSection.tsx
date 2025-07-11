@@ -265,8 +265,11 @@ const PropertyListingsSection = () => {
                       className="w-full" 
                       variant={property.status === 'Active' ? 'default' : 'secondary'}
                       disabled={property.status === 'Sold Out'}
+                      asChild={property.status !== 'Sold Out'}
                     >
-                      {property.status === 'Sold Out' ? 'Sold Out' : 'View Details'}
+                      {property.status === 'Sold Out' ? 'Sold Out' : (
+                        <a href={`/property/${property.id}`}>View Details</a>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
