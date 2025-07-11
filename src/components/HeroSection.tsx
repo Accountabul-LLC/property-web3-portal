@@ -48,28 +48,49 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 bg-gradient-hero bg-clip-text text-transparent animate-fade-in">
-            Tokenize Real Estate,
-            <br />
-            <span className="text-3xl md:text-5xl lg:text-6xl">Unlock Liquidity</span>
-          </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
-            The first Web3 platform enabling fractional real estate ownership through blockchain tokenization. 
-            Trade, stake, and earn from property investments with complete transparency.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '0.4s' }}>
-            <Button 
-              variant="premium" 
-              size="lg" 
-              onClick={onGetStarted}
-              className="text-lg px-8 py-4 h-auto"
-            >
-              Start Tokenizing
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-            <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto">
-              View Properties
-            </Button>
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-4 animate-fade-in">
+                <span className="text-foreground">Own Your Future.</span>
+                <br />
+                <span className="bg-gradient-hero bg-clip-text text-transparent">
+                  Tokenize Real Estate
+                </span>
+                <br />
+                <span className="text-foreground">with Accountabul.</span>
+              </h1>
+              <p className="text-lg text-muted-foreground font-medium animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                Empowering Ownership. Elevating Community. Built on Blockchain.
+              </p>
+            </div>
+            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              Fractional ownership. Secure transactions. Community-powered wealth.
+              <br />
+              Tokenize, invest, and manage real estate portfolios—all powered by secure, 
+              transparent blockchain technology, and built for everyone.
+            </p>
+          </div>
+          <div className="space-y-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                variant="premium" 
+                size="lg" 
+                onClick={onGetStarted}
+                className="text-lg px-8 py-4 h-auto"
+              >
+                Start Tokenizing
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto">
+                Explore Marketplace
+              </Button>
+            </div>
+            
+            <div className="bg-muted/30 backdrop-blur-sm border border-muted rounded-lg p-4 max-w-md mx-auto">
+              <p className="text-sm text-muted-foreground text-center">
+                <strong>Membership Required:</strong> All tokenization and marketplace features require active Accountabul Membership.
+              </p>
+            </div>
           </div>
         </div>
 

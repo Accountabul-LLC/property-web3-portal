@@ -12,9 +12,10 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
 
   const navItems = [
     { id: 'home', label: 'Home', icon: Building2 },
-    { id: 'tokenize', label: 'Tokenize', icon: TrendingUp },
+    { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
+    { id: 'tokenize', label: 'Tokenize Property', icon: TrendingUp },
+    { id: 'professionals', label: 'Professional Marketplace', icon: Users },
     { id: 'portfolio', label: 'Portfolio', icon: Wallet },
-    { id: 'marketplace', label: 'Professionals', icon: Users },
   ];
 
   return (
@@ -23,11 +24,13 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <div className="flex-shrink-0 flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-                <Building2 className="w-5 h-5 text-primary-foreground" />
-              </div>
+              <img 
+                src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
+                alt="Accountabul Logo" 
+                className="w-8 h-8"
+              />
               <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                TokenEstate
+                Accountabul
               </span>
             </div>
           </div>
@@ -57,8 +60,11 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             <Button variant="outline" size="sm">
               Connect Wallet
             </Button>
+            <div className="bg-success/10 text-success px-3 py-1 rounded-full text-xs font-medium">
+              Membership Required
+            </div>
             <Button variant="hero" size="sm">
-              Get Started
+              Help / AI Assistant
             </Button>
           </div>
 
