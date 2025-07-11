@@ -26,8 +26,8 @@ interface Property {
 
 const PropertyListingsSection = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedType, setSelectedType] = React.useState('');
-  const [selectedStatus, setSelectedStatus] = React.useState('');
+  const [selectedType, setSelectedType] = React.useState('all');
+  const [selectedStatus, setSelectedStatus] = React.useState('all');
 
   // Mock property data
   const properties: Property[] = [
@@ -91,8 +91,8 @@ const PropertyListingsSection = () => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          property.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === '' || property.propertyType === selectedType;
-    const matchesStatus = selectedStatus === '' || property.status === selectedStatus;
+    const matchesType = selectedType === 'all' || property.propertyType === selectedType;
+    const matchesStatus = selectedStatus === 'all' || property.status === selectedStatus;
     
     return matchesSearch && matchesType && matchesStatus;
   });
@@ -155,7 +155,7 @@ const PropertyListingsSection = () => {
               <SelectValue placeholder="Property Type" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Types</SelectItem>
+              <SelectItem value="all">All Types</SelectItem>
               {propertyTypes.map(type => (
                 <SelectItem key={type} value={type}>{type}</SelectItem>
               ))}
@@ -166,7 +166,7 @@ const PropertyListingsSection = () => {
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Status</SelectItem>
+              <SelectItem value="all">All Status</SelectItem>
               {statusOptions.map(status => (
                 <SelectItem key={status} value={status}>{status}</SelectItem>
               ))}
