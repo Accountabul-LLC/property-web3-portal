@@ -11,7 +11,6 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const navItems = [
-    { id: 'home', label: 'Home', icon: Building2 },
     { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
     { id: 'tokenize', label: 'Tokenize Property', icon: TrendingUp },
     { id: 'professionals', label: 'Professional Marketplace', icon: Users },
@@ -23,7 +22,10 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0 flex items-center space-x-2">
+            <button 
+              onClick={() => onSectionChange('home')}
+              className="flex-shrink-0 flex items-center space-x-2 hover:opacity-80 transition-opacity"
+            >
               <img 
                 src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
                 alt="Accountabul Logo" 
@@ -32,7 +34,7 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                 Accountabul
               </span>
-            </div>
+            </button>
           </div>
 
           {/* Desktop Navigation */}
@@ -60,9 +62,6 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             <Button variant="outline" size="sm">
               Connect Wallet
             </Button>
-            <div className="bg-success/10 text-success px-3 py-1 rounded-full text-xs font-medium">
-              Membership Required
-            </div>
             <Button variant="hero" size="sm">
               Help / AI Assistant
             </Button>
