@@ -4,6 +4,7 @@ import HeroSection from '@/components/HeroSection';
 import TokenizeSection from '@/components/TokenizeSection';
 import PortfolioSection from '@/components/PortfolioSection';
 import MarketplaceSection from '@/components/MarketplaceSection';
+import PropertyListingsSection from '@/components/PropertyListingsSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
 import ValuePropositionSection from '@/components/ValuePropositionSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
@@ -64,6 +65,7 @@ const Index = () => {
       case 'portfolio':
         return <PortfolioSection />;
       case 'marketplace':
+        return <PropertyListingsSection />;
       case 'professionals':
         return <MarketplaceSection />;
       default:
