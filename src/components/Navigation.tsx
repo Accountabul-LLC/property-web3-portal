@@ -18,37 +18,36 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   ];
 
   return (
-    <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => onSectionChange('home')}
-              className="flex-shrink-0 flex items-center space-x-2 hover:opacity-80 transition-opacity"
-            >
-              <img 
-                src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
-                alt="Accountabul Logo" 
-                className="w-8 h-8"
-              />
-              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                Accountabul
-              </span>
-            </button>
-          </div>
+    <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
+      <div className="max-w-7xl mx-auto px-10 h-full">
+        <div className="flex items-center justify-between h-full">
+          {/* Logo & Brand */}
+          <button 
+            onClick={() => onSectionChange('home')}
+            className="flex-shrink-0 flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
+          >
+            <img 
+              src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
+              alt="Accountabul Logo" 
+              className="w-8 h-8"
+            />
+            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Accountabul
+            </span>
+          </button>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex space-x-6">
+          <div className="hidden md:flex items-center space-x-8 flex-1">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => onSectionChange(item.id)}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  className={`flex items-center space-x-2 px-2 py-1 text-sm font-medium transition-all duration-300 ${
                     currentSection === item.id
-                      ? 'bg-primary text-primary-foreground shadow-glow'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -58,11 +57,12 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             })}
           </div>
 
+          {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium">
               Connect Wallet
             </Button>
-            <Button variant="hero" size="sm">
+            <Button variant="hero" className="h-10 px-6 font-medium">
               Help / AI Assistant
             </Button>
           </div>
@@ -104,11 +104,11 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               );
             })}
             <div className="pt-2 space-y-2">
-              <Button variant="outline" size="sm" className="w-full">
+              <Button variant="outline" className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium">
                 Connect Wallet
               </Button>
-              <Button variant="hero" size="sm" className="w-full">
-                Get Started
+              <Button variant="hero" className="w-full h-10 font-medium">
+                Help / AI Assistant
               </Button>
             </div>
           </div>
