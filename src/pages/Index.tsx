@@ -11,6 +11,7 @@ import TestimonialsSection from '@/components/TestimonialsSection';
 import NewsletterSection from '@/components/NewsletterSection';
 import Footer from '@/components/Footer';
 import MembershipModal from '@/components/MembershipModal';
+import AIAgentMarketplaceSection from '@/components/AIAgentMarketplaceSection';
 
 const Index = () => {
   const [currentSection, setCurrentSection] = React.useState('home');
@@ -68,6 +69,8 @@ const Index = () => {
         return <PropertyListingsSection />;
       case 'professionals':
         return <MarketplaceSection />;
+      case 'ai-agents':
+        return <AIAgentMarketplaceSection />;
       default:
         return (
           <>

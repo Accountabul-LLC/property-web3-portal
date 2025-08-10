@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot } from 'lucide-react';
 
 interface NavigationProps {
   onSectionChange: (section: string) => void;
@@ -14,6 +14,7 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
     { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
     { id: 'tokenize', label: 'Tokenize Property', icon: TrendingUp },
     { id: 'professionals', label: 'Professional Marketplace', icon: Users },
+    { id: 'ai-agents', label: 'AI Agent Marketplace', icon: Bot },
     { id: 'portfolio', label: 'Portfolio', icon: Wallet },
   ];
 
