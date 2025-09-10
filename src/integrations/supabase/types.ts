@@ -248,6 +248,60 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          last_login: string | null
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_login?: string | null
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_login?: string | null
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      xaman_payloads: {
+        Row: {
+          created_at: string
+          id: string
+          signed_at: string | null
+          status: string
+          updated_at: string
+          uuid: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          uuid: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          updated_at?: string
+          uuid?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

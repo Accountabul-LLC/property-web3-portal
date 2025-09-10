@@ -1,1 +1,7 @@
 project_id = "ivyughsvcddtqexwaciy"
+
+[functions.xaman-create-payload]
+verify_jwt = false
+
+[functions.xaman-check-payload]
+verify_jwt = false
