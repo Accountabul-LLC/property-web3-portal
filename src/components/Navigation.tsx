@@ -1,6 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot } from 'lucide-react';
+import { WalletConnectModal } from '@/components/WalletConnectModal';
+import { useWalletAuth } from '@/hooks/useWalletAuth';
 
 interface NavigationProps {
   onSectionChange: (section: string) => void;
@@ -9,6 +11,11 @@ interface NavigationProps {
 
 const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const { isConnected, walletAddress, connect, disconnect, isModalOpen, setModalOpen, onWalletConnected } = useWalletAuth();
+
+  const formatWalletAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
+  };
 
   const navItems = [
     { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
@@ -60,9 +67,33 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
 
           {/* Action Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <Button variant="outline" className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium">
-              Connect Wallet
-            </Button>
+            {isConnected && walletAddress ? (
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-primary/10 rounded-md border border-primary/20">
+                  <Wallet className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">
+                    {formatWalletAddress(walletAddress)}
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={disconnect}
+                  className="h-9 px-4 text-sm"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            ) : (
+              <Button 
+                variant="outline" 
+                onClick={connect}
+                className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Connect Wallet
+              </Button>
+            )}
             <Button variant="hero" className="h-10 px-6 font-medium">
               Help / AI Assistant
             </Button>
@@ -105,9 +136,32 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               );
             })}
             <div className="pt-2 space-y-2">
-              <Button variant="outline" className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium">
-                Connect Wallet
-              </Button>
+              {isConnected && walletAddress ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-primary/10 rounded-md border border-primary/20">
+                    <Wallet className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-primary">
+                      {formatWalletAddress(walletAddress)}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    onClick={disconnect}
+                    className="w-full h-10 text-sm"
+                  >
+                    Disconnect Wallet
+                  </Button>
+                </div>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={connect}
+                  className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
+                >
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
+                </Button>
+              )}
               <Button variant="hero" className="w-full h-10 font-medium">
                 Help / AI Assistant
               </Button>
@@ -115,6 +169,13 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
           </div>
         </div>
       )}
+
+      {/* Wallet Connect Modal */}
+      <WalletConnectModal 
+        isOpen={isModalOpen}
+        onClose={() => setModalOpen(false)}
+        onWalletConnected={onWalletConnected}
+      />
     </nav>
   );
 };
