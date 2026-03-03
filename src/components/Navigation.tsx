@@ -114,9 +114,17 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
         </div>
       </div>
 
+      {/* Backdrop overlay */}
+      {isMobileMenuOpen && (
+        <div
+          className="xl:hidden fixed inset-0 top-[72px] z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
-        <div className="xl:hidden border-t border-border bg-card/95 backdrop-blur-md">
+        <div className="xl:hidden border-t border-border bg-card/95 backdrop-blur-md relative z-50">
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
