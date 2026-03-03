@@ -6,6 +6,31 @@ const corsHeaders = {
 };
 
 const XRPL_NODE = 'https://xrplcluster.com';
+const CACHE_TTL_MS = 10_000; // 10 second server-side cache
+
+// In-memory cache to prevent hammering XRPL nodes on rapid wallet toggles
+const responseCache = new Map<string, { data: unknown; expiresAt: number }>();
+
+function getCached(key: string): unknown | null {
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) {
+    responseCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown) {
+  responseCache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  // Evict old entries if cache grows too large (>100 wallets)
+  if (responseCache.size > 100) {
+    const now = Date.now();
+    for (const [k, v] of responseCache) {
+      if (now > v.expiresAt) responseCache.delete(k);
+    }
+  }
+}
 
 async function xrplRequest(method: string, params: Record<string, unknown>[]) {
   const res = await fetch(XRPL_NODE, {
@@ -26,6 +51,15 @@ serve(async (req) => {
     if (!wallet_address) {
       return new Response(JSON.stringify({ error: 'wallet_address required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check server-side cache first
+    const cacheKey = `account:${wallet_address}`;
+    const cached = getCached(cacheKey);
+    if (cached) {
+      return new Response(JSON.stringify(cached), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
       });
     }
 
@@ -72,7 +106,6 @@ serve(async (req) => {
         }
       }
 
-      // Determine direction relative to the queried wallet
       const direction = tx.Destination === wallet_address ? 'received' : 'sent';
 
       return {
@@ -88,13 +121,18 @@ serve(async (req) => {
       };
     });
 
-    return new Response(JSON.stringify({
+    const responseData = {
       xrp_balance: xrpBalance,
       token_holdings: tokenHoldings,
       transactions,
       account: wallet_address,
-    }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    };
+
+    // Cache the response
+    setCache(cacheKey, responseData);
+
+    return new Response(JSON.stringify(responseData), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
     });
 
   } catch (error) {

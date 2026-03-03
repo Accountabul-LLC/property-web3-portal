@@ -37,6 +37,9 @@ export function usePortfolioHoldings(walletAddress: string | null) {
       return (data || []) as unknown as PortfolioHolding[];
     },
     enabled: !!walletAddress,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -55,5 +58,8 @@ export function usePortfolioTransactions(walletAddress: string | null) {
       return (data || []) as unknown as PortfolioTransaction[];
     },
     enabled: !!walletAddress,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }
