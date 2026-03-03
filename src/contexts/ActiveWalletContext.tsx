@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ConnectedWallet {
   address: string;
@@ -17,7 +18,6 @@ interface ActiveWalletContextType {
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
-  // Modal state for "Add wallet" flow
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
@@ -47,12 +47,20 @@ function saveActiveAddress(addr: string | null) {
   else localStorage.removeItem(ACTIVE_KEY);
 }
 
+// Fire-and-forget audit log — never blocks UI
+function logAuditEvent(walletAddress: string, eventType: string, metadata?: Record<string, unknown>) {
+  supabase.functions.invoke('wallet-audit-log', {
+    body: { wallet_address: walletAddress, event_type: eventType, metadata },
+  }).catch(err => console.warn('Audit log failed (non-blocking):', err));
+}
+
 const ActiveWalletContext = createContext<ActiveWalletContextType | null>(null);
 
 export function ActiveWalletProvider({ children }: { children: React.ReactNode }) {
   const [wallets, setWallets] = useState<ConnectedWallet[]>(() => loadWallets());
   const [activeAddress, setActiveAddressState] = useState<string | null>(() => loadActiveAddress());
   const [isConnectModalOpen, setConnectModalOpen] = useState(false);
+  const prevActiveRef = useRef<string | null>(activeAddress);
 
   // Migrate from old single-wallet localStorage
   useEffect(() => {
@@ -86,8 +94,10 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
   const setActiveWallet = useCallback((address: string) => {
     const now = new Date().toISOString();
-    setWallets(prev => {
-      const updated = prev.map(w =>
+    const prev = prevActiveRef.current;
+
+    setWallets(prevWallets => {
+      const updated = prevWallets.map(w =>
         w.address === address ? { ...w, lastUsedAt: now } : w
       );
       saveWallets(updated);
@@ -95,20 +105,29 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     });
     setActiveAddressState(address);
     saveActiveAddress(address);
+
+    // Audit: log switch events
+    if (prev && prev !== address) {
+      logAuditEvent(prev, 'switch_from', { switched_to: address });
+      logAuditEvent(address, 'switch_to', { switched_from: prev });
+    }
+    prevActiveRef.current = address;
   }, []);
 
   const addWallet = useCallback((address: string, label?: string) => {
     const now = new Date().toISOString();
+    let isNew = false;
+
     setWallets(prev => {
       const existing = prev.find(w => w.address === address);
       if (existing) {
-        // Already exists — update lastUsedAt and make active
         const updated = prev.map(w =>
           w.address === address ? { ...w, lastUsedAt: now } : w
         );
         saveWallets(updated);
         return updated;
       }
+      isNew = true;
       const newWallet: ConnectedWallet = {
         address,
         label: label || `Wallet ${prev.length + 1}`,
@@ -121,9 +140,16 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     });
     setActiveAddressState(address);
     saveActiveAddress(address);
+    prevActiveRef.current = address;
+
+    // Audit: log connect event
+    logAuditEvent(address, 'connect', { is_new: isNew, label: label || null });
   }, []);
 
   const removeWallet = useCallback((address: string) => {
+    // Audit: log disconnect before removing
+    logAuditEvent(address, 'disconnect');
+
     setWallets(prev => {
       const updated = prev.filter(w => w.address !== address);
       saveWallets(updated);
@@ -131,6 +157,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         const fallback = updated.length > 0 ? updated[0].address : null;
         setActiveAddressState(fallback);
         saveActiveAddress(fallback);
+        prevActiveRef.current = fallback;
       }
       return updated;
     });
@@ -147,11 +174,15 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const disconnectAll = useCallback(() => {
+    // Audit: log disconnect_all for each wallet
+    wallets.forEach(w => logAuditEvent(w.address, 'disconnect_all'));
+
     setWallets([]);
     setActiveAddressState(null);
     saveWallets([]);
     saveActiveAddress(null);
-  }, []);
+    prevActiveRef.current = null;
+  }, [wallets]);
 
   const onWalletConnected = useCallback((address: string) => {
     addWallet(address);
