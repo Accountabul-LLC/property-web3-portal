@@ -14,7 +14,254 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      ai_agents: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          price_model: string | null
+          price_text: string | null
+          rating: number | null
+          rating_count: number | null
+          response_time: string | null
+          role: string | null
+          skills: string[] | null
+          tasks_completed: number | null
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          price_model?: string | null
+          price_text?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          response_time?: string | null
+          role?: string | null
+          skills?: string[] | null
+          tasks_completed?: number | null
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          price_model?: string | null
+          price_text?: string | null
+          rating?: number | null
+          rating_count?: number | null
+          response_time?: string | null
+          role?: string | null
+          skills?: string[] | null
+          tasks_completed?: number | null
+          type?: string | null
+        }
+        Relationships: []
+      }
+      professionals: {
+        Row: {
+          completed_jobs: number | null
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          name: string
+          price_range: string | null
+          rating: number | null
+          response_time: string | null
+          review_count: number | null
+          service_type: string | null
+          specialties: string[] | null
+          title: string | null
+          verified: boolean | null
+          wallet_address: string | null
+        }
+        Insert: {
+          completed_jobs?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name: string
+          price_range?: string | null
+          rating?: number | null
+          response_time?: string | null
+          review_count?: number | null
+          service_type?: string | null
+          specialties?: string[] | null
+          title?: string | null
+          verified?: boolean | null
+          wallet_address?: string | null
+        }
+        Update: {
+          completed_jobs?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          name?: string
+          price_range?: string | null
+          rating?: number | null
+          response_time?: string | null
+          review_count?: number | null
+          service_type?: string | null
+          specialties?: string[] | null
+          title?: string | null
+          verified?: boolean | null
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          amenities: string[] | null
+          bathrooms: number | null
+          bedrooms: number | null
+          city: string | null
+          created_at: string
+          description: string | null
+          estimated_value: number | null
+          id: string
+          images: string[] | null
+          market_cap: number | null
+          owner_wallet: string | null
+          price_per_token: number | null
+          projected_annual_return: number | null
+          projected_rental_yield: number | null
+          property_type: string | null
+          square_feet: number | null
+          state: string | null
+          status: string
+          title: string
+          tokens_available: number | null
+          total_tokens: number | null
+          updated_at: string
+          year_built: number | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          amenities?: string[] | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          images?: string[] | null
+          market_cap?: number | null
+          owner_wallet?: string | null
+          price_per_token?: number | null
+          projected_annual_return?: number | null
+          projected_rental_yield?: number | null
+          property_type?: string | null
+          square_feet?: number | null
+          state?: string | null
+          status?: string
+          title: string
+          tokens_available?: number | null
+          total_tokens?: number | null
+          updated_at?: string
+          year_built?: number | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          amenities?: string[] | null
+          bathrooms?: number | null
+          bedrooms?: number | null
+          city?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          images?: string[] | null
+          market_cap?: number | null
+          owner_wallet?: string | null
+          price_per_token?: number | null
+          projected_annual_return?: number | null
+          projected_rental_yield?: number | null
+          property_type?: string | null
+          square_feet?: number | null
+          state?: string | null
+          status?: string
+          title?: string
+          tokens_available?: number | null
+          total_tokens?: number | null
+          updated_at?: string
+          year_built?: number | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "properties_owner_wallet_fkey"
+            columns: ["owner_wallet"]
+            isOneToOne: false
+            referencedRelation: "wallet_profiles"
+            referencedColumns: ["wallet_address"]
+          },
+        ]
+      }
+      wallet_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          last_login: string | null
+          wallet_address: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_login?: string | null
+          wallet_address: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          last_login?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
+      xaman_payloads: {
+        Row: {
+          created_at: string
+          id: string
+          signed_at: string | null
+          status: string
+          uuid: string
+          wallet_address: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          uuid: string
+          wallet_address?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          signed_at?: string | null
+          status?: string
+          uuid?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
