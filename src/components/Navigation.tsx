@@ -13,6 +13,15 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const { isConnected, walletAddress, connect, disconnect, isModalOpen, setModalOpen, onWalletConnected } = useWalletAuth();
 
+  React.useEffect(() => {
+    if (!isMobileMenuOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isMobileMenuOpen]);
+
   const formatWalletAddress = (address: string) => {
     return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
