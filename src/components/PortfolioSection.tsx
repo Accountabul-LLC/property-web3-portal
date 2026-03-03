@@ -6,7 +6,7 @@ import { TrendingUp, TrendingDown, Building2, Wallet, DollarSign, PieChart, Arro
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
 import ReceiveModal from '@/components/ReceiveModal';
-import SendXRPModal from '@/components/SendXRPModal';
+import SendModal from '@/components/SendModal';
 
 const PortfolioSection = () => {
   const { walletAddress, isConnected } = useWalletAuth();
@@ -20,7 +20,6 @@ const PortfolioSection = () => {
 
   const decodeCurrency = (hex: string) => {
     if (hex.length <= 3) return hex;
-    // Hex-encoded currency codes on XRPL
     try {
       const decoded = hex.replace(/0+$/, '').replace(/../g, (m: string) => String.fromCharCode(parseInt(m, 16)));
       return decoded || hex;
@@ -205,10 +204,12 @@ const PortfolioSection = () => {
             onClose={() => setIsReceiveOpen(false)}
             walletAddress={walletAddress}
           />
-          <SendXRPModal
+          <SendModal
             isOpen={isSendOpen}
             onClose={() => setIsSendOpen(false)}
             walletAddress={walletAddress}
+            xrpBalance={xrplData?.xrp_balance}
+            tokenHoldings={xrplData?.token_holdings}
           />
         </>
       )}
