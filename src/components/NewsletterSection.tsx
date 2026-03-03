@@ -2,15 +2,35 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Mail, Twitter, Github, Linkedin } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle newsletter signup
-    console.log('Newsletter signup:', email);
-    setEmail('');
+    setIsSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('newsletter_subscribers' as any)
+        .insert({ email } as any);
+      if (error) {
+        if (error.code === '23505') {
+          toast.info('You\'re already subscribed!');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Successfully subscribed!');
+      }
+      setEmail('');
+    } catch (err: any) {
+      toast.error('Failed to subscribe. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const socialLinks = [
@@ -22,15 +42,12 @@ const NewsletterSection = () => {
   return (
     <div className="py-24 px-4 bg-muted/20">
       <div className="max-w-4xl mx-auto text-center space-y-12">
-        {/* Newsletter Signup */}
         <div className="space-y-8">
           <div className="space-y-4">
             <div className="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto">
               <Mail className="w-8 h-8 text-primary-foreground" />
             </div>
-            <h2 className="text-3xl md:text-4xl font-bold">
-              Stay Connected
-            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold">Stay Connected</h2>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Get the latest updates on new properties, platform features, 
               and real estate tokenization insights.
@@ -46,8 +63,8 @@ const NewsletterSection = () => {
               required
               className="flex-1"
             />
-            <Button type="submit" variant="hero" size="lg">
-              Subscribe
+            <Button type="submit" variant="hero" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? 'Subscribing...' : 'Subscribe'}
             </Button>
           </form>
 
@@ -56,11 +73,8 @@ const NewsletterSection = () => {
           </p>
         </div>
 
-        {/* Social Links */}
         <div className="space-y-6">
-          <h3 className="text-xl font-semibold">
-            Join Our Community
-          </h3>
+          <h3 className="text-xl font-semibold">Join Our Community</h3>
           <div className="flex justify-center space-x-6">
             {socialLinks.map((social, index) => {
               const Icon = social.icon;

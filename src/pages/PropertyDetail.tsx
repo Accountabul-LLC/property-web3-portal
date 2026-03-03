@@ -183,13 +183,13 @@ const PropertyDetailPage: React.FC = () => {
                 <OrderBook />
               </TabsContent>
               <TabsContent value="documents" className="space-y-6">
-                <DocumentsTab documents={property.documents} />
+                <DocumentsTab propertyId={id} />
               </TabsContent>
               <TabsContent value="market" className="space-y-6">
                 <MarketTab property={property} />
               </TabsContent>
               <TabsContent value="reviews" className="space-y-6">
-                <ReviewsTab reviews={property.reviews} />
+                <ReviewsTab propertyId={id} />
               </TabsContent>
             </div>
           </Tabs>

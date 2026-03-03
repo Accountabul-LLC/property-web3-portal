@@ -62,6 +62,109 @@ export type Database = {
         }
         Relationships: []
       }
+      newsletter_subscribers: {
+        Row: {
+          email: string
+          id: string
+          subscribed_at: string
+        }
+        Insert: {
+          email: string
+          id?: string
+          subscribed_at?: string
+        }
+        Update: {
+          email?: string
+          id?: string
+          subscribed_at?: string
+        }
+        Relationships: []
+      }
+      portfolio_holdings: {
+        Row: {
+          average_purchase_price: number
+          created_at: string
+          id: string
+          property_id: string
+          tokens_owned: number
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          average_purchase_price?: number
+          created_at?: string
+          id?: string
+          property_id: string
+          tokens_owned?: number
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          average_purchase_price?: number
+          created_at?: string
+          id?: string
+          property_id?: string
+          tokens_owned?: number
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_holdings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_transactions: {
+        Row: {
+          created_at: string
+          id: string
+          price_per_token: number
+          property_id: string
+          status: string
+          tokens: number
+          total_amount: number
+          transaction_type: string
+          tx_hash: string | null
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price_per_token: number
+          property_id: string
+          status?: string
+          tokens: number
+          total_amount: number
+          transaction_type: string
+          tx_hash?: string | null
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price_per_token?: number
+          property_id?: string
+          status?: string
+          tokens?: number
+          total_amount?: number
+          transaction_type?: string
+          tx_hash?: string | null
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_transactions_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professionals: {
         Row: {
           completed_jobs: number | null
@@ -205,6 +308,231 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "wallet_profiles"
             referencedColumns: ["wallet_address"]
+          },
+        ]
+      }
+      property_documents: {
+        Row: {
+          created_at: string
+          file_type: string | null
+          file_url: string
+          id: string
+          name: string
+          property_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_type?: string | null
+          file_url: string
+          id?: string
+          name: string
+          property_id: string
+        }
+        Update: {
+          created_at?: string
+          file_type?: string | null
+          file_url?: string
+          id?: string
+          name?: string
+          property_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_documents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          ownership_percentage: number | null
+          property_id: string
+          rating: number
+          user_name: string | null
+          wallet_address: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ownership_percentage?: number | null
+          property_id: string
+          rating: number
+          user_name?: string | null
+          wallet_address: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          ownership_percentage?: number | null
+          property_id?: string
+          rating?: number
+          user_name?: string | null
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_reviews_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      saved_properties: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          property_id: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          property_id?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_properties_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_bookings: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          professional_id: string
+          scheduled_at: string | null
+          status: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          professional_id: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          professional_id?: string
+          scheduled_at?: string | null
+          status?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_bookings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_orders: {
+        Row: {
+          created_at: string
+          filled_quantity: number
+          id: string
+          price: number
+          property_id: string
+          quantity: number
+          side: string
+          status: string
+          updated_at: string
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          filled_quantity?: number
+          id?: string
+          price: number
+          property_id: string
+          quantity: number
+          side: string
+          status?: string
+          updated_at?: string
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          filled_quantity?: number
+          id?: string
+          price?: number
+          property_id?: string
+          quantity?: number
+          side?: string
+          status?: string
+          updated_at?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_orders_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      token_price_history: {
+        Row: {
+          id: string
+          price: number
+          property_id: string
+          recorded_at: string
+          volume: number | null
+        }
+        Insert: {
+          id?: string
+          price: number
+          property_id: string
+          recorded_at?: string
+          volume?: number | null
+        }
+        Update: {
+          id?: string
+          price?: number
+          property_id?: string
+          recorded_at?: string
+          volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "token_price_history_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
           },
         ]
       }
