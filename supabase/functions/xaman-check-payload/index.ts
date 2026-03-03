@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     console.log('Checking Xaman payload status:', uuid);
 
-    const xamanResponse = await fetch(`https://xumm.app/api/v1/platform/payload/${uuid}`, {
+    const xamanResponse = await fetch(`https://xaman.app/api/v1/platform/payload/${uuid}`, {
       method: 'GET',
       headers: {
         'X-API-Key': xamanApiKey,
