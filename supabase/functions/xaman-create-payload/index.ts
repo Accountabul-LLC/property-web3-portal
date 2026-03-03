@@ -2,7 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
 interface XamanPayloadResponse {
@@ -19,29 +19,33 @@ interface XamanPayloadResponse {
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const xamanApiKey = Deno.env.get('XAMAN_API_KEY')!;
-    const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET')!;
+    const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
+    const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
+
+    if (!xamanApiKey || !xamanApiSecret) {
+      console.error('Missing XAMAN_API_KEY or XAMAN_API_SECRET');
+      throw new Error('Xaman API credentials not configured');
+    }
 
     console.log('Creating Xaman payload for sign-in');
+    console.log('API Key present:', !!xamanApiKey, 'Secret present:', !!xamanApiSecret);
 
-    // Create sign-in payload for Xaman
     const payload = {
       txjson: {
         TransactionType: 'SignIn'
       },
       options: {
         submit: false,
-        expire: 300, // 5 minutes
+        expire: 300,
         return_url: {
-          web: `${req.url.split('/functions/')[0]}`
+          web: `${req.headers.get('origin') || req.url.split('/functions/')[0]}`
         }
       },
       custom_meta: {
@@ -53,28 +57,36 @@ Deno.serve(async (req) => {
       }
     };
 
-    console.log('Sending payload to Xaman API');
+    console.log('Sending payload to Xaman API...');
 
     const xamanResponse = await fetch('https://xumm.app/api/v1/platform/payload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-API-Key': xamanApiKey,
-        'X-API-Secret': xamanApiSecret
+        'X-API-Secret': xamanApiSecret,
       },
       body: JSON.stringify(payload)
     });
 
+    const responseText = await xamanResponse.text();
+
     if (!xamanResponse.ok) {
-      const errorText = await xamanResponse.text();
-      console.error('Xaman API error:', errorText);
-      throw new Error(`Xaman API error: ${xamanResponse.status} - ${errorText}`);
+      console.error('Xaman API error:', xamanResponse.status, responseText);
+      throw new Error(`Xaman API error: ${xamanResponse.status} - ${responseText}`);
     }
 
-    const xamanData: XamanPayloadResponse = await xamanResponse.json();
+    let xamanData: XamanPayloadResponse;
+    try {
+      xamanData = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse Xaman response:', responseText.substring(0, 200));
+      throw new Error('Invalid response from Xaman API');
+    }
+
     console.log('Xaman payload created:', xamanData.uuid);
 
-    // Store payload reference in Supabase for tracking
+    // Store payload reference in database
     const supabase = createClient(supabaseUrl, supabaseAnonKey);
     
     const { error: dbError } = await supabase
