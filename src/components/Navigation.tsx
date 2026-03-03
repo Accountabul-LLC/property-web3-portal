@@ -29,20 +29,28 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
       <div className="max-w-7xl mx-auto px-10 h-full">
         <div className="flex items-center justify-between h-full overflow-hidden">
-          {/* Logo & Brand */}
-          <button 
-            onClick={() => onSectionChange('home')}
-            className="flex-shrink-0 flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
-          >
-            <img 
-              src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
-              alt="Accountabul Logo" 
-              className="w-8 h-8"
-            />
-            <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Accountabul
-            </span>
-          </button>
+          {/* Mobile menu button + Logo & Brand */}
+          <div className="flex items-center flex-shrink-0">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="xl:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+            <button 
+              onClick={() => onSectionChange('home')}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
+            >
+              <img 
+                src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
+                alt="Accountabul Logo" 
+                className="w-8 h-8"
+              />
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                Accountabul
+              </span>
+            </button>
+          </div>
 
           {/* Desktop Navigation — centered */}
           <div className="hidden xl:flex items-center justify-center flex-1 min-w-0">
@@ -101,15 +109,8 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             </Button>
           </div>
 
-          {/* Mobile menu button */}
-          <div className="xl:hidden">
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
+
+
         </div>
       </div>
 
