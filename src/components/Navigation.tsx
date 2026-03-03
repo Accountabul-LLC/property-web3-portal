@@ -109,7 +109,37 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             </Button>
           </div>
 
-
+          {/* Mobile wallet info — always visible on smaller screens */}
+          <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
+            {isConnected && walletAddress ? (
+              <>
+                <div className="flex items-center space-x-1.5 px-2 py-1.5 bg-primary/10 rounded-md border border-primary/20">
+                  <Wallet className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-xs font-medium text-primary">
+                    {formatWalletAddress(walletAddress)}
+                  </span>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={disconnect}
+                  className="h-8 px-3 text-xs"
+                >
+                  Disconnect
+                </Button>
+              </>
+            ) : (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={connect}
+                className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Wallet className="w-3.5 h-3.5 mr-1.5" />
+                Connect
+              </Button>
+            )}
+          </div>
 
         </div>
       </div>
