@@ -66,14 +66,15 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY')!;
+    const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET')!;
 
     console.log('Checking Xaman payload status:', uuid);
 
     const xamanResponse = await fetch(`https://xumm.app/api/v1/platform/payload/${uuid}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${xamanApiKey}`,
-        'X-API-Key': xamanApiKey
+        'X-API-Key': xamanApiKey,
+        'X-API-Secret': xamanApiSecret
       }
     });
 
