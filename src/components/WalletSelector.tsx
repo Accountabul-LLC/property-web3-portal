@@ -49,8 +49,11 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
-        <button
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/20 bg-primary/10 hover:bg-primary/15 transition-colors ${
+        <div
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsOpen(!isOpen); }}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/20 bg-primary/10 hover:bg-primary/15 transition-colors cursor-pointer ${
             compact ? 'text-xs' : 'text-sm'
           }`}
         >
@@ -64,7 +67,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
             </Badge>
           )}
           <ChevronDown className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-primary/60`} />
-        </button>
+        </div>
       </PopoverTrigger>
 
       <PopoverContent className="w-72 p-2" align="end">
