@@ -4,94 +4,24 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Search, MapPin, Bed, Bath, Square, TrendingUp } from 'lucide-react';
-
-interface Property {
-  id: string;
-  title: string;
-  address: string;
-  city: string;
-  state: string;
-  image: string;
-  pricePerToken: number;
-  totalTokens: number;
-  availableTokens: number;
-  projectedYield: number;
-  status: 'Active' | 'Pending' | 'Sold Out';
-  bedrooms: number;
-  bathrooms: number;
-  sqft: number;
-  propertyType: string;
-}
+import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2 } from 'lucide-react';
+import { useProperties, Property } from '@/hooks/useProperties';
 
 const PropertyListingsSection = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState('all');
   const [selectedStatus, setSelectedStatus] = React.useState('all');
 
-  // Mock property data
-  const properties: Property[] = [
-    {
-      id: '1',
-      title: 'Modern Downtown Condo',
-      address: '123 Main Street',
-      city: 'Austin',
-      state: 'TX',
-      image: 'https://images.unsplash.com/photo-1721322800607-8c38375eef04?w=400&h=300&fit=crop',
-      pricePerToken: 50,
-      totalTokens: 1000,
-      availableTokens: 750,
-      projectedYield: 8.5,
-      status: 'Active',
-      bedrooms: 2,
-      bathrooms: 2,
-      sqft: 1200,
-      propertyType: 'Condo'
-    },
-    {
-      id: '2',
-      title: 'Luxury Suburban Home',
-      address: '456 Oak Avenue',
-      city: 'Dallas',
-      state: 'TX',
-      image: 'https://images.unsplash.com/photo-1487958449943-2429e8be8625?w=400&h=300&fit=crop',
-      pricePerToken: 100,
-      totalTokens: 2000,
-      availableTokens: 1200,
-      projectedYield: 7.2,
-      status: 'Active',
-      bedrooms: 4,
-      bathrooms: 3,
-      sqft: 2800,
-      propertyType: 'Single Family'
-    },
-    {
-      id: '3',
-      title: 'Investment Duplex',
-      address: '789 Pine Street',
-      city: 'Houston',
-      state: 'TX',
-      image: 'https://images.unsplash.com/photo-1649972904349-6e44c42644a7?w=400&h=300&fit=crop',
-      pricePerToken: 25,
-      totalTokens: 800,
-      availableTokens: 0,
-      projectedYield: 9.1,
-      status: 'Sold Out',
-      bedrooms: 6,
-      bathrooms: 4,
-      sqft: 3200,
-      propertyType: 'Multi Family'
-    }
-  ];
+  const { data: properties = [], isLoading } = useProperties();
 
   const propertyTypes = ['Condo', 'Single Family', 'Multi Family', 'Commercial'];
   const statusOptions = ['Active', 'Pending', 'Sold Out'];
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         property.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         property.city.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = selectedType === 'all' || property.propertyType === selectedType;
+                         (property.address || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         (property.city || '').toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesType = selectedType === 'all' || property.property_type === selectedType;
     const matchesStatus = selectedStatus === 'all' || property.status === selectedStatus;
     
     return matchesSearch && matchesType && matchesStatus;
@@ -174,121 +104,125 @@ const PropertyListingsSection = () => {
           </Select>
         </div>
 
-        {/* Results Count */}
-        {filteredProperties.length > 0 && (
-          <p className="text-muted-foreground mb-6">
-            {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'} found
-          </p>
-        )}
-
-        {/* Property Grid */}
-        {filteredProperties.length === 0 ? (
-          <EmptyState />
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProperties.map((property) => (
-              <Card key={property.id} className="overflow-hidden hover:shadow-glow transition-all duration-300 group">
-                <div className="relative">
-                  <img
-                    src={property.image}
-                    alt={property.title}
-                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <Badge 
-                    className={`absolute top-3 right-3 ${getStatusColor(property.status)}`}
-                  >
-                    {property.status}
-                  </Badge>
-                </div>
-                
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-lg leading-tight">{property.title}</h3>
-                      <div className="flex items-center text-muted-foreground text-sm mt-1">
-                        <MapPin className="w-3 h-3 mr-1" />
-                        {property.address}, {property.city}, {property.state}
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
+          <>
+            {/* Results Count */}
+            {filteredProperties.length > 0 && (
+              <p className="text-muted-foreground mb-6">
+                {filteredProperties.length} {filteredProperties.length === 1 ? 'property' : 'properties'} found
+              </p>
+            )}
 
-                <CardContent className="pt-0">
-                  <div className="space-y-4">
-                    {/* Property Details */}
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-4">
-                        <span className="flex items-center">
-                          <Bed className="w-3 h-3 mr-1" />
-                          {property.bedrooms}
-                        </span>
-                        <span className="flex items-center">
-                          <Bath className="w-3 h-3 mr-1" />
-                          {property.bathrooms}
-                        </span>
-                        <span className="flex items-center">
-                          <Square className="w-3 h-3 mr-1" />
-                          {property.sqft.toLocaleString()} ft²
-                        </span>
-                      </div>
+            {/* Property Grid */}
+            {filteredProperties.length === 0 ? (
+              <EmptyState />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredProperties.map((property) => (
+                  <Card key={property.id} className="overflow-hidden hover:shadow-glow transition-all duration-300 group">
+                    <div className="relative">
+                      <img
+                        src={property.images?.[0] || '/placeholder.svg'}
+                        alt={property.title}
+                        className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <Badge 
+                        className={`absolute top-3 right-3 ${getStatusColor(property.status)}`}
+                      >
+                        {property.status}
+                      </Badge>
                     </div>
-
-                    {/* Pricing */}
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold">${property.pricePerToken}</span>
-                        <div className="flex items-center text-success text-sm font-medium">
-                          <TrendingUp className="w-3 h-3 mr-1" />
-                          {property.projectedYield}% yield
+                    
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h3 className="font-semibold text-lg leading-tight">{property.title}</h3>
+                          <div className="flex items-center text-muted-foreground text-sm mt-1">
+                            <MapPin className="w-3 h-3 mr-1" />
+                            {property.address}, {property.city}, {property.state}
+                          </div>
                         </div>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        per token • {property.availableTokens.toLocaleString()} of {property.totalTokens.toLocaleString()} available
-                      </p>
-                    </div>
+                    </CardHeader>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
-                          style={{ width: `${((property.totalTokens - property.availableTokens) / property.totalTokens) * 100}%` }}
-                        />
+                    <CardContent className="pt-0">
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center">
+                              <Bed className="w-3 h-3 mr-1" />
+                              {property.bedrooms}
+                            </span>
+                            <span className="flex items-center">
+                              <Bath className="w-3 h-3 mr-1" />
+                              {property.bathrooms}
+                            </span>
+                            <span className="flex items-center">
+                              <Square className="w-3 h-3 mr-1" />
+                              {(property.square_feet || 0).toLocaleString()} ft²
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-2xl font-bold">${property.price_per_token}</span>
+                            <div className="flex items-center text-success text-sm font-medium">
+                              <TrendingUp className="w-3 h-3 mr-1" />
+                              {property.projected_rental_yield}% yield
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            per token • {(property.tokens_available || 0).toLocaleString()} of {(property.total_tokens || 0).toLocaleString()} available
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <div className="w-full bg-muted rounded-full h-2">
+                            <div 
+                              className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${property.total_tokens ? ((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100 : 0}%` }}
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {property.total_tokens ? Math.round(((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100) : 0}% funded
+                          </p>
+                        </div>
+
+                        <Button 
+                          className="w-full" 
+                          variant={property.status === 'Active' ? 'default' : 'secondary'}
+                          disabled={property.status === 'Sold Out'}
+                          asChild={property.status !== 'Sold Out'}
+                        >
+                          {property.status === 'Sold Out' ? 'Sold Out' : (
+                            <a href={`/property/${property.id}`}>View Details</a>
+                          )}
+                        </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {Math.round(((property.totalTokens - property.availableTokens) / property.totalTokens) * 100)}% funded
-                      </p>
-                    </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
-                    {/* Action Button */}
-                    <Button 
-                      className="w-full" 
-                      variant={property.status === 'Active' ? 'default' : 'secondary'}
-                      disabled={property.status === 'Sold Out'}
-                      asChild={property.status !== 'Sold Out'}
-                    >
-                      {property.status === 'Sold Out' ? 'Sold Out' : (
-                        <a href={`/property/${property.id}`}>View Details</a>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Call to Action */}
-        {filteredProperties.length > 0 && (
-          <div className="text-center mt-16 p-8 bg-card rounded-lg border">
-            <h3 className="text-2xl font-semibold mb-4">Ready to Tokenize Your Property?</h3>
-            <p className="text-muted-foreground mb-6">
-              Join the future of real estate investment and unlock liquidity for your property.
-            </p>
-            <Button variant="hero" size="lg">
-              Start Tokenizing
-            </Button>
-          </div>
+            {filteredProperties.length > 0 && (
+              <div className="text-center mt-16 p-8 bg-card rounded-lg border">
+                <h3 className="text-2xl font-semibold mb-4">Ready to Tokenize Your Property?</h3>
+                <p className="text-muted-foreground mb-6">
+                  Join the future of real estate investment and unlock liquidity for your property.
+                </p>
+                <Button variant="hero" size="lg">
+                  Start Tokenizing
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -14,8 +14,10 @@ import OrderBook from '../components/property/OrderBook';
 import DocumentsTab from '../components/property/DocumentsTab';
 import MarketTab from '../components/property/MarketTab';
 import ReviewsTab from '../components/property/ReviewsTab';
+import { useProperty } from '@/hooks/useProperties';
+import { Loader2 } from 'lucide-react';
 
-// Property interface for detailed view
+// Property interface for detailed view (used by sub-components)
 export interface PropertyDetail {
   id: string;
   title: string;
@@ -77,113 +79,88 @@ export interface PropertyDetail {
   };
 }
 
-// Mock property data
-const mockPropertyData: PropertyDetail = {
-  id: '1',
-  title: 'Luxury Downtown Condo with City Views',
-  address: '123 Main Street',
-  city: 'Austin',
-  state: 'TX',
-  zip: '78701',
-  status: 'Active',
-  pricePerToken: 250,
-  totalTokens: 1000,
-  tokensAvailable: 750,
-  projectedAnnualReturn: 8.5,
-  projectedRentalYield: 6.2,
-  actualYield: 7.1,
-  images: [
-    '/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png',
-    '/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png',
-    '/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png',
-  ],
-  description: 'This stunning downtown condo offers breathtaking city views and modern amenities. Located in the heart of Austin\'s business district, this property provides exceptional rental income potential with strong appreciation prospects.',
-  propertyType: 'Condo',
-  bedrooms: 2,
-  bathrooms: 2,
-  squareFeet: 1200,
-  yearBuilt: 2018,
-  amenities: ['Pool', 'Gym', 'Concierge', 'Rooftop Deck', 'Parking'],
-  marketCap: 250000,
-  lastTradePrice: 252,
-  estimatedValue: 255000,
-  tradeVolume: 12500,
-  management: {
-    name: 'Sarah Johnson',
-    bio: 'Professional property manager with 10+ years experience in Austin real estate market. Airbnb Superhost with 4.9 rating.',
-    avatar: '/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png',
-    isSuperhostAirbnb: true,
-  },
-  financials: {
-    totalRaise: 250000,
-    assetValue: 240000,
-    closingCosts: 8000,
-    operatingReserves: 15000,
-    capRate: 6.5,
-    annualIncome: 18000,
-    appreciation: 5.2,
-  },
-  reviews: [
-    {
-      id: '1',
-      userName: 'Michael Chen',
-      rating: 5,
-      comment: 'Excellent property with great returns. Management is very responsive.',
-      ownershipPercentage: 12.5,
-      date: '2024-01-15',
-    },
-    {
-      id: '2',
-      userName: 'Jennifer Davis',
-      rating: 4,
-      comment: 'Good investment so far. Location is perfect.',
-      ownershipPercentage: 8.3,
-      date: '2024-01-10',
-    },
-  ],
-  documents: [
-    { name: 'Property Deed', type: 'PDF', url: '#' },
-    { name: 'Appraisal Report', type: 'PDF', url: '#' },
-    { name: 'Inspection Report', type: 'PDF', url: '#' },
-    { name: 'LLC Formation', type: 'PDF', url: '#' },
-  ],
-  marketData: {
-    regionGrowth: 12.8,
-    priceAppreciation: 8.4,
-    demandIndex: 85,
-  },
-};
+// Map DB row to the PropertyDetail shape sub-components expect
+function mapToPropertyDetail(row: any): PropertyDetail {
+  return {
+    id: row.id,
+    title: row.title || '',
+    address: row.address || '',
+    city: row.city || '',
+    state: row.state || '',
+    zip: row.zip || '',
+    status: (row.status as any) || 'Active',
+    pricePerToken: Number(row.price_per_token) || 0,
+    totalTokens: row.total_tokens || 0,
+    tokensAvailable: row.tokens_available || 0,
+    projectedAnnualReturn: Number(row.projected_annual_return) || 0,
+    projectedRentalYield: Number(row.projected_rental_yield) || 0,
+    images: row.images || [],
+    description: row.description || '',
+    propertyType: row.property_type || '',
+    bedrooms: row.bedrooms || 0,
+    bathrooms: row.bathrooms || 0,
+    squareFeet: row.square_feet || 0,
+    yearBuilt: row.year_built || 0,
+    amenities: row.amenities || [],
+    marketCap: Number(row.market_cap) || 0,
+    lastTradePrice: Number(row.price_per_token) || 0,
+    estimatedValue: Number(row.estimated_value) || 0,
+    tradeVolume: 0,
+    management: { name: '', bio: '', avatar: '', isSuperhostAirbnb: false },
+    financials: { totalRaise: 0, assetValue: Number(row.estimated_value) || 0, closingCosts: 0, operatingReserves: 0, capRate: 0, annualIncome: 0, appreciation: 0 },
+    reviews: [],
+    documents: [],
+    marketData: { regionGrowth: 0, priceAppreciation: 0, demandIndex: 0 },
+  };
+}
 
-const PropertyDetail: React.FC = () => {
+const PropertyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [property] = React.useState<PropertyDetail>(mockPropertyData);
+  const { data: dbProperty, isLoading, error } = useProperty(id);
+
+  const property = dbProperty ? mapToPropertyDetail(dbProperty) : null;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (error || !property) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation onSectionChange={() => {}} currentSection="property" />
+        <div className="container mx-auto px-4 py-16 text-center">
+          <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
+          <p className="text-muted-foreground">This property doesn't exist or has been removed.</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation onSectionChange={() => {}} currentSection="property" />
       
       <main className="container mx-auto px-4 py-8">
-        {/* Hero Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Left Column - Gallery and Summary */}
           <div className="lg:col-span-2 space-y-6">
             <PhotoGallery images={property.images} title={property.title} />
             <PropertySummary property={property} />
           </div>
-          
-          {/* Right Column - Financial Sidebar */}
           <div className="lg:col-span-1">
             <FinancialSidebar property={property} />
           </div>
         </div>
 
-        {/* Market Data Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
           <PriceChart />
           <MarketStats property={property} />
         </div>
 
-        {/* Main Content Tabs */}
         <div className="w-full">
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="grid w-full grid-cols-6">
@@ -199,23 +176,18 @@ const PropertyDetail: React.FC = () => {
               <TabsContent value="details" className="space-y-6">
                 <DetailsTab property={property} />
               </TabsContent>
-              
               <TabsContent value="financials" className="space-y-6">
                 <FinancialsTab property={property} />
               </TabsContent>
-              
               <TabsContent value="orderbook" className="space-y-6">
                 <OrderBook />
               </TabsContent>
-              
               <TabsContent value="documents" className="space-y-6">
                 <DocumentsTab documents={property.documents} />
               </TabsContent>
-              
               <TabsContent value="market" className="space-y-6">
                 <MarketTab property={property} />
               </TabsContent>
-              
               <TabsContent value="reviews" className="space-y-6">
                 <ReviewsTab reviews={property.reviews} />
               </TabsContent>
@@ -229,4 +201,4 @@ const PropertyDetail: React.FC = () => {
   );
 };
 
-export default PropertyDetail;
+export default PropertyDetailPage;
