@@ -8,9 +8,16 @@ import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
-const PortfolioSection = () => {
+interface PortfolioSectionProps {
+  overrideAddress?: string | null;
+  isReadOnly?: boolean;
+}
+
+const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
   const { activeAddress, isConnected } = useActiveWallet();
-  const { data: xrplData, isLoading, error } = useXRPLPortfolio(activeAddress);
+  const displayAddress = overrideAddress || activeAddress;
+  const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
+  const { data: xrplData, isLoading, error } = useXRPLPortfolio(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
 
@@ -25,7 +32,7 @@ const PortfolioSection = () => {
     } catch { return hex; }
   };
 
-  if (!isConnected) {
+  if (!hasWallet) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center py-16">
@@ -48,16 +55,19 @@ const PortfolioSection = () => {
           Your XRPL Portfolio
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Live on-chain data for <span className="font-mono text-sm">{shortenAddress(activeAddress!)}</span>
+          {isReadOnly ? 'Viewing portfolio for' : 'Live on-chain data for'}{' '}
+          <span className="font-mono text-sm">{shortenAddress(displayAddress!)}</span>
         </p>
-        <div className="flex justify-center gap-3 mt-4">
-          <Button onClick={() => setIsSendOpen(true)} className="gap-2">
-            <Send className="w-4 h-4" /> Send
-          </Button>
-          <Button onClick={() => setIsReceiveOpen(true)} variant="outline" className="gap-2">
-            <QrCode className="w-4 h-4" /> Receive
-          </Button>
-        </div>
+        {!isReadOnly && (
+          <div className="flex justify-center gap-3 mt-4">
+            <Button onClick={() => setIsSendOpen(true)} className="gap-2">
+              <Send className="w-4 h-4" /> Send
+            </Button>
+            <Button onClick={() => setIsReceiveOpen(true)} variant="outline" className="gap-2">
+              <QrCode className="w-4 h-4" /> Receive
+            </Button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -191,17 +201,17 @@ const PortfolioSection = () => {
           </div>
         </>
       ) : null}
-      {activeAddress && (
+      {displayAddress && !isReadOnly && (
         <>
           <ReceiveModal
             isOpen={isReceiveOpen}
             onClose={() => setIsReceiveOpen(false)}
-            walletAddress={activeAddress}
+            walletAddress={displayAddress}
           />
           <SendModal
             isOpen={isSendOpen}
             onClose={() => setIsSendOpen(false)}
-            walletAddress={activeAddress}
+            walletAddress={displayAddress}
             xrpBalance={xrplData?.xrp_balance}
             tokenHoldings={xrplData?.token_holdings}
           />

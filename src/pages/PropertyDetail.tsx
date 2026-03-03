@@ -131,7 +131,7 @@ const PropertyDetailPage: React.FC = () => {
   if (error || !property) {
     return (
       <div className="min-h-screen bg-background">
-        <Navigation onSectionChange={() => {}} currentSection="property" />
+        <Navigation />
         <div className="container mx-auto px-4 py-16 text-center">
           <h1 className="text-2xl font-bold mb-4">Property Not Found</h1>
           <p className="text-muted-foreground">This property doesn't exist or has been removed.</p>
@@ -143,7 +143,7 @@ const PropertyDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navigation onSectionChange={() => {}} currentSection="property" />
+      <Navigation />
       
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
