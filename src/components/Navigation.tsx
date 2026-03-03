@@ -1,17 +1,15 @@
 import React from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot } from 'lucide-react';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
 
-interface NavigationProps {
-  onSectionChange: (section: string) => void;
-  currentSection: string;
-}
-
-const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
+const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const {
     isConnected,
     isConnectModalOpen,
@@ -30,12 +28,14 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   }, [isMobileMenuOpen]);
 
   const navItems = [
-    { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
-    { id: 'tokenize', label: 'Tokenize Property', icon: TrendingUp },
-    { id: 'professionals', label: 'Professional Marketplace', icon: Users },
-    { id: 'ai-agents', label: 'AI Agent Marketplace', icon: Bot },
-    { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+    { path: '/marketplace', label: 'Real Estate Marketplace', icon: Building2 },
+    { path: '/tokenize', label: 'Tokenize Property', icon: TrendingUp },
+    { path: '/professionals', label: 'Professional Marketplace', icon: Users },
+    { path: '/ai-agents', label: 'AI Agent Marketplace', icon: Bot },
+    { path: '/portfolio', label: 'Portfolio', icon: Wallet },
   ];
+
+  const currentPath = location.pathname;
 
   return (
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
@@ -50,7 +50,7 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             <button 
-              onClick={() => onSectionChange('home')}
+              onClick={() => navigate('/')}
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
             >
               <img 
@@ -71,10 +71,10 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
                 const Icon = item.icon;
                 return (
                   <button
-                    key={item.id}
-                    onClick={() => onSectionChange(item.id)}
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
                     className={`flex items-center space-x-1.5 px-1.5 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
-                      currentSection === item.id
+                      currentPath === item.path
                         ? 'text-primary'
                         : 'text-muted-foreground hover:text-foreground'
                     }`}
@@ -144,13 +144,13 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               const Icon = item.icon;
               return (
                 <button
-                  key={item.id}
+                  key={item.path}
                   onClick={() => {
-                    onSectionChange(item.id);
+                    navigate(item.path);
                     setIsMobileMenuOpen(false);
                   }}
                   className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                    currentSection === item.id
+                    currentPath === item.path
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
