@@ -98,16 +98,22 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const addWallet = useCallback((address: string, label?: string) => {
+    const now = new Date().toISOString();
     setWallets(prev => {
-      if (prev.find(w => w.address === address)) {
-        // Already exists, just make active
-        return prev;
+      const existing = prev.find(w => w.address === address);
+      if (existing) {
+        // Already exists — update lastUsedAt and make active
+        const updated = prev.map(w =>
+          w.address === address ? { ...w, lastUsedAt: now } : w
+        );
+        saveWallets(updated);
+        return updated;
       }
       const newWallet: ConnectedWallet = {
         address,
         label: label || `Wallet ${prev.length + 1}`,
-        connectedAt: new Date().toISOString(),
-        lastUsedAt: new Date().toISOString(),
+        connectedAt: now,
+        lastUsedAt: now,
       };
       const updated = [...prev, newWallet];
       saveWallets(updated);
