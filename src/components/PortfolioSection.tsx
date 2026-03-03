@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Building2, Wallet, DollarSign, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Plus, Loader2, Coins, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, Building2, Wallet, DollarSign, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Plus, Loader2, Coins, ExternalLink, QrCode } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useWalletAuth } from '@/hooks/useWalletAuth';
+import ReceiveModal from '@/components/ReceiveModal';
 
 const PortfolioSection = () => {
   const { walletAddress, isConnected } = useWalletAuth();
   const { data: xrplData, isLoading, error } = useXRPLPortfolio(walletAddress);
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
 
   const formatXRP = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
 
@@ -50,6 +52,11 @@ const PortfolioSection = () => {
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Live on-chain data for <span className="font-mono text-sm">{shortenAddress(walletAddress!)}</span>
         </p>
+        <div className="flex justify-center gap-3 mt-4">
+          <Button onClick={() => setIsReceiveOpen(true)} variant="outline" className="gap-2">
+            <QrCode className="w-4 h-4" /> Receive
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -186,6 +193,13 @@ const PortfolioSection = () => {
           </div>
         </>
       ) : null}
+      {walletAddress && (
+        <ReceiveModal
+          isOpen={isReceiveOpen}
+          onClose={() => setIsReceiveOpen(false)}
+          walletAddress={walletAddress}
+        />
+      )}
     </div>
   );
 };
