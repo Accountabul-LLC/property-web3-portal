@@ -536,6 +536,36 @@ export type Database = {
           },
         ]
       }
+      wallet_audit_log: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          ip_hint: string | null
+          metadata: Json | null
+          user_agent: string | null
+          wallet_address: string
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          ip_hint?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          wallet_address: string
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          ip_hint?: string | null
+          metadata?: Json | null
+          user_agent?: string | null
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       wallet_profiles: {
         Row: {
           avatar_url: string | null
