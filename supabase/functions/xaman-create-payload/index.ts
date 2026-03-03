@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
 
     console.log('Sending payload to Xaman API...');
 
-    const xamanResponse = await fetch('https://xumm.app/api/v1/platform/payload', {
+    const xamanResponse = await fetch('https://xaman.app/api/v1/platform/payload', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
