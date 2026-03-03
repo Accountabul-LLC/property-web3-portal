@@ -2,7 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot } from 'lucide-react';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
-import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+import WalletSelector from '@/components/WalletSelector';
 
 interface NavigationProps {
   onSectionChange: (section: string) => void;
@@ -11,7 +12,13 @@ interface NavigationProps {
 
 const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-  const { isConnected, walletAddress, connect, disconnect, isModalOpen, setModalOpen, onWalletConnected } = useWalletAuth();
+  const {
+    isConnected,
+    isConnectModalOpen,
+    openConnectModal,
+    closeConnectModal,
+    onWalletConnected,
+  } = useActiveWallet();
 
   React.useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -21,10 +28,6 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isMobileMenuOpen]);
-
-  const formatWalletAddress = (address: string) => {
-    return `${address.slice(0, 6)}...${address.slice(-4)}`;
-  };
 
   const navItems = [
     { id: 'marketplace', label: 'Real Estate Marketplace', icon: Building2 },
@@ -84,29 +87,14 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Desktop Action Buttons */}
           <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
-            {isConnected && walletAddress ? (
-              <div className="flex items-center space-x-3">
-                <div className="flex items-center space-x-2 px-3 py-2 bg-primary/10 rounded-md border border-primary/20">
-                  <Wallet className="w-4 h-4 text-primary" />
-                  <span className="text-sm font-medium text-primary">
-                    {formatWalletAddress(walletAddress)}
-                  </span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={disconnect}
-                  className="h-9 px-4 text-sm"
-                >
-                  Disconnect
-                </Button>
-              </div>
+            {isConnected ? (
+              <WalletSelector />
             ) : (
               <Button 
                 variant="outline" 
-                onClick={connect}
+                onClick={openConnectModal}
                 className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
               >
                 <Wallet className="w-4 h-4 mr-2" />
@@ -118,30 +106,15 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
             </Button>
           </div>
 
-          {/* Mobile wallet info — always visible on smaller screens */}
+          {/* Mobile wallet info */}
           <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
-            {isConnected && walletAddress ? (
-              <>
-                <div className="flex items-center space-x-1.5 px-2 py-1.5 bg-primary/10 rounded-md border border-primary/20">
-                  <Wallet className="w-3.5 h-3.5 text-primary" />
-                  <span className="text-xs font-medium text-primary">
-                    {formatWalletAddress(walletAddress)}
-                  </span>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={disconnect}
-                  className="h-8 px-3 text-xs"
-                >
-                  Disconnect
-                </Button>
-              </>
+            {isConnected ? (
+              <WalletSelector compact />
             ) : (
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={connect}
+                onClick={openConnectModal}
                 className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
               >
                 <Wallet className="w-3.5 h-3.5 mr-1.5" />
@@ -149,7 +122,6 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               </Button>
             )}
           </div>
-
         </div>
       </div>
 
@@ -189,26 +161,10 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
               );
             })}
             <div className="pt-2 space-y-2">
-              {isConnected && walletAddress ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-primary/10 rounded-md border border-primary/20">
-                    <Wallet className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium text-primary">
-                      {formatWalletAddress(walletAddress)}
-                    </span>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={disconnect}
-                    className="w-full h-10 text-sm"
-                  >
-                    Disconnect Wallet
-                  </Button>
-                </div>
-              ) : (
+              {!isConnected && (
                 <Button 
                   variant="outline" 
-                  onClick={connect}
+                  onClick={openConnectModal}
                   className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
                 >
                   <Wallet className="w-4 h-4 mr-2" />
@@ -225,8 +181,8 @@ const Navigation = ({ onSectionChange, currentSection }: NavigationProps) => {
 
       {/* Wallet Connect Modal */}
       <WalletConnectModal 
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
+        isOpen={isConnectModalOpen}
+        onClose={closeConnectModal}
         onWalletConnected={onWalletConnected}
       />
     </nav>

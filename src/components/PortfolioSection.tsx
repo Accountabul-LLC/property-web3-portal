@@ -2,20 +2,19 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Building2, Wallet, DollarSign, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Plus, Loader2, Coins, ExternalLink, QrCode, Send } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
-import { useWalletAuth } from '@/hooks/useWalletAuth';
+import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
 const PortfolioSection = () => {
-  const { walletAddress, isConnected } = useWalletAuth();
-  const { data: xrplData, isLoading, error } = useXRPLPortfolio(walletAddress);
+  const { activeAddress, isConnected } = useActiveWallet();
+  const { data: xrplData, isLoading, error } = useXRPLPortfolio(activeAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
 
   const formatXRP = (amount: number) => amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
-
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
 
   const decodeCurrency = (hex: string) => {
@@ -23,9 +22,7 @@ const PortfolioSection = () => {
     try {
       const decoded = hex.replace(/0+$/, '').replace(/../g, (m: string) => String.fromCharCode(parseInt(m, 16)));
       return decoded || hex;
-    } catch {
-      return hex;
-    }
+    } catch { return hex; }
   };
 
   if (!isConnected) {
@@ -51,7 +48,7 @@ const PortfolioSection = () => {
           Your XRPL Portfolio
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Live on-chain data for <span className="font-mono text-sm">{shortenAddress(walletAddress!)}</span>
+          Live on-chain data for <span className="font-mono text-sm">{shortenAddress(activeAddress!)}</span>
         </p>
         <div className="flex justify-center gap-3 mt-4">
           <Button onClick={() => setIsSendOpen(true)} className="gap-2">
@@ -87,7 +84,6 @@ const PortfolioSection = () => {
                 </div>
               </div>
             </Card>
-
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-secondary rounded-lg flex items-center justify-center">
@@ -99,7 +95,6 @@ const PortfolioSection = () => {
                 </div>
               </div>
             </Card>
-
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-accent to-accent/80 rounded-lg flex items-center justify-center">
@@ -117,7 +112,6 @@ const PortfolioSection = () => {
             {/* Token Holdings */}
             <div className="lg:col-span-2">
               <h3 className="text-2xl font-bold mb-6">Token Holdings</h3>
-
               {xrplData.token_holdings.length === 0 ? (
                 <Card className="p-12 text-center">
                   <div className="mx-auto w-16 h-16 bg-muted rounded-lg flex items-center justify-center mb-4">
@@ -197,17 +191,17 @@ const PortfolioSection = () => {
           </div>
         </>
       ) : null}
-      {walletAddress && (
+      {activeAddress && (
         <>
           <ReceiveModal
             isOpen={isReceiveOpen}
             onClose={() => setIsReceiveOpen(false)}
-            walletAddress={walletAddress}
+            walletAddress={activeAddress}
           />
           <SendModal
             isOpen={isSendOpen}
             onClose={() => setIsSendOpen(false)}
-            walletAddress={walletAddress}
+            walletAddress={activeAddress}
             xrpBalance={xrplData?.xrp_balance}
             tokenHoldings={xrplData?.token_holdings}
           />
