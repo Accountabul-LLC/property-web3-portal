@@ -30,6 +30,26 @@ export interface XRPLTransaction {
   balance_changes?: Array<{ account: string; currency: string; issuer?: string; value: number }> | null;
 }
 
+export interface MPTIssuance {
+  mpt_issuance_id: string | null;
+  issuer: string | null;
+  max_amount: string | null;
+  outstanding_amount: string | null;
+  asset_scale: number;
+  transfer_fee: number;
+  flags: number;
+  metadata_hex: string | null;
+  name: string | null;
+  description: string | null;
+}
+
+export interface MPTHolding {
+  mpt_issuance_id: string | null;
+  amount: string;
+  flags: number;
+  locked_amount: string | null;
+}
+
 export interface XRPLPortfolioData {
   xrp_balance: number;
   reserve_xrp: number;
@@ -37,6 +57,8 @@ export interface XRPLPortfolioData {
   owner_count: number;
   token_holdings: XRPLTokenHolding[];
   transactions: XRPLTransaction[];
+  mpt_issuances: MPTIssuance[];
+  mpt_holdings: MPTHolding[];
   account: string;
 }
 
@@ -52,15 +74,10 @@ export function useXRPLPortfolio(walletAddress: string | null, network: 'mainnet
       return data as XRPLPortfolioData;
     },
     enabled: !!walletAddress,
-    // Keep data fresh for 15s — toggling back within 15s is instant (no network request)
     staleTime: 15_000,
-    // Keep inactive wallet data in cache for 5 minutes so toggling back doesn't refetch
     gcTime: 5 * 60_000,
-    // Auto-refresh active wallet every 60s (WebSocket handles real-time updates)
     refetchInterval: 60_000,
-    // Refetch when user returns to the tab/page
     refetchOnWindowFocus: true,
-    // Always refetch when component remounts (e.g. navigating back to portfolio)
     refetchOnMount: 'always',
   });
 }
