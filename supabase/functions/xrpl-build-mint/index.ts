@@ -147,11 +147,15 @@ Deno.serve(async (req) => {
 
     } else if (token_type === 'mpt') {
       // MPTokenIssuanceCreate
-      const { max_amount, asset_scale, flags } = params || {};
+      const { name, description, max_amount, asset_scale, transfer_fee, flags } = params || {};
 
       let mptFlags = 0;
-      if (flags?.transferable) mptFlags |= 0x00000002;  // tfMPTCanTransfer
-      if (flags?.clawback) mptFlags |= 0x00000004;      // tfMPTCanClawback
+      if (flags?.can_lock)      mptFlags |= 0x00000002;  // tfMPTCanLock
+      if (flags?.require_auth)  mptFlags |= 0x00000004;  // tfMPTRequireAuth
+      if (flags?.can_escrow)    mptFlags |= 0x00000008;  // tfMPTCanEscrow
+      if (flags?.can_trade)     mptFlags |= 0x00000010;  // tfMPTCanTrade
+      if (flags?.can_transfer)  mptFlags |= 0x00000020;  // tfMPTCanTransfer
+      if (flags?.can_clawback)  mptFlags |= 0x00000040;  // tfMPTCanClawback
 
       txJson = {
         TransactionType: 'MPTokenIssuanceCreate',
@@ -165,6 +169,19 @@ Deno.serve(async (req) => {
       }
       if (max_amount) {
         txJson.MaximumAmount = String(max_amount);
+      }
+
+      // Build MPTokenMetadata from name + description
+      if (name || description) {
+        const metaObj: Record<string, string> = {};
+        if (name) metaObj.name = name;
+        if (description) metaObj.description = description;
+        txJson.MPTokenMetadata = toHex(JSON.stringify(metaObj));
+      }
+
+      // TransferFee only valid when can_transfer is set
+      if (flags?.can_transfer && transfer_fee && Number(transfer_fee) > 0) {
+        txJson.TransferFee = Number(transfer_fee);
       }
 
     } else {
