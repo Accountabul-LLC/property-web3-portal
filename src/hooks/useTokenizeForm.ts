@@ -5,6 +5,10 @@ import { toast } from 'sonner';
 
 export interface TokenizeFormData {
   propertyAddress: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
   propertyType: string;
   squareFootage: string;
   bedrooms: string;
@@ -20,6 +24,10 @@ export interface TokenizeFormData {
 
 const initialFormData: TokenizeFormData = {
   propertyAddress: '',
+  city: '',
+  state: '',
+  zip: '',
+  country: 'US',
   propertyType: '',
   squareFootage: '',
   bedrooms: '',
@@ -52,7 +60,10 @@ export function useTokenizeForm() {
     owner_user_id: user?.id,
     title: formData.propertyAddress || 'Untitled Property',
     address: formData.propertyAddress,
-    address_display: formData.propertyAddress,
+    address_display: [formData.propertyAddress, formData.city, formData.state, formData.zip, formData.country].filter(Boolean).join(', '),
+    city: formData.city || null,
+    state: formData.state || null,
+    zip: formData.zip || null,
     property_type: formData.propertyType || null,
     square_feet: parseNum(formData.squareFootage) ? Math.round(parseNum(formData.squareFootage)!) : null,
     bedrooms: parseNum(formData.bedrooms) ? Math.round(parseNum(formData.bedrooms)!) : null,
