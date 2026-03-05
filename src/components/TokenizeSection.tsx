@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle, Save } from 'lucide-react';
 import { useTokenizeForm } from '@/hooks/useTokenizeForm';
 import { useAuth } from '@/hooks/useAuth';
+import AddressAutocomplete from '@/components/AddressAutocomplete';
 
 const TokenizeSection = () => {
   const navigate = useNavigate();
@@ -71,13 +72,14 @@ const TokenizeSection = () => {
           <div className="space-y-6">
             <div>
               <Label htmlFor="address">Property Address *</Label>
-              <Input
-                id="address"
-                value={formData.propertyAddress}
-                onChange={(e) => handleInputChange('propertyAddress', e.target.value)}
-                placeholder="123 Main Street, City, State, ZIP"
-                className="mt-2"
-              />
+              <div className="mt-2">
+                <AddressAutocomplete
+                  id="address"
+                  value={formData.propertyAddress}
+                  onChange={(value) => handleInputChange('propertyAddress', value)}
+                  placeholder="Start typing an address..."
+                />
+              </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
