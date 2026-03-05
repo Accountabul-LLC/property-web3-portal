@@ -1,9 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import rippleKeypairs from 'https://esm.sh/ripple-keypairs@1.3.1';
-import rippleBinaryCodec from 'https://esm.sh/ripple-binary-codec@1.11.0';
-
-const { deriveKeypair, sign: signMessage } = rippleKeypairs;
-const { encode, encodeForSigning } = rippleBinaryCodec;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +6,15 @@ const corsHeaders = {
 };
 
 const TESTNET_RPC = 'https://s.altnet.rippletest.net:51234';
+
+async function xrplRequest(method: string, params: Record<string, unknown>[]) {
+  const res = await fetch(TESTNET_RPC, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ method, params }),
+  });
+  return res.json();
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -51,20 +55,15 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    // Derive keypair from seed
-    const keypair = deriveKeypair(secret);
-    console.log('Derived public key:', keypair.publicKey);
+    // Import xrpl.js dynamically via npm: specifier (Deno native)
+    const { Wallet } = await import('npm:xrpl@4.1.0');
+    
+    // Derive wallet from seed
+    const wallet = Wallet.fromSeed(secret);
+    console.log('Derived wallet address:', wallet.address);
 
-    // Get account sequence from ledger
-    const accountInfoRes = await fetch(TESTNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        method: 'account_info',
-        params: [{ account: wallet_address, ledger_index: 'current' }],
-      }),
-    });
-    const accountInfo = await accountInfoRes.json();
+    // Get account info for sequence
+    const accountInfo = await xrplRequest('account_info', [{ account: wallet_address, ledger_index: 'current' }]);
 
     if (accountInfo.result?.error) {
       throw new Error(`Account error: ${accountInfo.result.error_message || accountInfo.result.error}`);
@@ -75,45 +74,24 @@ Deno.serve(async (req) => {
       throw new Error('Could not determine account sequence');
     }
 
-    // Complete the transaction
+    // Complete the transaction with sequence and signing pub key
     const completeTx = {
       ...tx_json,
       Sequence: tx_json.Sequence ?? sequence,
-      SigningPubKey: keypair.publicKey,
     };
 
-    console.log('Complete tx:', JSON.stringify(completeTx));
+    console.log('Signing tx:', JSON.stringify(completeTx));
 
-    // Serialize for signing
-    const serializedForSigning = encodeForSigning(completeTx);
+    // Sign locally
+    const signed = wallet.sign(completeTx);
+    console.log('Signed, hash:', signed.hash, 'blob length:', signed.tx_blob.length);
 
-    // Sign the serialized transaction
-    const signature = signMessage(serializedForSigning, keypair.privateKey);
-
-    // Add signature to tx and encode final blob
-    const signedTx = {
-      ...completeTx,
-      TxnSignature: signature,
-    };
-    const txBlob = encode(signedTx);
-
-    console.log('Signed tx blob length:', txBlob.length);
-
-    // Submit the signed transaction
-    const submitRes = await fetch(TESTNET_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        method: 'submit',
-        params: [{ tx_blob: txBlob }],
-      }),
-    });
-
-    const submitData = await submitRes.json();
+    // Submit
+    const submitData = await xrplRequest('submit', [{ tx_blob: signed.tx_blob }]);
     console.log('Submit response:', JSON.stringify(submitData));
 
     const engineResult = submitData.result?.engine_result;
-    const txHash = submitData.result?.tx_json?.hash;
+    const txHash = submitData.result?.tx_json?.hash || signed.hash;
 
     if (engineResult !== 'tesSUCCESS' && !engineResult?.startsWith('tec')) {
       throw new Error(`Submit failed: ${engineResult} — ${submitData.result?.engine_result_message || ''}`);
