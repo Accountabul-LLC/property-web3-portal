@@ -46,7 +46,7 @@ const MintWizard: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pushed, setPushed] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [generatingFaucet, setGeneratingFaucet] = useState(false);
   const getParams = () => {
     if (tokenType === 'nft') return nftParams;
     if (tokenType === 'mpt') return mptParams;
