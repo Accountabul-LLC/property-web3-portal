@@ -84,7 +84,7 @@ serve(async (req) => {
       limit: Number(line.limit),
     })).filter((t: any) => t.balance !== 0);
 
-    // Parse recent transactions
+    // Parse recent transactions with richer data
     const transactions = (accountTxRes.result?.transactions || []).map((entry: any) => {
       const tx = entry.tx || entry.tx_json || {};
       const meta = entry.meta || {};
@@ -95,7 +95,9 @@ serve(async (req) => {
       let amount = 0;
       let currency = 'XRP';
       let txType = tx.TransactionType || 'Unknown';
+      let issuer: string | null = null;
 
+      // Parse Amount field
       if (tx.Amount) {
         if (typeof tx.Amount === 'string') {
           amount = Number(tx.Amount) / 1_000_000;
@@ -103,21 +105,113 @@ serve(async (req) => {
         } else if (tx.Amount.value) {
           amount = Number(tx.Amount.value);
           currency = tx.Amount.currency;
+          issuer = tx.Amount.issuer || null;
+        }
+      }
+
+      // Use delivered_amount when available (actual amount received)
+      const delivered = meta.delivered_amount;
+      let deliveredAmount: number | null = null;
+      let deliveredCurrency: string | null = null;
+      if (delivered) {
+        if (typeof delivered === 'string') {
+          deliveredAmount = Number(delivered) / 1_000_000;
+          deliveredCurrency = 'XRP';
+        } else if (delivered.value) {
+          deliveredAmount = Number(delivered.value);
+          deliveredCurrency = delivered.currency;
         }
       }
 
       const direction = tx.Destination === wallet_address ? 'received' : 'sent';
+      const sender = tx.Account || null;
+      const destination = tx.Destination || null;
+
+      // Parse memos
+      const memos: string[] = [];
+      if (tx.Memos && Array.isArray(tx.Memos)) {
+        for (const m of tx.Memos) {
+          if (m.Memo?.MemoData) {
+            try {
+              const hex = m.Memo.MemoData;
+              const text = hex.match(/../g)?.map((h: string) => String.fromCharCode(parseInt(h, 16))).join('') || '';
+              if (text && /^[\x20-\x7E\s]+$/.test(text)) memos.push(text);
+            } catch {}
+          }
+        }
+      }
+
+      // Parse balance changes from meta for swap detection
+      const balanceChanges: Array<{ account: string; currency: string; issuer?: string; value: number }> = [];
+      if (meta.AffectedNodes) {
+        for (const node of meta.AffectedNodes) {
+          const modified = node.ModifiedNode || node.CreatedNode || node.DeletedNode;
+          if (!modified) continue;
+          
+          if (modified.LedgerEntryType === 'RippleState') {
+            const finalBal = modified.FinalFields?.Balance?.value;
+            const prevBal = modified.PreviousFields?.Balance?.value;
+            if (finalBal !== undefined && prevBal !== undefined) {
+              const change = Number(finalBal) - Number(prevBal);
+              if (change !== 0) {
+                balanceChanges.push({
+                  account: modified.FinalFields?.HighLimit?.issuer === wallet_address 
+                    ? wallet_address 
+                    : (modified.FinalFields?.LowLimit?.issuer === wallet_address ? wallet_address : ''),
+                  currency: modified.FinalFields?.Balance?.currency || 'Unknown',
+                  issuer: modified.FinalFields?.HighLimit?.issuer === wallet_address
+                    ? modified.FinalFields?.LowLimit?.issuer
+                    : modified.FinalFields?.HighLimit?.issuer,
+                  value: change,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Detect if this is likely a swap (OfferCreate with balance changes in multiple currencies)
+      const isSwap = txType === 'OfferCreate' || 
+        (txType === 'Payment' && balanceChanges.filter(bc => bc.account === wallet_address).length > 1);
+
+      // For OfferCreate, parse TakerPays/TakerGets
+      let takerPays: { currency: string; value: number; issuer?: string } | null = null;
+      let takerGets: { currency: string; value: number; issuer?: string } | null = null;
+      if (tx.TakerPays) {
+        if (typeof tx.TakerPays === 'string') {
+          takerPays = { currency: 'XRP', value: Number(tx.TakerPays) / 1_000_000 };
+        } else {
+          takerPays = { currency: tx.TakerPays.currency, value: Number(tx.TakerPays.value), issuer: tx.TakerPays.issuer };
+        }
+      }
+      if (tx.TakerGets) {
+        if (typeof tx.TakerGets === 'string') {
+          takerGets = { currency: 'XRP', value: Number(tx.TakerGets) / 1_000_000 };
+        } else {
+          takerGets = { currency: tx.TakerGets.currency, value: Number(tx.TakerGets.value), issuer: tx.TakerGets.issuer };
+        }
+      }
 
       return {
         hash: tx.hash,
-        type: txType,
+        type: isSwap ? 'Swap' : txType,
         direction,
         amount,
         currency,
+        issuer,
+        delivered_amount: deliveredAmount,
+        delivered_currency: deliveredCurrency,
         date,
         fee: tx.Fee ? Number(tx.Fee) / 1_000_000 : 0,
-        destination: tx.Destination || null,
+        sender,
+        destination,
+        destination_tag: tx.DestinationTag ?? null,
+        memos: memos.length > 0 ? memos : null,
         result: meta.TransactionResult || null,
+        is_swap: isSwap,
+        taker_pays: takerPays,
+        taker_gets: takerGets,
+        balance_changes: balanceChanges.length > 0 ? balanceChanges : null,
       };
     });
 
