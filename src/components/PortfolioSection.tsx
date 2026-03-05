@@ -658,7 +658,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                       return (
                         <Card
                           key={mptKey}
-                          className={`hover:shadow-card transition-all duration-300 cursor-pointer ${isExpanded ? 'ring-1 ring-primary/30' : ''}`}
+                          className={`hover:shadow-card hover:border-primary/40 transition-all duration-300 cursor-pointer ${isExpanded ? 'ring-1 ring-primary/30' : ''}`}
                           onClick={() => setExpandedToken(isExpanded ? null : mptKey)}
                         >
                           <div className="p-5">
@@ -790,9 +790,21 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 )}
                               </div>
                               {mpt.mpt_issuance_id && (
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono break-all">
-                                  <span>Issuance ID:</span>
-                                  <span>{mpt.mpt_issuance_id}</span>
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono break-all">
+                                    <span>Issuance ID:</span>
+                                    <span>{mpt.mpt_issuance_id}</span>
+                                  </div>
+                                  <a
+                                    href={`https://${isTestnet ? 'testnet' : 'livenet'}.xrpl.org/mpt/${mpt.mpt_issuance_id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/5 hover:bg-primary/10 px-3 py-1.5 rounded-md flex-shrink-0"
+                                  >
+                                    <ExternalLink className="w-3 h-3" />
+                                    View in Explorer
+                                  </a>
                                 </div>
                               )}
                             </div>
