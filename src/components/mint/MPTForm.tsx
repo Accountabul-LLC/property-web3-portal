@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon } from 'lucide-react';
+import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon, FlaskConical, Shuffle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -46,6 +46,7 @@ export interface MPTParams {
 interface MPTFormProps {
   params: MPTParams;
   onChange: (params: MPTParams) => void;
+  network?: 'testnet' | 'mainnet';
 }
 
 const FLAG_OPTIONS: { key: keyof MPTParams['flags']; label: string; desc: string }[] = [
@@ -163,7 +164,82 @@ const TokenImageUpload = ({ value, onChange }: { value: string; onChange: (url: 
   );
 };
 
-const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
+const RANDOM_PROPERTIES = [
+  { name: 'Sunset Ridge Estate Token', ticker: 'SNST', address: '742 Evergreen Terrace', city: 'Miami', state: 'FL', type: 'Single Family' },
+  { name: 'Harbor View Loft Token', ticker: 'HRBR', address: '88 Waterfront Drive', city: 'San Diego', state: 'CA', type: 'Condo / Apartment' },
+  { name: 'Mountain Crest Villa Token', ticker: 'MTCR', address: '1200 Alpine Road', city: 'Denver', state: 'CO', type: 'Single Family' },
+  { name: 'Palm Gardens Residence Token', ticker: 'PALM', address: '456 Palm Boulevard', city: 'Austin', state: 'TX', type: 'Townhouse' },
+  { name: 'Coral Reef Beach House Token', ticker: 'CORAL', address: '221B Baker Street', city: 'Fort Lauderdale', state: 'FL', type: 'Single Family' },
+  { name: 'Skyline Tower Unit Token', ticker: 'SKYL', address: '1600 Pennsylvania Ave', city: 'Chicago', state: 'IL', type: 'Condo / Apartment' },
+  { name: 'Oakwood Manor Token', ticker: 'OAKW', address: '99 Oak Hill Lane', city: 'Portland', state: 'OR', type: 'Multi-Family' },
+  { name: 'Desert Oasis Villa Token', ticker: 'DSER', address: '3050 Cactus Way', city: 'Scottsdale', state: 'AZ', type: 'Single Family' },
+  { name: 'Lakefront Retreat Token', ticker: 'LAKE', address: '12 Lakeshore Drive', city: 'Nashville', state: 'TN', type: 'Single Family' },
+  { name: 'Metro Mixed-Use Token', ticker: 'MTRO', address: '500 Commerce Street', city: 'Atlanta', state: 'GA', type: 'Mixed-Use' },
+];
+
+const RANDOM_OWNERS = [
+  { name: 'Alice Johnson', email: 'alice@example.com' },
+  { name: 'Bob Martinez', email: 'bob.martinez@example.com' },
+  { name: 'Charlie Kim', email: 'charlie.k@example.com' },
+  { name: 'Diana Patel', email: 'diana.p@example.com' },
+  { name: 'Ethan Nakamura', email: 'ethan.n@example.com' },
+  { name: 'Fiona O\'Brien', email: 'fiona.ob@example.com' },
+];
+
+const RANDOM_DESCRIPTIONS = [
+  'Beautiful property in a prime location with modern amenities and excellent investment potential. Recently renovated with high-end finishes throughout.',
+  'Charming residence featuring open floor plan, updated kitchen, and spacious backyard. Located in a top-rated school district.',
+  'Stunning contemporary home with panoramic views, smart home features, and energy-efficient design. Minutes from downtown.',
+  'Well-maintained property with strong rental history and consistent cash flow. Ideal for income-focused investors.',
+  'Luxury living with resort-style amenities including pool, gym, and concierge services. Premium location near shopping and dining.',
+];
+
+const RANDOM_IMAGES = [
+  'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?w=800&q=80',
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&q=80',
+  'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&q=80',
+  'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&q=80',
+];
+
+const rand = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+function generateTestData(): MPTParams {
+  const prop = rand(RANDOM_PROPERTIES);
+  const owner = rand(RANDOM_OWNERS);
+  return {
+    name: prop.name,
+    description: rand(RANDOM_DESCRIPTIONS),
+    ticker: prop.ticker,
+    image_url: rand(RANDOM_IMAGES),
+    property_address: prop.address,
+    city: prop.city,
+    state: prop.state,
+    zip: String(randInt(10000, 99999)),
+    country: 'US',
+    property_type: prop.type,
+    owner_name: owner.name,
+    owner_email: owner.email,
+    estimated_value: String(randInt(1, 50) * 100000),
+    bedrooms: String(randInt(1, 6)),
+    bathrooms: String(randInt(1, 4)),
+    square_feet: String(randInt(8, 50) * 100),
+    year_built: String(randInt(1950, 2024)),
+    max_amount: String(randInt(1, 10) * (Math.random() > 0.5 ? 10000 : 1000)),
+    asset_scale: randInt(0, 2),
+    transfer_fee: Math.random() > 0.5 ? randInt(100, 5000) : 0,
+    flags: {
+      can_transfer: Math.random() > 0.3,
+      can_trade: Math.random() > 0.5,
+      can_lock: Math.random() > 0.6,
+      require_auth: Math.random() > 0.7,
+      can_escrow: Math.random() > 0.6,
+      can_clawback: Math.random() > 0.5,
+    },
+  };
+}
+
+const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
   const set = (key: string, value: string | number) => onChange({ ...params, [key]: value });
   const setFlag = (key: keyof MPTParams['flags'], value: boolean) => {
     const newFlags = { ...params.flags, [key]: value };
@@ -173,6 +249,23 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
 
   return (
     <div className="space-y-6">
+      {network === 'testnet' && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+          <FlaskConical className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <span className="text-xs text-amber-500 font-medium">Testnet Mode</span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 text-xs border-amber-500/30 text-amber-500 hover:bg-amber-500/20"
+            onClick={() => onChange(generateTestData())}
+          >
+            <Shuffle className="w-3 h-3 mr-1" />
+            Generate Test Data
+          </Button>
+        </div>
+      )}
+
       {/* Property Information */}
       <Card className="p-4 space-y-4 border-primary/10">
         <SectionHeader icon={Building2} title="Property Information" />

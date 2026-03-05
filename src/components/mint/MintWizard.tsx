@@ -343,7 +343,7 @@ const MintWizard: React.FC = () => {
             <Badge variant="outline" className="mb-2">{TOKEN_INFO[tokenType].label}</Badge>
 
             {tokenType === 'nft' && <NFTForm params={nftParams} onChange={setNftParams} />}
-            {tokenType === 'mpt' && <MPTForm params={mptParams} onChange={setMptParams} />}
+            {tokenType === 'mpt' && <MPTForm params={mptParams} onChange={setMptParams} network={network} />}
             {tokenType === 'iou' && <IOUForm params={iouParams} onChange={setIouParams} />}
 
             <div className="flex justify-between">
