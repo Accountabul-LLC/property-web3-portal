@@ -57,7 +57,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
             setStep('success');
             setIsPolling(false);
             clearInterval(pollInterval);
-            onWalletConnected(data.wallet_address);
+            onWalletConnected(data.wallet_address, data.account_name || null);
           } else if (data.cancelled || data.expired) {
             setError(data.cancelled ? 'Payment request was cancelled' : 'Payment request expired');
             setStep('error');
