@@ -182,7 +182,18 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     <div className="flex items-center space-x-4">
                       <TokenAvatar currency="XRP" />
                       <div>
-                        <p className="font-semibold text-lg">XRP</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-lg">XRP</p>
+                          <a
+                            href="https://xrpl.org/about/xrp"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                            title="Learn about XRP"
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
                         <p className="text-xs text-muted-foreground">Native token</p>
                       </div>
                     </div>
