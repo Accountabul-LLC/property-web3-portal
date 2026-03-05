@@ -201,7 +201,15 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
           {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
             <span className="text-foreground">{activeWallet.label} · </span>
           )}
-          <span className="font-mono text-sm">{shortenAddress(displayAddress!)}</span>
+          <a
+            href={`${explorerBase}/accounts/${displayAddress}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1"
+          >
+            {shortenAddress(displayAddress!)}
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </p>
         {!isReadOnly && (
           <div className="flex justify-center gap-3 mt-4">
