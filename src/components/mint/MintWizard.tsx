@@ -25,7 +25,7 @@ const TOKEN_INFO: Record<TokenType, { label: string; desc: string; icon: React.R
 };
 
 const defaultNFT: NFTParams = { uri: '', flags: { transferable: true, burnable: false, onlyXRP: false } };
-const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset_scale: 0, transfer_fee: 0, flags: { can_lock: false, require_auth: false, can_escrow: false, can_trade: false, can_transfer: true, can_clawback: false }, property_address: '', city: '', state: '', zip: '', country: 'United States', property_type: '', owner_name: '', owner_email: '', estimated_value: '', bedrooms: '', bathrooms: '', square_feet: '', year_built: '' };
+const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset_scale: 0, transfer_fee: 0, flags: { can_lock: false, require_auth: false, can_escrow: false, can_trade: false, can_transfer: true, can_clawback: false }, image_url: '', collection_name: 'RWA Property Tokens', collection_family: 'Real Estate', property_address: '', city: '', state: '', zip: '', country: 'United States', property_type: '', owner_name: '', owner_email: '', estimated_value: '', bedrooms: '', bathrooms: '', square_feet: '', year_built: '' };
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {

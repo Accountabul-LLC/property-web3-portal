@@ -52,13 +52,12 @@ function parseMPTIssuances(objects: any[]) {
   return objects
     .filter((obj: any) => obj.LedgerEntryType === 'MPTokenIssuance')
     .map((obj: any) => {
-      let metadata: { name?: string; description?: string } = {};
+      let metadata: Record<string, any> = {};
       if (obj.MPTokenMetadata) {
         const decoded = decodeHexString(obj.MPTokenMetadata);
         try {
           metadata = JSON.parse(decoded);
         } catch {
-          // Not JSON, use raw decoded string as name
           if (decoded && /^[\x20-\x7E\s]+$/.test(decoded)) {
             metadata = { name: decoded };
           }
@@ -76,6 +75,11 @@ function parseMPTIssuances(objects: any[]) {
         metadata_hex: obj.MPTokenMetadata || null,
         name: metadata.name || null,
         description: metadata.description || null,
+        image: metadata.image || null,
+        nft_type: metadata.nftType || null,
+        collection: metadata.collection || null,
+        attributes: Array.isArray(metadata.attributes) ? metadata.attributes : null,
+        schema: metadata.schema || null,
       };
     });
 }

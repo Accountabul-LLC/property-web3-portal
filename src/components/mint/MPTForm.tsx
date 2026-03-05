@@ -21,6 +21,10 @@ export interface MPTParams {
     can_transfer: boolean;
     can_clawback: boolean;
   };
+  // XLS-24d metadata
+  image_url: string;
+  collection_name: string;
+  collection_family: string;
   // RWA metadata
   property_address: string;
   city: string;
@@ -112,6 +116,41 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
             className="mt-1"
             rows={3}
           />
+        </div>
+
+        <div>
+          <Label htmlFor="mpt-image">Image URL</Label>
+          <Input
+            id="mpt-image"
+            placeholder="https://… or ipfs://…"
+            value={params.image_url}
+            onChange={e => set('image_url', e.target.value)}
+            className="mt-1"
+          />
+          <p className="text-xs text-muted-foreground mt-1">IPFS or HTTPS link to a property photo / thumbnail</p>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="mpt-collection">Collection Name</Label>
+            <Input
+              id="mpt-collection"
+              placeholder="RWA Property Tokens"
+              value={params.collection_name}
+              onChange={e => set('collection_name', e.target.value)}
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="mpt-family">Collection Family</Label>
+            <Input
+              id="mpt-family"
+              placeholder="Real Estate"
+              value={params.collection_family}
+              onChange={e => set('collection_family', e.target.value)}
+              className="mt-1"
+            />
+          </div>
         </div>
 
         <div>
