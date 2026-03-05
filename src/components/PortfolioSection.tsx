@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
+import { useTokenMeta } from '@/hooks/useTokenMeta';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
@@ -55,6 +56,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+
+  // Fetch enriched metadata for all token holdings
+  const { data: tokenMetaMap } = useTokenMeta(
+    xrplData?.token_holdings.map((t) => ({ currency: t.currency, issuer: t.issuer }))
+  );
 
   const formatXRP = (amount: number | undefined | null) => (amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -184,23 +190,52 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                   </div>
                 </Card>
                 {/* Issued tokens */}
-                {xrplData.token_holdings.map((token, idx) => (
-                  <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <TokenAvatar issuer={token.issuer} currency={token.currency} />
-                        <div>
-                          <p className="font-semibold text-lg">{decodeCurrency(token.currency)}</p>
-                          <p className="text-xs text-muted-foreground font-mono">{shortenAddress(token.issuer)}</p>
+                {xrplData.token_holdings.map((token, idx) => {
+                  const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
+                  const displayName = meta?.name || decodeCurrency(token.currency);
+                  const issuerLabel = meta?.issuer_name || shortenAddress(token.issuer);
+
+                  return (
+                    <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <TokenAvatar issuer={token.issuer} currency={token.currency} />
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-lg">{displayName}</p>
+                              {meta?.website && (
+                                <a
+                                  href={meta.website.startsWith('http') ? meta.website : `https://${meta.website}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-muted-foreground hover:text-primary transition-colors"
+                                  title={meta.website}
+                                >
+                                  <Globe className="w-3.5 h-3.5" />
+                                </a>
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {issuerLabel}
+                              {meta?.domain && ` · ${meta.domain}`}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                          {meta?.price ? (
+                            <p className="text-xs text-muted-foreground">
+                              ≈ ${(Number(token.balance) * meta.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                            </p>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
+                          )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
-                        <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
             </div>
 
