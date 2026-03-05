@@ -27,18 +27,31 @@ serve(async (req) => {
       });
     }
 
-    const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(input)}&types=address&components=country:us&key=${apiKey}`;
-    const res = await fetch(url);
+    const res = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+      },
+      body: JSON.stringify({
+        input,
+        includedPrimaryTypes: ["street_address", "subpremise", "premise"],
+        includedRegionCodes: ["us"],
+      }),
+    });
+
     const data = await res.json();
 
-    if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
-      throw new Error(`Google Places API error: ${data.status} - ${data.error_message || ""}`);
+    if (!res.ok) {
+      throw new Error(`Google Places API error [${res.status}]: ${JSON.stringify(data)}`);
     }
 
-    const predictions = (data.predictions || []).map((p: any) => ({
-      description: p.description,
-      place_id: p.place_id,
-    }));
+    const predictions = (data.suggestions || [])
+      .filter((s: any) => s.placePrediction)
+      .map((s: any) => ({
+        description: s.placePrediction.text?.text || "",
+        place_id: s.placePrediction.placeId || "",
+      }));
 
     return new Response(JSON.stringify({ predictions }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
