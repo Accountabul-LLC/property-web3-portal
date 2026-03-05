@@ -316,13 +316,18 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
+                              <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
                               {xrpUsdPrice > 0 ? (
-                                <p className="text-xs text-muted-foreground">
-                                  ≈ ${((xrplData.spendable_xrp ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                                </p>
+                                <>
+                                  <p className="text-sm font-semibold text-primary">
+                                    ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    @ ${xrpUsdPrice.toFixed(4)}/XRP
+                                  </p>
+                                </>
                               ) : (
-                                <p className="text-xs text-muted-foreground">Spendable</p>
+                                <p className="text-xs text-muted-foreground">No USD price</p>
                               )}
                             </div>
                             {isXrpExpanded ? (
