@@ -261,9 +261,32 @@ const Dashboard = () => {
         <Card className="p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-primary" />
-              </div>
+              <button
+                type="button"
+                className="relative group w-12 h-12 rounded-full overflow-hidden cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Click to upload profile picture"
+              >
+                <Avatar className="w-12 h-12">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={displayName} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="w-6 h-6 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+              </button>
               <div>
                 <h2 className="text-xl font-semibold">{displayName}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
