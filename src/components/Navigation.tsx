@@ -158,15 +158,26 @@ const Navigation = () => {
               )
             )}
             {user ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/dashboard')}
-                className="h-8 px-3 text-xs font-medium"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
-                Dashboard
-              </Button>
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="h-8 px-3 text-xs font-medium"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="h-8 w-8 p-0 text-muted-foreground"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="hero"
