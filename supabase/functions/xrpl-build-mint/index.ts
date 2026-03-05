@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
     ]);
 
     if (accountInfoRes.result?.error === 'actNotFound') {
-      return new Response(JSON.stringify({ error: 'Account not found on XRPL. Fund it first on testnet.' }), {
+      return new Response(JSON.stringify({ error: `Account not found on XRPL ${network}. Fund it first.` }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

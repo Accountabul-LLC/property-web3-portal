@@ -34,7 +34,7 @@ const MintWizard: React.FC = () => {
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
-  const [network, setNetwork] = useState<Network>('testnet');
+  const [network, setNetwork] = useState<Network>(activeWallet?.network === 'testnet' ? 'testnet' : 'testnet');
 
   const [nftParams, setNftParams] = useState<NFTParams>(defaultNFT);
   const [mptParams, setMptParams] = useState<MPTParams>(defaultMPT);
@@ -59,8 +59,9 @@ const MintWizard: React.FC = () => {
     return iouParams.currency_code.length === 3 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
   };
 
+  const walletNetwork = activeWallet?.network || 'mainnet';
+  const networkMismatch = network !== walletNetwork;
   const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
-  const needsFaucetWallet = network === 'testnet' && !isTestnetFaucetWallet;
 
   const handleGenerateFaucetWallet = useCallback(async () => {
     if (!user) return;
@@ -75,7 +76,8 @@ const MintWizard: React.FC = () => {
         'Testnet Faucet Wallet',
         null,
         'testnet_faucet',
-        data.secret
+        data.secret,
+        'testnet'
       );
 
       toast({ title: '✅ Testnet wallet created', description: `Funded with ${data.balance} XRP` });
@@ -313,12 +315,12 @@ const MintWizard: React.FC = () => {
               </p>
             )}
 
-            {needsFaucetWallet && (
+            {networkMismatch && (
               <Alert className="border-amber-500/30 bg-amber-500/5">
                 <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Testnet wallet needed</AlertTitle>
+                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
                 <AlertDescription className="text-xs text-muted-foreground">
-                  Your current wallet is connected via Xaman and can't auto-sign testnet transactions. You'll be able to generate a testnet wallet in the review step.
+                  Your active wallet is on <strong>{walletNetwork}</strong> but you selected <strong>{network}</strong>. Switch wallets or {network === 'testnet' ? 'generate a testnet wallet' : 'connect a mainnet wallet via Xaman'}.
                 </AlertDescription>
               </Alert>
             )}
@@ -414,23 +416,25 @@ const MintWizard: React.FC = () => {
               )}
             </div>
 
-            {needsFaucetWallet ? (
+            {networkMismatch ? (
               <div className="space-y-3">
                 <Alert className="border-amber-500/30 bg-amber-500/5">
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Can't auto-sign with this wallet</AlertTitle>
+                  <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
                   <AlertDescription className="text-xs text-muted-foreground">
-                    Your current wallet was connected via Xaman and doesn't have a server-side secret for testnet auto-signing. Generate a testnet wallet to continue.
+                    Your wallet is on <strong>{walletNetwork}</strong> but you're minting on <strong>{network}</strong>. Switch wallets or change the network to proceed.
                   </AlertDescription>
                 </Alert>
                 <div className="flex justify-between">
                   <Button variant="ghost" onClick={() => setStep('form')}>
                     <ArrowLeft className="w-4 h-4 mr-1" /> Back
                   </Button>
-                  <Button onClick={handleGenerateFaucetWallet} disabled={generatingFaucet} variant="hero">
-                    {generatingFaucet ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wallet className="w-4 h-4 mr-1" />}
-                    Generate Testnet Wallet
-                  </Button>
+                  {network === 'testnet' && (
+                    <Button onClick={handleGenerateFaucetWallet} disabled={generatingFaucet} variant="hero">
+                      {generatingFaucet ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wallet className="w-4 h-4 mr-1" />}
+                      Generate Testnet Wallet
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (

@@ -687,6 +687,7 @@ export type Database = {
           id: string
           label: string | null
           last_seen_at: string
+          network: string
           provider: string
           revoked_at: string | null
           status: string
@@ -702,6 +703,7 @@ export type Database = {
           id?: string
           label?: string | null
           last_seen_at?: string
+          network?: string
           provider?: string
           revoked_at?: string | null
           status?: string
@@ -717,6 +719,7 @@ export type Database = {
           id?: string
           label?: string | null
           last_seen_at?: string
+          network?: string
           provider?: string
           revoked_at?: string | null
           status?: string
