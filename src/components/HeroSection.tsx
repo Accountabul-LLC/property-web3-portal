@@ -33,10 +33,10 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
   ];
 
   const stats = [
-    { value: '$2.4B+', label: 'Total Value Locked' },
-    { value: '12,500+', label: 'Properties Tokenized' },
-    { value: '95%+', label: 'User Satisfaction' },
-    { value: '24/7', label: 'Trading Available' }
+    { value: '$50M+', label: 'Properties Tokenized' },
+    { value: '12,000+', label: 'Active Members' },
+    { value: '25,000+', label: 'Transactions' },
+    { value: '8.5%', label: 'Average Return' }
   ];
 
   return (
