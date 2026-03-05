@@ -1,3 +1,5 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -11,6 +13,8 @@ Deno.serve(async (req) => {
   try {
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     if (!xamanApiKey || !xamanApiSecret) {
       throw new Error('Xaman API credentials not configured');
@@ -22,9 +26,24 @@ Deno.serve(async (req) => {
       throw new Error('Invalid transaction JSON');
     }
 
-    console.log('Creating Xaman payment payload for', tx_json.Account, '→', tx_json.Destination);
+    const senderAddress = tx_json.Account;
+    console.log('Creating Xaman payment payload for', senderAddress, '→', tx_json.Destination);
 
-    const payload = {
+    // Look up the user_token for push notifications
+    let userToken: string | null = null;
+    if (senderAddress) {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      const { data: profile } = await supabase
+        .from('wallet_profiles')
+        .select('xaman_user_token')
+        .eq('wallet_address', senderAddress)
+        .single();
+      userToken = profile?.xaman_user_token || null;
+    }
+
+    console.log('User token present:', !!userToken);
+
+    const payload: Record<string, unknown> = {
       txjson: tx_json,
       options: {
         submit: true,
@@ -41,6 +60,11 @@ Deno.serve(async (req) => {
         }
       }
     };
+
+    // Include user_token to trigger push notification instead of QR code
+    if (userToken) {
+      payload.user_token = userToken;
+    }
 
     const xamanResponse = await fetch('https://xaman.app/api/v1/platform/payload', {
       method: 'POST',
@@ -60,13 +84,14 @@ Deno.serve(async (req) => {
     }
 
     const xamanData = JSON.parse(responseText);
-    console.log('Xaman payment payload created:', xamanData.uuid);
+    console.log('Xaman payment payload created:', xamanData.uuid, 'pushed:', xamanData.pushed);
 
     return new Response(JSON.stringify({
       success: true,
       uuid: xamanData.uuid,
       qr_code: xamanData.refs?.qr_png,
       websocket_url: xamanData.refs?.websocket_status,
+      pushed: xamanData.pushed || false,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

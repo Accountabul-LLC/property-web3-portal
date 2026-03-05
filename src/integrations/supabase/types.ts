@@ -640,6 +640,7 @@ export type Database = {
           id: string
           last_login: string | null
           wallet_address: string
+          xaman_user_token: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -648,6 +649,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           wallet_address: string
+          xaman_user_token?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -656,6 +658,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           wallet_address?: string
+          xaman_user_token?: string | null
         }
         Relationships: []
       }

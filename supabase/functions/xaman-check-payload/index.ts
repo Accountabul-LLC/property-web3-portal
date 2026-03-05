@@ -60,8 +60,9 @@ Deno.serve(async (req) => {
     if (xamanData.meta?.signed && xamanData.response) {
       status = 'signed';
       wallet_address = xamanData.response.account;
+      const userToken = xamanData.response?.user_token || null;
       
-      console.log('Wallet signed in:', wallet_address);
+      console.log('Wallet signed in:', wallet_address, 'user_token present:', !!userToken);
 
       await supabase
         .from('xaman_payloads')
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
         })
         .eq('uuid', uuid);
 
-      // Create or update user profile
+      // Create or update user profile (including user_token for push notifications)
       const { data: existingProfile } = await supabase
         .from('wallet_profiles')
         .select('*')
@@ -85,12 +86,15 @@ Deno.serve(async (req) => {
           .insert({
             wallet_address,
             created_at: new Date().toISOString(),
-            last_login: new Date().toISOString()
+            last_login: new Date().toISOString(),
+            xaman_user_token: userToken,
           });
       } else {
+        const updateData: Record<string, unknown> = { last_login: new Date().toISOString() };
+        if (userToken) updateData.xaman_user_token = userToken;
         await supabase
           .from('wallet_profiles')
-          .update({ last_login: new Date().toISOString() })
+          .update(updateData)
           .eq('wallet_address', wallet_address);
       }
 
