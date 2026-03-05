@@ -100,6 +100,7 @@ const TokenizeSection = () => {
                   id="address"
                   value={formData.propertyAddress}
                   onChange={(value) => handleInputChange('propertyAddress', value)}
+                  onPlaceSelect={handlePlaceSelect}
                   placeholder="Start typing an address..."
                 />
               </div>
