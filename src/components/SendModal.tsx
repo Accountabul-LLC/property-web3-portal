@@ -9,8 +9,9 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowRight, Loader2, CheckCircle, XCircle, ExternalLink, ArrowLeft,
-  Coins, Search, ChevronRight,
+  Coins, Search, ChevronRight, Camera,
 } from 'lucide-react';
+import QRScanner from '@/components/QRScanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { XRPLTokenHolding } from '@/hooks/useXRPLPortfolio';
@@ -57,6 +58,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
   const [qrCode, setQrCode] = useState('');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   const { toast } = useToast();
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -196,6 +198,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     setQrCode('');
     setTxHash(null);
     setErrorMsg('');
+    setShowScanner(false);
     onClose();
   };
 
@@ -329,7 +332,29 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="to-address">Destination Address</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="to-address">Destination Address</Label>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 gap-1 text-xs text-primary"
+                  onClick={() => setShowScanner(!showScanner)}
+                >
+                  <Camera className="w-3.5 h-3.5" />
+                  {showScanner ? 'Close Scanner' : 'Scan QR'}
+                </Button>
+              </div>
+
+              {showScanner && (
+                <QRScanner
+                  onScan={(address) => {
+                    setToAddress(address);
+                    setShowScanner(false);
+                  }}
+                  onClose={() => setShowScanner(false)}
+                />
+              )}
+
               <Input
                 id="to-address"
                 placeholder="rXXXX..."
