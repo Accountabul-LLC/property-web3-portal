@@ -50,21 +50,44 @@ serve(async (req) => {
       });
     }
 
-    // --- Wallet ownership verification ---
-    // Verify the sender wallet was previously authenticated via Xaman sign-in
+    // --- Auth + Wallet ownership verification ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { data: profile } = await supabase
-      .from('wallet_profiles')
-      .select('wallet_address')
+    // Verify authenticated user
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userId = claimsData.claims.sub as string;
+
+    // Verify wallet belongs to this user
+    const { data: walletLink } = await supabase
+      .from('user_wallets')
+      .select('id')
       .eq('wallet_address', from_address)
+      .eq('user_id', userId)
+      .eq('status', 'active')
       .single();
 
-    if (!profile) {
-      return new Response(JSON.stringify({ error: 'Wallet not verified. Please connect via Xaman first.' }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    if (!walletLink) {
+      return new Response(JSON.stringify({ error: 'Wallet not linked to your account. Please connect it first.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 

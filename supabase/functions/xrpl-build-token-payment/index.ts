@@ -64,19 +64,37 @@ serve(async (req) => {
       return jsonError('Cannot send to yourself', 400);
     }
 
-    // --- Wallet ownership verification ---
+    // --- Auth + Wallet ownership verification ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const db = createClient(supabaseUrl, supabaseKey);
 
-    const { data: profile } = await db
-      .from('wallet_profiles')
-      .select('wallet_address')
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return jsonError('Authentication required', 401);
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      return jsonError('Invalid authentication', 401);
+    }
+    const userId = claimsData.claims.sub as string;
+
+    const { data: walletLink } = await db
+      .from('user_wallets')
+      .select('id')
       .eq('wallet_address', from_address)
+      .eq('user_id', userId)
+      .eq('status', 'active')
       .single();
 
-    if (!profile) {
-      return jsonError('Wallet not verified. Please connect via Xaman first.', 403);
+    if (!walletLink) {
+      return jsonError('Wallet not linked to your account. Please connect it first.', 403);
     }
     if (!currency || typeof currency !== 'string') {
       return jsonError('Currency is required', 400);
