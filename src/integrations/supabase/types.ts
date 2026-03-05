@@ -538,6 +538,51 @@ export type Database = {
           },
         ]
       }
+      token_mints: {
+        Row: {
+          created_at: string
+          id: string
+          network: string
+          request_json: Json | null
+          status: string
+          token_type: string
+          tx_hash: string | null
+          tx_json: Json | null
+          updated_at: string
+          user_id: string
+          wallet_address: string
+          xaman_payload_uuid: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          network?: string
+          request_json?: Json | null
+          status?: string
+          token_type: string
+          tx_hash?: string | null
+          tx_json?: Json | null
+          updated_at?: string
+          user_id: string
+          wallet_address: string
+          xaman_payload_uuid?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          network?: string
+          request_json?: Json | null
+          status?: string
+          token_type?: string
+          tx_hash?: string | null
+          tx_json?: Json | null
+          updated_at?: string
+          user_id?: string
+          wallet_address?: string
+          xaman_payload_uuid?: string | null
+        }
+        Relationships: []
+      }
       token_orders: {
         Row: {
           created_at: string
