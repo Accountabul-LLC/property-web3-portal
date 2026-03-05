@@ -559,9 +559,9 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                             )}
                           </div>
 
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                            <span>Issuer:</span>
-                            <span>{token.issuer}</span>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono min-w-0">
+                            <span className="flex-shrink-0">Issuer:</span>
+                            <span className="truncate">{token.issuer}</span>
                           </div>
 
                           <div className="flex items-center gap-3 pt-1">
