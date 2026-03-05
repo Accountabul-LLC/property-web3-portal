@@ -183,6 +183,15 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
               <span>Add Wallet</span>
             </button>
 
+            <button
+              onClick={handleGenerateTestnet}
+              disabled={generatingTestnet}
+              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              {generatingTestnet ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+              <span>{generatingTestnet ? 'Generating...' : 'Generate Testnet Wallet'}</span>
+            </button>
+
             {wallets.length > 0 && (
               <button
                 onClick={() => { disconnectAll(); setIsOpen(false); }}
