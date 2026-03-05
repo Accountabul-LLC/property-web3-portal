@@ -34,19 +34,19 @@ serve(async (req) => {
 
     if (!from_address || !isValidXRPLAddress(from_address)) {
       return new Response(JSON.stringify({ error: 'Invalid sender address' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (!to_address || !isValidXRPLAddress(to_address)) {
       return new Response(JSON.stringify({ error: 'Invalid destination address' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     if (from_address === to_address) {
       return new Response(JSON.stringify({ error: 'Cannot send to yourself' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -64,14 +64,14 @@ serve(async (req) => {
 
     if (!profile) {
       return new Response(JSON.stringify({ error: 'Wallet not verified. Please connect via Xaman first.' }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const amount = Number(amount_xrp);
     if (!amount_xrp || isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
       return new Response(JSON.stringify({ error: 'Invalid amount' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -79,14 +79,14 @@ serve(async (req) => {
       const tag = Number(destination_tag);
       if (!Number.isInteger(tag) || tag < 0 || tag > 4294967295) {
         return new Response(JSON.stringify({ error: 'Invalid destination tag (must be integer 0-4294967295)' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
     }
 
     if (memo && typeof memo === 'string' && memo.length > 300) {
       return new Response(JSON.stringify({ error: 'Memo too long (max 300 characters)' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -98,7 +98,7 @@ serve(async (req) => {
 
     if (accountInfoRes.result?.error === 'actNotFound') {
       return new Response(JSON.stringify({ error: 'Sender account not found on XRPL' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -120,7 +120,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         error: `Insufficient spendable balance. You have ${spendable.toFixed(6)} XRP available (${totalReserve} XRP reserved).`
       }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
