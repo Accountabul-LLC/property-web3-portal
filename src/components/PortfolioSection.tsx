@@ -123,17 +123,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
       ) : xrplData ? (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
-              <div className="flex items-center space-x-3">
-                <TokenAvatar currency="XRP" size={12} />
-                <div>
-                  <p className="text-sm text-muted-foreground">XRP Balance</p>
-                  <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)}</p>
-                  <p className="text-xs text-muted-foreground">XRP</p>
-                </div>
-              </div>
-            </Card>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
@@ -155,7 +145,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Token Holdings</p>
-                  <p className="text-2xl font-bold">{xrplData.token_holdings.length}</p>
+                  <p className="text-2xl font-bold">{xrplData.token_holdings.length + 1}</p>
                 </div>
               </div>
             </Card>
@@ -176,35 +166,42 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
             {/* Token Holdings */}
             <div className="lg:col-span-2">
               <h3 className="text-2xl font-bold mb-6">Token Holdings</h3>
-              {xrplData.token_holdings.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <div className="mx-auto w-16 h-16 bg-muted rounded-lg flex items-center justify-center mb-4">
-                    <Coins className="w-8 h-8 text-muted-foreground" />
+              <div className="space-y-4">
+                {/* XRP as first holding */}
+                <Card className="p-5 hover:shadow-card transition-all duration-300 border-primary/20">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <TokenAvatar currency="XRP" />
+                      <div>
+                        <p className="font-semibold text-lg">XRP</p>
+                        <p className="text-xs text-muted-foreground">Native token</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
+                      <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                    </div>
                   </div>
-                  <h4 className="font-semibold text-lg mb-2">No Token Holdings</h4>
-                  <p className="text-muted-foreground">This wallet has no active trustlines with balances.</p>
                 </Card>
-              ) : (
-                <div className="space-y-4">
-                  {xrplData.token_holdings.map((token, idx) => (
-                    <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <TokenAvatar issuer={token.issuer} currency={token.currency} />
-                          <div>
-                            <p className="font-semibold text-lg">{decodeCurrency(token.currency)}</p>
-                            <p className="text-xs text-muted-foreground font-mono">{shortenAddress(token.issuer)}</p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
-                          <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
+                {/* Issued tokens */}
+                {xrplData.token_holdings.map((token, idx) => (
+                  <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <TokenAvatar issuer={token.issuer} currency={token.currency} />
+                        <div>
+                          <p className="font-semibold text-lg">{decodeCurrency(token.currency)}</p>
+                          <p className="text-xs text-muted-foreground font-mono">{shortenAddress(token.issuer)}</p>
                         </div>
                       </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                      <div className="text-right">
+                        <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                        <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
             </div>
 
             {/* Recent Transactions */}
