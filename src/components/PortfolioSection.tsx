@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
@@ -52,7 +52,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const { data: xrplData, isLoading, error } = useXRPLPortfolio(displayAddress);
+  const { data: xrplData, isLoading, error, dataUpdatedAt, refetch, isFetching } = useXRPLPortfolio(displayAddress);
   useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
@@ -64,6 +64,69 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   );
   const tokenMetaMap = tokenMetaData?.tokenMap;
   const xrpUsdPrice = tokenMetaData?.xrpUsd ?? 0;
+
+  // Compute total wallet USD value
+  const portfolioValuation = useMemo(() => {
+    if (!xrplData) return null;
+
+    const xrpSubtotal = xrpUsdPrice > 0 ? (xrplData.xrp_balance ?? 0) * xrpUsdPrice : 0;
+    let tokenSubtotal = 0;
+    let pricedCount = 0;
+    let unpricedCount = 0;
+
+    const assetValues: Array<{ key: string; subtotalUsd: number | null; priceUsd: number | null; priceSource: string }> = [];
+
+    // XRP
+    assetValues.push({
+      key: 'XRP_NATIVE',
+      subtotalUsd: xrpUsdPrice > 0 ? xrpSubtotal : null,
+      priceUsd: xrpUsdPrice > 0 ? xrpUsdPrice : null,
+      priceSource: xrpUsdPrice > 0 ? 'market' : 'unavailable',
+    });
+    if (xrpUsdPrice > 0) pricedCount++; else unpricedCount++;
+
+    for (const token of xrplData.token_holdings) {
+      const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
+      if (meta?.price && meta.price > 0) {
+        const sub = Number(token.balance) * meta.price;
+        tokenSubtotal += sub;
+        pricedCount++;
+        assetValues.push({
+          key: `${token.currency}:${token.issuer}`,
+          subtotalUsd: sub,
+          priceUsd: meta.price,
+          priceSource: 'market',
+        });
+      } else {
+        unpricedCount++;
+        assetValues.push({
+          key: `${token.currency}:${token.issuer}`,
+          subtotalUsd: null,
+          priceUsd: null,
+          priceSource: 'unavailable',
+        });
+      }
+    }
+
+    return {
+      totalUsd: xrpSubtotal + tokenSubtotal,
+      xrpSubtotal,
+      tokenSubtotal,
+      pricedCount,
+      unpricedCount,
+      assetValues,
+    };
+  }, [xrplData, xrpUsdPrice, tokenMetaMap]);
+
+  // "Updated X ago" helper
+  const updatedAgo = useMemo(() => {
+    if (!dataUpdatedAt) return null;
+    const diff = Math.round((Date.now() - dataUpdatedAt) / 1000);
+    if (diff < 10) return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+    return `${Math.round(diff / 3600)}h ago`;
+  }, [dataUpdatedAt, isFetching]); // re-evaluate on refetch
 
   const formatXRP = (amount: number | undefined | null) => (amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -131,6 +194,45 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
         </Card>
       ) : xrplData ? (
         <>
+          {/* Total Wallet Value Header */}
+          {portfolioValuation && (
+            <Card className="p-6 mb-8 bg-gradient-card border-primary/10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                    <p className="text-sm text-muted-foreground font-medium">Estimated Total Value</p>
+                  </div>
+                  <p className="text-4xl font-bold tracking-tight">
+                    ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Updated {updatedAgo || 'now'}
+                    </span>
+                    {portfolioValuation.unpricedCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        {portfolioValuation.unpricedCount} asset{portfolioValuation.unpricedCount > 1 ? 's' : ''} without USD price
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
@@ -141,9 +243,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <p className="text-sm text-muted-foreground">Spendable XRP</p>
                   <p className="text-2xl font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Reserve: {formatXRP(xrplData.reserve_xrp)} XRP
-                  </p>
+                  {xrpUsdPrice > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ≈ ${((xrplData.spendable_xrp ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -155,6 +259,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <p className="text-sm text-muted-foreground">Token Holdings</p>
                   <p className="text-2xl font-bold">{xrplData.token_holdings.length + 1}</p>
+                  {portfolioValuation && portfolioValuation.pricedCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {portfolioValuation.pricedCount} priced
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -207,13 +316,18 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
+                              <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
                               {xrpUsdPrice > 0 ? (
-                                <p className="text-xs text-muted-foreground">
-                                  ≈ ${((xrplData.spendable_xrp ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                                </p>
+                                <>
+                                  <p className="text-sm font-semibold text-primary">
+                                    ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    @ ${xrpUsdPrice.toFixed(4)}/XRP
+                                  </p>
+                                </>
                               ) : (
-                                <p className="text-xs text-muted-foreground">Spendable</p>
+                                <p className="text-xs text-muted-foreground">No USD price</p>
                               )}
                             </div>
                             {isXrpExpanded ? (
@@ -318,11 +432,16 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                             <div className="text-right">
                               <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
                               {meta?.price ? (
-                                <p className="text-xs text-muted-foreground">
-                                  ≈ ${(Number(token.balance) * meta.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                                </p>
+                                <>
+                                  <p className="text-sm font-semibold text-primary">
+                                    ${(Number(token.balance) * meta.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    @ ${meta.price < 0.01 ? meta.price.toExponential(2) : meta.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}/{decodeCurrency(token.currency)}
+                                  </p>
+                                </>
                               ) : (
-                                <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">No USD price</p>
                               )}
                             </div>
                             {isExpanded ? (
