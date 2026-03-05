@@ -109,7 +109,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
       let responseData: any;
       
       if (selectedAsset.type === 'xrp') {
-        const result = await supabase.functions.invoke('xrpl-build-payment', {
+        const { data, error } = await supabase.functions.invoke('xrpl-build-payment', {
           body: {
             from_address: walletAddress,
             to_address: toAddress.trim(),
@@ -118,21 +118,10 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (result.error) {
-          // Try to parse error context from FunctionsHttpError
-          let msg = result.error.message || 'Failed to build payment';
-          try {
-            const ctx = result.error as any;
-            if (ctx.context?.body) {
-              const body = typeof ctx.context.body === 'string' ? JSON.parse(ctx.context.body) : ctx.context.body;
-              if (body?.error) msg = body.error;
-            }
-          } catch {}
-          throw new Error(msg);
-        }
-        responseData = result.data;
+        if (error) throw new Error(error.message || 'Failed to build payment');
+        responseData = data;
       } else {
-        const result = await supabase.functions.invoke('xrpl-build-token-payment', {
+        const { data, error } = await supabase.functions.invoke('xrpl-build-token-payment', {
           body: {
             from_address: walletAddress,
             to_address: toAddress.trim(),
@@ -143,18 +132,8 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (result.error) {
-          let msg = result.error.message || 'Failed to build payment';
-          try {
-            const ctx = result.error as any;
-            if (ctx.context?.body) {
-              const body = typeof ctx.context.body === 'string' ? JSON.parse(ctx.context.body) : ctx.context.body;
-              if (body?.error) msg = body.error;
-            }
-          } catch {}
-          throw new Error(msg);
-        }
-        responseData = result.data;
+        if (error) throw new Error(error.message || 'Failed to build payment');
+        responseData = data;
       }
 
       if (responseData?.error) throw new Error(responseData.error);
@@ -163,7 +142,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     } catch (err: any) {
       const message = err.message || 'Failed to build transaction';
       setErrorMsg(message);
-      toast({ title: 'Error', description: message, variant: 'destructive' });
+      toast({ title: 'Insufficient Balance', description: message, variant: 'destructive' });
     } finally {
       setIsBuilding(false);
     }
