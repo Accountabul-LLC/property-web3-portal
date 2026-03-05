@@ -55,7 +55,9 @@ export function useXRPLPortfolio(walletAddress: string | null) {
     gcTime: 5 * 60_000,
     // Auto-refresh active wallet every 30s
     refetchInterval: 30_000,
-    // Don't refetch on window focus if data is still fresh
-    refetchOnWindowFocus: false,
+    // Refetch when user returns to the tab/page
+    refetchOnWindowFocus: true,
+    // Always refetch when component remounts (e.g. navigating back to portfolio)
+    refetchOnMount: 'always',
   });
 }
