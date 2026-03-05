@@ -55,13 +55,13 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
           role="button"
           tabIndex={0}
           onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setIsOpen(!isOpen); }}
-          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/20 bg-primary/10 hover:bg-primary/15 transition-colors cursor-pointer ${
-            compact ? 'text-xs' : 'text-sm'
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-primary/20 bg-primary/10 hover:bg-primary/15 transition-colors cursor-pointer max-w-[180px] ${
+            compact ? 'text-xs max-w-[140px]' : 'text-sm'
           }`}
         >
-          <Wallet className={compact ? 'w-3.5 h-3.5 text-primary' : 'w-4 h-4 text-primary'} />
+          <Wallet className={`flex-shrink-0 ${compact ? 'w-3.5 h-3.5 text-primary' : 'w-4 h-4 text-primary'}`} />
           <span
-            className="font-medium text-primary hover:underline"
+            className="font-medium text-primary hover:underline truncate"
             onClick={(e) => {
               e.stopPropagation();
               navigate('/portfolio');
