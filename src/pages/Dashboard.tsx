@@ -10,14 +10,16 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
+import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Building2, Edit2, Save, Plus } from 'lucide-react';
+import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet } = useActiveWallet();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     full_name: '',
@@ -27,6 +29,8 @@ const Dashboard = () => {
   });
   const [properties, setProperties] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
+  const [editingWalletAddr, setEditingWalletAddr] = useState<string | null>(null);
+  const [walletLabel, setWalletLabel] = useState('');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -68,6 +72,14 @@ const Dashboard = () => {
       setEditing(false);
     }
     setSaving(false);
+  };
+
+  const handleRenameWallet = (addr: string) => {
+    if (walletLabel.trim()) {
+      renameWallet(addr, walletLabel.trim());
+      setEditingWalletAddr(null);
+      toast.success('Wallet renamed');
+    }
   };
 
   if (authLoading || profileLoading) {
@@ -194,6 +206,88 @@ const Dashboard = () => {
                   {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}
                 </p>
               </div>
+            </div>
+          )}
+        </Card>
+
+        {/* Connected Wallets */}
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <Wallet className="w-5 h-5" />
+          Connected Wallets
+        </h2>
+
+        <Card className="p-6 mb-8">
+          {walletsLoading ? (
+            <p className="text-muted-foreground text-sm">Loading wallets...</p>
+          ) : wallets.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-muted-foreground mb-4">No wallets connected yet.</p>
+              <Button onClick={openConnectModal} className="gap-2">
+                <Wallet className="w-4 h-4" />
+                Connect Your First Wallet
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {wallets.map((w) => (
+                <div key={w.address} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    {editingWalletAddr === w.address ? (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={walletLabel}
+                          onChange={(e) => setWalletLabel(e.target.value)}
+                          className="h-8 text-sm max-w-[200px]"
+                          onKeyDown={(e) => e.key === 'Enter' && handleRenameWallet(w.address)}
+                          autoFocus
+                        />
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleRenameWallet(w.address)}>
+                          <Check className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditingWalletAddr(null)}>
+                          <X className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="font-medium text-sm">{w.label}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">{w.address}</p>
+                      </>
+                    )}
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Connected {new Date(w.connectedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => {
+                        setEditingWalletAddr(w.address);
+                        setWalletLabel(w.label);
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      onClick={() => {
+                        removeWallet(w.address);
+                        toast.success('Wallet disconnected');
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button variant="outline" onClick={openConnectModal} className="w-full mt-2 gap-2">
+                <Plus className="w-4 h-4" />
+                Connect Another Wallet
+              </Button>
             </div>
           )}
         </Card>

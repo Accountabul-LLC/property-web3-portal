@@ -1,12 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface ConnectedWallet {
+  id: string;
   address: string;
   label: string;
   xamanName: string | null;
   connectedAt: string;
   lastUsedAt: string;
+  status: string;
 }
 
 interface ActiveWalletContextType {
@@ -23,21 +26,10 @@ interface ActiveWalletContextType {
   openConnectModal: () => void;
   closeConnectModal: () => void;
   onWalletConnected: (address: string, xamanName?: string | null) => void;
+  walletsLoading: boolean;
 }
 
-const STORAGE_KEY = 'accountabul_wallets';
 const ACTIVE_KEY = 'accountabul_active_wallet';
-
-function loadWallets(): ConnectedWallet[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch { return []; }
-}
-
-function saveWallets(wallets: ConnectedWallet[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(wallets));
-}
 
 function loadActiveAddress(): string | null {
   return localStorage.getItem(ACTIVE_KEY);
@@ -48,116 +40,165 @@ function saveActiveAddress(addr: string | null) {
   else localStorage.removeItem(ACTIVE_KEY);
 }
 
-// Fire-and-forget audit log — never blocks UI
-function logAuditEvent(walletAddress: string, eventType: string, metadata?: Record<string, unknown>) {
+// Fire-and-forget audit log
+function logAuditEvent(walletAddress: string, eventType: string, userId?: string, metadata?: Record<string, unknown>) {
   supabase.functions.invoke('wallet-audit-log', {
-    body: { wallet_address: walletAddress, event_type: eventType, metadata },
+    body: { wallet_address: walletAddress, event_type: eventType, user_id: userId, metadata },
   }).catch(err => console.warn('Audit log failed (non-blocking):', err));
 }
 
 const ActiveWalletContext = createContext<ActiveWalletContextType | null>(null);
 
 export function ActiveWalletProvider({ children }: { children: React.ReactNode }) {
-  const [wallets, setWallets] = useState<ConnectedWallet[]>(() => loadWallets());
+  const { user } = useAuth();
+  const [wallets, setWallets] = useState<ConnectedWallet[]>([]);
   const [activeAddress, setActiveAddressState] = useState<string | null>(() => loadActiveAddress());
   const [isConnectModalOpen, setConnectModalOpen] = useState(false);
+  const [walletsLoading, setWalletsLoading] = useState(false);
   const prevActiveRef = useRef<string | null>(activeAddress);
 
-  // Migrate from old single-wallet localStorage
+  // Load wallets from DB when user authenticates
   useEffect(() => {
-    const oldAddr = localStorage.getItem('wallet_address');
-    if (oldAddr && wallets.length === 0) {
-      const w: ConnectedWallet = {
-        address: oldAddr,
-        label: 'Primary',
-        xamanName: null,
-        connectedAt: new Date().toISOString(),
-        lastUsedAt: new Date().toISOString(),
-      };
-      setWallets([w]);
-      setActiveAddressState(oldAddr);
-      saveWallets([w]);
-      saveActiveAddress(oldAddr);
-      localStorage.removeItem('wallet_address');
+    if (!user) {
+      setWallets([]);
+      setActiveAddressState(null);
+      saveActiveAddress(null);
+      return;
     }
-  }, []);
 
-  // Reconcile: if active address no longer in wallet list, fall back
+    const fetchWallets = async () => {
+      setWalletsLoading(true);
+      const { data, error } = await supabase
+        .from('user_wallets')
+        .select('*')
+        .eq('status', 'active')
+        .order('last_seen_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to load wallets:', error);
+        setWalletsLoading(false);
+        return;
+      }
+
+      const mapped: ConnectedWallet[] = (data || []).map((w: any) => ({
+        id: w.id,
+        address: w.wallet_address,
+        label: w.label || w.xaman_account_name || `Wallet`,
+        xamanName: w.xaman_account_name,
+        connectedAt: w.created_at,
+        lastUsedAt: w.last_seen_at,
+        status: w.status,
+      }));
+
+      setWallets(mapped);
+
+      // Reconcile active address
+      const savedActive = loadActiveAddress();
+      if (savedActive && mapped.find(w => w.address === savedActive)) {
+        setActiveAddressState(savedActive);
+      } else if (mapped.length > 0) {
+        setActiveAddressState(mapped[0].address);
+        saveActiveAddress(mapped[0].address);
+      } else {
+        setActiveAddressState(null);
+        saveActiveAddress(null);
+      }
+
+      setWalletsLoading(false);
+    };
+
+    fetchWallets();
+  }, [user]);
+
+  // Clean up old localStorage migration data
   useEffect(() => {
-    if (activeAddress && !wallets.find(w => w.address === activeAddress)) {
-      const fallback = wallets.length > 0 ? wallets[0].address : null;
-      setActiveAddressState(fallback);
-      saveActiveAddress(fallback);
-    }
-  }, [wallets, activeAddress]);
+    localStorage.removeItem('accountabul_wallets');
+    localStorage.removeItem('wallet_address');
+  }, []);
 
   const activeWallet = wallets.find(w => w.address === activeAddress) || null;
   const isConnected = !!activeWallet;
 
   const setActiveWallet = useCallback((address: string) => {
-    const now = new Date().toISOString();
     const prev = prevActiveRef.current;
-
-    setWallets(prevWallets => {
-      const updated = prevWallets.map(w =>
-        w.address === address ? { ...w, lastUsedAt: now } : w
-      );
-      saveWallets(updated);
-      return updated;
-    });
     setActiveAddressState(address);
     saveActiveAddress(address);
 
-    // Audit: log switch events
-    if (prev && prev !== address) {
-      logAuditEvent(prev, 'switch_from', { switched_to: address });
-      logAuditEvent(address, 'switch_to', { switched_from: prev });
+    // Update last_seen_at in DB
+    supabase
+      .from('user_wallets')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('wallet_address', address)
+      .then(() => {});
+
+    if (prev && prev !== address && user) {
+      logAuditEvent(prev, 'switch_from', user.id, { switched_to: address });
+      logAuditEvent(address, 'switch_to', user.id, { switched_from: prev });
     }
     prevActiveRef.current = address;
-  }, []);
+  }, [user]);
 
-  const addWallet = useCallback((address: string, label?: string, xamanName?: string | null) => {
-    const now = new Date().toISOString();
-    let isNew = false;
+  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null) => {
+    if (!user) return;
 
-    setWallets(prev => {
-      const existing = prev.find(w => w.address === address);
-      if (existing) {
-        const updated = prev.map(w =>
-          w.address === address
-            ? { ...w, lastUsedAt: now, xamanName: xamanName ?? w.xamanName }
-            : w
-        );
-        saveWallets(updated);
-        return updated;
-      }
-      isNew = true;
-      const newWallet: ConnectedWallet = {
-        address,
-        label: label || xamanName || `Wallet ${prev.length + 1}`,
-        xamanName: xamanName || null,
-        connectedAt: now,
-        lastUsedAt: now,
-      };
-      const updated = [...prev, newWallet];
-      saveWallets(updated);
-      return updated;
-    });
+    // Upsert into user_wallets
+    const { data, error } = await supabase
+      .from('user_wallets')
+      .upsert({
+        user_id: user.id,
+        wallet_address: address,
+        label: label || xamanName || `Wallet`,
+        xaman_account_name: xamanName || null,
+        status: 'active',
+        last_seen_at: new Date().toISOString(),
+        revoked_at: null,
+      }, { onConflict: 'wallet_address' })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Failed to add wallet:', error);
+      return;
+    }
+
+    // Refresh wallet list
+    const { data: allWallets } = await supabase
+      .from('user_wallets')
+      .select('*')
+      .eq('status', 'active')
+      .order('last_seen_at', { ascending: false });
+
+    const mapped: ConnectedWallet[] = (allWallets || []).map((w: any) => ({
+      id: w.id,
+      address: w.wallet_address,
+      label: w.label || w.xaman_account_name || `Wallet`,
+      xamanName: w.xaman_account_name,
+      connectedAt: w.created_at,
+      lastUsedAt: w.last_seen_at,
+      status: w.status,
+    }));
+
+    setWallets(mapped);
     setActiveAddressState(address);
     saveActiveAddress(address);
     prevActiveRef.current = address;
 
-    // Audit: log connect event
-    logAuditEvent(address, 'connect', { is_new: isNew, label: label || null, xaman_name: xamanName || null });
-  }, []);
+    logAuditEvent(address, 'connect', user.id, { label: label || null, xaman_name: xamanName || null });
+  }, [user]);
 
-  const removeWallet = useCallback((address: string) => {
-    // Audit: log disconnect before removing
-    logAuditEvent(address, 'disconnect');
+  const removeWallet = useCallback(async (address: string) => {
+    if (!user) return;
+
+    logAuditEvent(address, 'disconnect', user.id);
+
+    await supabase
+      .from('user_wallets')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+      .eq('wallet_address', address)
+      .eq('user_id', user.id);
 
     setWallets(prev => {
       const updated = prev.filter(w => w.address !== address);
-      saveWallets(updated);
       if (activeAddress === address) {
         const fallback = updated.length > 0 ? updated[0].address : null;
         setActiveAddressState(fallback);
@@ -166,28 +207,38 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       }
       return updated;
     });
-  }, [activeAddress]);
+  }, [activeAddress, user]);
 
-  const renameWallet = useCallback((address: string, newLabel: string) => {
-    setWallets(prev => {
-      const updated = prev.map(w =>
-        w.address === address ? { ...w, label: newLabel } : w
-      );
-      saveWallets(updated);
-      return updated;
-    });
-  }, []);
+  const renameWallet = useCallback(async (address: string, newLabel: string) => {
+    if (!user) return;
 
-  const disconnectAll = useCallback(() => {
-    // Audit: log disconnect_all for each wallet
-    wallets.forEach(w => logAuditEvent(w.address, 'disconnect_all'));
+    await supabase
+      .from('user_wallets')
+      .update({ label: newLabel })
+      .eq('wallet_address', address)
+      .eq('user_id', user.id);
+
+    setWallets(prev =>
+      prev.map(w => w.address === address ? { ...w, label: newLabel } : w)
+    );
+  }, [user]);
+
+  const disconnectAll = useCallback(async () => {
+    if (!user) return;
+
+    wallets.forEach(w => logAuditEvent(w.address, 'disconnect_all', user.id));
+
+    await supabase
+      .from('user_wallets')
+      .update({ status: 'revoked', revoked_at: new Date().toISOString() })
+      .eq('user_id', user.id)
+      .eq('status', 'active');
 
     setWallets([]);
     setActiveAddressState(null);
-    saveWallets([]);
     saveActiveAddress(null);
     prevActiveRef.current = null;
-  }, [wallets]);
+  }, [wallets, user]);
 
   const onWalletConnected = useCallback((address: string, xamanName?: string | null) => {
     addWallet(address, undefined, xamanName);
@@ -209,6 +260,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       openConnectModal: () => setConnectModalOpen(true),
       closeConnectModal: () => setConnectModalOpen(false),
       onWalletConnected,
+      walletsLoading,
     }}>
       {children}
     </ActiveWalletContext.Provider>

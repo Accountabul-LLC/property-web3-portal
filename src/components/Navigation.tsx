@@ -94,17 +94,19 @@ const Navigation = () => {
           {/* Desktop Action Buttons */}
           <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
             <ThemeToggle />
-            {isConnected ? (
-              <WalletSelector />
-            ) : (
-              <Button 
-                variant="outline" 
-                onClick={openConnectModal}
-                className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
-                Connect Wallet
-              </Button>
+            {user && (
+              isConnected ? (
+                <WalletSelector />
+              ) : (
+                <Button 
+                  variant="outline" 
+                  onClick={openConnectModal}
+                  className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
+                >
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
+                </Button>
+              )
             )}
             {user ? (
               <>
@@ -140,18 +142,20 @@ const Navigation = () => {
           {/* Mobile header actions */}
           <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
             <ThemeToggle />
-            {isConnected ? (
-              <WalletSelector compact />
-            ) : (
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={openConnectModal}
-                className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
-              >
-                <Wallet className="w-3.5 h-3.5 mr-1.5" />
-                Connect
-              </Button>
+            {user && (
+              isConnected ? (
+                <WalletSelector compact />
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={openConnectModal}
+                  className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
+                >
+                  <Wallet className="w-3.5 h-3.5 mr-1.5" />
+                  Connect
+                </Button>
+              )
             )}
             {user ? (
               <Button
@@ -211,7 +215,7 @@ const Navigation = () => {
               );
             })}
             <div className="pt-2 space-y-2">
-              {!isConnected && (
+              {user && !isConnected && (
                 <Button 
                   variant="outline" 
                   onClick={openConnectModal}

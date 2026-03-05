@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle, XCircle, Wallet } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Wallet, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -11,6 +13,8 @@ interface WalletConnectModalProps {
 }
 
 export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: WalletConnectModalProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState<'select' | 'qr' | 'success' | 'error'>('select');
   const [qrCode, setQrCode] = useState<string>('');
   const [payloadUuid, setPayloadUuid] = useState<string>('');
@@ -74,7 +78,6 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
       }
     }, 2000);
 
-    // Clean up polling after 5 minutes
     setTimeout(() => {
       if (isPolling) {
         clearInterval(pollInterval);
@@ -115,102 +118,107 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
         </DialogHeader>
 
         <div className="space-y-6">
-          {step === 'select' && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Choose your preferred wallet to sign in securely
-              </p>
-              
-              <Button 
-                onClick={createXamanPayload}
-                className="w-full h-12 text-base"
-                size="lg"
-              >
-                <Wallet className="mr-2 h-5 w-5" />
-                Connect with Xaman
-              </Button>
-
-              <div className="text-center">
-                <p className="text-xs text-muted-foreground">
-                  More wallet options coming soon
-                </p>
-              </div>
-            </div>
-          )}
-
-          {step === 'qr' && (
+          {/* Auth gate: must be signed in */}
+          {!user ? (
             <div className="space-y-4 text-center">
-              <div className="space-y-2">
-                <div className="flex items-center justify-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="text-sm font-medium">Waiting for signature...</p>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Scan the QR code with your Xaman app
+              <LogIn className="h-12 w-12 text-muted-foreground mx-auto" />
+              <div>
+                <h3 className="text-lg font-semibold">Sign In Required</h3>
+                <p className="text-sm text-muted-foreground">
+                  You need to sign in before connecting a wallet.
                 </p>
               </div>
+              <Button onClick={() => { handleClose(); navigate('/auth'); }} className="w-full">
+                <LogIn className="mr-2 h-4 w-4" />
+                Go to Sign In
+              </Button>
+            </div>
+          ) : (
+            <>
+              {step === 'select' && (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Choose your preferred wallet to connect securely
+                  </p>
+                  
+                  <Button 
+                    onClick={createXamanPayload}
+                    className="w-full h-12 text-base"
+                    size="lg"
+                  >
+                    <Wallet className="mr-2 h-5 w-5" />
+                    Connect with Xaman
+                  </Button>
 
-              {qrCode && (
-                <div className="flex justify-center">
-                  <img 
-                    src={qrCode} 
-                    alt="Xaman QR Code" 
-                    className="w-48 h-48 border-2 border-border rounded-lg"
-                  />
+                  <div className="text-center">
+                    <p className="text-xs text-muted-foreground">
+                      More wallet options coming soon
+                    </p>
+                  </div>
                 </div>
               )}
 
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  1. Open your Xaman wallet app
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  2. Scan this QR code
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  3. Sign the login request
-                </p>
-              </div>
+              {step === 'qr' && (
+                <div className="space-y-4 text-center">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <p className="text-sm font-medium">Waiting for signature...</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Scan the QR code with your Xaman app
+                    </p>
+                  </div>
 
-              <Button variant="outline" onClick={handleClose}>
-                Cancel
-              </Button>
-            </div>
-          )}
+                  {qrCode && (
+                    <div className="flex justify-center">
+                      <img 
+                        src={qrCode} 
+                        alt="Xaman QR Code" 
+                        className="w-48 h-48 border-2 border-border rounded-lg"
+                      />
+                    </div>
+                  )}
 
-          {step === 'success' && (
-            <div className="space-y-4 text-center">
-              <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
-              <div>
-                <h3 className="text-lg font-semibold">Wallet Connected!</h3>
-                <p className="text-sm text-muted-foreground">
-                  You've successfully signed in with your Xaman wallet
-                </p>
-              </div>
-              <Button onClick={handleClose} className="w-full">
-                Continue
-              </Button>
-            </div>
-          )}
+                  <div className="space-y-2">
+                    <p className="text-xs text-muted-foreground">1. Open your Xaman wallet app</p>
+                    <p className="text-xs text-muted-foreground">2. Scan this QR code</p>
+                    <p className="text-xs text-muted-foreground">3. Sign the login request</p>
+                  </div>
 
-          {step === 'error' && (
-            <div className="space-y-4 text-center">
-              <XCircle className="h-12 w-12 text-red-500 mx-auto" />
-              <div>
-                <h3 className="text-lg font-semibold">Connection Failed</h3>
-                <p className="text-sm text-muted-foreground">
-                  {error || 'Something went wrong. Please try again.'}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={handleClose} className="flex-1">
-                  Close
-                </Button>
-                <Button onClick={() => setStep('select')} className="flex-1">
-                  Try Again
-                </Button>
-              </div>
-            </div>
+                  <Button variant="outline" onClick={handleClose}>Cancel</Button>
+                </div>
+              )}
+
+              {step === 'success' && (
+                <div className="space-y-4 text-center">
+                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Wallet Connected!</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Your wallet has been linked to your account
+                    </p>
+                  </div>
+                  <Button onClick={handleClose} className="w-full">Continue</Button>
+                </div>
+              )}
+
+              {step === 'error' && (
+                <div className="space-y-4 text-center">
+                  <XCircle className="h-12 w-12 text-red-500 mx-auto" />
+                  <div>
+                    <h3 className="text-lg font-semibold">Connection Failed</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {error || 'Something went wrong. Please try again.'}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleClose} className="flex-1">Close</Button>
+                    <Button onClick={() => setStep('select')} className="flex-1">Try Again</Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </DialogContent>

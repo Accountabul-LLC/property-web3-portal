@@ -5,3 +5,15 @@ verify_jwt = false
 
 [functions.places-details]
 verify_jwt = false
+
+[functions.xaman-check-payload]
+verify_jwt = false
+
+[functions.xrpl-build-payment]
+verify_jwt = false
+
+[functions.xrpl-build-token-payment]
+verify_jwt = false
+
+[functions.xaman-send-payment]
+verify_jwt = false
