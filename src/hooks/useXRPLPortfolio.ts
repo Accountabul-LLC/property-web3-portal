@@ -46,6 +46,12 @@ export interface MPTIssuance {
   collection: { name?: string; family?: string } | null;
   attributes: Array<{ trait_type: string; value: string | number }> | null;
   schema: string | null;
+  // XLS-89 compressed fields
+  ticker: string | null;
+  asset_class: string | null;
+  asset_subclass: string | null;
+  issuer_name: string | null;
+  uris: string[] | null;
 }
 
 export interface MPTHolding {

@@ -24,10 +24,9 @@ export interface MPTParams {
     can_transfer: boolean;
     can_clawback: boolean;
   };
-  // XLS-24d metadata
+  // XLS-89 compressed metadata
+  ticker: string;
   image_url: string;
-  collection_name: string;
-  collection_family: string;
   // RWA metadata
   property_address: string;
   city: string;
