@@ -98,7 +98,7 @@ const MintWizard: React.FC = () => {
     try {
       // 1. Build the transaction via edge function
       const { data: buildData, error: buildError } = await supabase.functions.invoke('xrpl-build-mint', {
-        body: { token_type: tokenType, network, wallet_address: activeAddress, params: getParams() },
+        body: { token_type: tokenType, network, wallet_address: mintAddress, params: getParams() },
       });
 
       if (buildError) throw new Error(buildError.message);
@@ -111,7 +111,7 @@ const MintWizard: React.FC = () => {
         setMintStatus('pending');
 
         const { data: submitData, error: submitError } = await supabase.functions.invoke('xrpl-submit-signed', {
-          body: { tx_json: txJson, wallet_address: activeAddress, network },
+          body: { tx_json: txJson, wallet_address: mintAddress, network },
         });
 
         if (submitError) throw new Error(submitError.message);
@@ -120,7 +120,7 @@ const MintWizard: React.FC = () => {
         // Save mint record as validated
         await supabase.from('token_mints' as any).insert({
           user_id: user.id,
-          wallet_address: activeAddress,
+          wallet_address: mintAddress,
           token_type: tokenType,
           network,
           request_json: getParams(),
@@ -149,7 +149,7 @@ const MintWizard: React.FC = () => {
         // Save mint record
         await supabase.from('token_mints' as any).insert({
           user_id: user.id,
-          wallet_address: activeAddress,
+          wallet_address: mintAddress,
           token_type: tokenType,
           network,
           request_json: getParams(),
@@ -206,7 +206,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeAddress, activeWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
+  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
 
   const handleReset = () => {
     setStep('type');
@@ -300,32 +300,33 @@ const MintWizard: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Network</label>
-              <Select value={network} onValueChange={v => setNetwork(v as Network)}>
+              <label className="text-sm font-medium mb-1 block">Signing Wallet</label>
+              <Select value={selectedWalletAddress || ''} onValueChange={v => setSelectedWalletAddress(v)}>
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a wallet" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="testnet">Testnet (safe testing)</SelectItem>
-                  <SelectItem value="mainnet">Mainnet (live)</SelectItem>
+                  {wallets.map(w => (
+                    <SelectItem key={w.address} value={w.address}>
+                      <div className="flex items-center gap-2">
+                        <span>{w.label}</span>
+                        <Badge variant={w.network === 'testnet' ? 'secondary' : 'outline'} className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}>
+                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Network: <strong className="capitalize">{network}</strong> — derived from selected wallet
+              </p>
             </div>
 
             {network === 'mainnet' && (
               <p className="text-xs text-destructive font-medium">
                 ⚠️ Mainnet transactions use real XRP and are irreversible.
               </p>
-            )}
-
-            {networkMismatch && (
-              <Alert className="border-amber-500/30 bg-amber-500/5">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
-                <AlertDescription className="text-xs text-muted-foreground">
-                  Your active wallet is on <strong>{walletNetwork}</strong> but you selected <strong>{network}</strong>. Switch wallets or {network === 'testnet' ? 'generate a testnet wallet' : 'connect a mainnet wallet via Xaman'}.
-                </AlertDescription>
-              </Alert>
             )}
 
             <div className="flex justify-end">
@@ -370,7 +371,7 @@ const MintWizard: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Wallet</span>
-                <span className="font-mono text-xs">{activeAddress?.slice(0, 8)}...{activeAddress?.slice(-6)}</span>
+                <span className="font-mono text-xs">{mintAddress?.slice(0, 8)}...{mintAddress?.slice(-6)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Signing</span>
