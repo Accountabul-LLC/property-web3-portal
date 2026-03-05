@@ -49,7 +49,19 @@ export function useProfile() {
         .eq('id', user.id)
         .single();
 
-      if (!error && data) {
+      if (error && error.code === 'PGRST116') {
+        // Profile row missing — create it from user metadata
+        const meta = user.user_metadata || {};
+        const newProfile: any = {
+          id: user.id,
+          email: user.email,
+          full_name: meta.full_name || meta.name || null,
+          first_name: meta.given_name || null,
+          last_name: meta.family_name || null,
+        };
+        await supabase.from('profiles' as any).insert(newProfile as any);
+        setProfile(newProfile as Profile);
+      } else if (!error && data) {
         const profileData = data as any as Profile;
         setProfile(profileData);
 

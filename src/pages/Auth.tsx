@@ -25,6 +25,12 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!authLoading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, authLoading, navigate]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
