@@ -103,7 +103,7 @@ const MintWizard: React.FC = () => {
       const poll = setInterval(async () => {
         try {
           const { data: checkData } = await supabase.functions.invoke('xaman-check-payload', {
-            body: { payload_uuid: uuid },
+            body: { uuid },
           });
 
           if (checkData?.signed) {
@@ -116,10 +116,10 @@ const MintWizard: React.FC = () => {
               .eq('xaman_payload_uuid', uuid);
 
             toast({ title: '✅ Token minted successfully!' });
-          } else if (checkData?.expired || checkData?.rejected) {
+          } else if (checkData?.expired || checkData?.cancelled) {
             clearInterval(poll);
             setMintStatus('failed');
-            setMintError(checkData.rejected ? 'Signing was rejected.' : 'Signing request expired.');
+            setMintError(checkData.cancelled ? 'Signing was cancelled.' : 'Signing request expired.');
 
             await supabase.from('token_mints' as any)
               .update({ status: 'failed' })
