@@ -16,7 +16,7 @@ interface WalletSelectorProps {
 const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   const {
     wallets, activeWallet, activeAddress,
-    setActiveWallet, removeWallet, renameWallet,
+    setActiveWallet, removeWallet, renameWallet, addWallet,
     openConnectModal, disconnectAll,
   } = useActiveWallet();
 
