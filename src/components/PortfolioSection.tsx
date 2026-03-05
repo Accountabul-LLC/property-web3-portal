@@ -3,13 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /** Renders a token logo from Bithomp CDN with fallback to Coins icon */
 const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currency?: string; size?: number }) => {
@@ -54,10 +56,33 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress);
+  const isTestnet = activeWallet?.provider === 'testnet_faucet';
+  const network = isTestnet ? 'testnet' : 'mainnet';
+  const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
+  const [isFunding, setIsFunding] = useState(false);
+
+  const explorerBase = isTestnet ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
+
+  const handleFaucetFund = async () => {
+    if (!displayAddress) return;
+    setIsFunding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('xrpl-testnet-faucet', {
+        body: { destination: displayAddress },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Faucet failed');
+      toast.success(`Funded! Balance: ${data.balance} XRP`);
+      queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
+    } catch (err: any) {
+      toast.error(`Faucet error: ${err.message}`);
+    } finally {
+      setIsFunding(false);
+    }
+  };
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress] });
+    queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
     queryClient.invalidateQueries({ queryKey: ['token_meta'] });
   };
   useXRPLSubscription(displayAddress);
