@@ -188,7 +188,13 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
-                      <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                      {xrpUsdPrice > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          ≈ ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                      )}
                     </div>
                   </div>
                 </Card>
