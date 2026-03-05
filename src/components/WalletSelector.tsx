@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Wallet, ChevronDown, Plus, X, Check, Pencil, FlaskConical, Loader2 } from 'lucide-react';
+import { Wallet, ChevronDown, Plus, X, Check, Pencil, FlaskConical, Loader2, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useActiveWallet, type ConnectedWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +53,13 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   };
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
+  const getExplorerUrl = (address: string, provider: string) => {
+    if (provider === 'testnet_faucet') {
+      return `https://testnet.xrpl.org/accounts/${address}`;
+    }
+    return `https://xrpscan.com/account/${address}`;
+  };
 
   const handleStartRename = (w: ConnectedWallet, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -149,7 +156,16 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                       {w.xamanName && w.xamanName !== w.label && (
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
-                      <p className="text-[10px] font-mono text-muted-foreground">{shortenAddress(w.address)}</p>
+                      <a
+                        href={getExplorerUrl(w.address, w.provider)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-mono text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {shortenAddress(w.address)}
+                        <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
                     </div>
                   </div>
                   <div className="flex items-center gap-0.5 flex-shrink-0">
