@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import ThemeToggle from '@/components/ThemeToggle';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
@@ -91,6 +92,7 @@ const Navigation = () => {
 
           {/* Desktop Action Buttons */}
           <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
+            <ThemeToggle />
             {isConnected ? (
               <WalletSelector />
             ) : (
@@ -136,6 +138,7 @@ const Navigation = () => {
 
           {/* Mobile wallet info */}
           <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
+            <ThemeToggle />
             {isConnected ? (
               <WalletSelector compact />
             ) : (

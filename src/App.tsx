@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
+import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Tokenize from "./pages/Tokenize";
@@ -19,6 +20,7 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
+  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
   <QueryClientProvider client={queryClient}>
     <ActiveWalletProvider>
       <TooltipProvider>
@@ -42,6 +44,7 @@ const App = () => (
         </BrowserRouter>
       </TooltipProvider>
     </ActiveWalletProvider>
+  </ThemeProvider>
   </QueryClientProvider>
 );
 
