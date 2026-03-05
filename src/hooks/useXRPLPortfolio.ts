@@ -40,12 +40,12 @@ export interface XRPLPortfolioData {
   account: string;
 }
 
-export function useXRPLPortfolio(walletAddress: string | null) {
+export function useXRPLPortfolio(walletAddress: string | null, network: 'mainnet' | 'testnet' = 'mainnet') {
   return useQuery({
-    queryKey: ['xrpl_portfolio', walletAddress],
+    queryKey: ['xrpl_portfolio', walletAddress, network],
     queryFn: async (): Promise<XRPLPortfolioData> => {
       const { data, error } = await supabase.functions.invoke('xrpl-account-data', {
-        body: { wallet_address: walletAddress },
+        body: { wallet_address: walletAddress, network },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
