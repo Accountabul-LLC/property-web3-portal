@@ -649,6 +649,46 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                               {mpt.description && (
                                 <p className="text-sm text-muted-foreground">{mpt.description}</p>
                               )}
+
+                              {/* Collection & Image */}
+                              {(mpt.collection || mpt.image) && (
+                                <div className="flex items-start gap-4">
+                                  {mpt.image && (
+                                    <img
+                                      src={mpt.image}
+                                      alt={mpt.name || 'MPT'}
+                                      className="w-20 h-20 rounded-lg object-cover bg-muted flex-shrink-0"
+                                      onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                    />
+                                  )}
+                                  {mpt.collection && (
+                                    <div>
+                                      {mpt.collection.name && (
+                                        <p className="text-xs text-muted-foreground">Collection: <span className="text-foreground font-medium">{mpt.collection.name}</span></p>
+                                      )}
+                                      {mpt.collection.family && (
+                                        <p className="text-xs text-muted-foreground">Family: <span className="text-foreground font-medium">{mpt.collection.family}</span></p>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* XLS-24d Attributes */}
+                              {mpt.attributes && mpt.attributes.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Attributes</p>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                                    {mpt.attributes.map((attr, attrIdx) => (
+                                      <div key={attrIdx} className="bg-muted/50 rounded-lg p-2.5">
+                                        <p className="text-[10px] uppercase text-muted-foreground font-medium">{attr.trait_type}</p>
+                                        <p className="text-sm font-semibold truncate">{typeof attr.value === 'number' ? attr.value.toLocaleString() : attr.value}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div className="bg-muted/50 rounded-lg p-3">
                                   <p className="text-[10px] uppercase text-muted-foreground font-medium">Outstanding</p>
