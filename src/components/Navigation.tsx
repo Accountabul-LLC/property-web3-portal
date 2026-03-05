@@ -161,11 +161,11 @@ const Navigation = () => {
       {isMobileMenuOpen && createPortal(
         <>
           <div
-            className="xl:hidden fixed inset-0 z-40"
+            className="lg:hidden fixed inset-0 z-40"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="xl:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            className="lg:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
