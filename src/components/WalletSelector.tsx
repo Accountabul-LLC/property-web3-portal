@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +18,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
     openConnectModal, disconnectAll,
   } = useActiveWallet();
 
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
@@ -58,7 +60,13 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
           }`}
         >
           <Wallet className={compact ? 'w-3.5 h-3.5 text-primary' : 'w-4 h-4 text-primary'} />
-          <span className="font-medium text-primary">
+          <span
+            className="font-medium text-primary hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/portfolio');
+            }}
+          >
             {activeWallet.label || activeWallet.xamanName || shortenAddress(activeAddress!)}
           </span>
           {wallets.length > 1 && (
