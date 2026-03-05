@@ -124,9 +124,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-primary-foreground" />
-                </div>
+                <TokenAvatar currency="XRP" size={12} />
                 <div>
                   <p className="text-sm text-muted-foreground">XRP Balance</p>
                   <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)} XRP</p>
@@ -184,9 +182,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Coins className="w-5 h-5 text-primary" />
-                          </div>
+                          <TokenAvatar issuer={token.issuer} currency={token.currency} />
                           <div>
                             <p className="font-semibold text-lg">{decodeCurrency(token.currency)}</p>
                             <p className="text-xs text-muted-foreground font-mono">{shortenAddress(token.issuer)}</p>
