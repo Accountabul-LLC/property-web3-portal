@@ -32,6 +32,9 @@ export interface XRPLTransaction {
 
 export interface XRPLPortfolioData {
   xrp_balance: number;
+  reserve_xrp: number;
+  spendable_xrp: number;
+  owner_count: number;
   token_holdings: XRPLTokenHolding[];
   transactions: XRPLTransaction[];
   account: string;
