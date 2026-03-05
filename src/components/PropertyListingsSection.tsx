@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,7 @@ import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2 } from 'lucide-r
 import { useProperties, Property } from '@/hooks/useProperties';
 
 const PropertyListingsSection = () => {
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState('all');
   const [selectedStatus, setSelectedStatus] = React.useState('all');
@@ -49,7 +51,7 @@ const PropertyListingsSection = () => {
       <p className="text-muted-foreground mb-8 max-w-md mx-auto">
         Be the first to tokenize your property and create investment opportunities for others.
       </p>
-      <Button variant="hero" size="lg">
+      <Button variant="hero" size="lg" onClick={() => navigate('/tokenize')}>
         Start Tokenizing
       </Button>
       <p className="text-sm text-muted-foreground mt-4">
@@ -217,7 +219,7 @@ const PropertyListingsSection = () => {
                 <p className="text-muted-foreground mb-6">
                   Join the future of real estate investment and unlock liquidity for your property.
                 </p>
-                <Button variant="hero" size="lg">
+                <Button variant="hero" size="lg" onClick={() => navigate('/tokenize')}>
                   Start Tokenizing
                 </Button>
               </div>
