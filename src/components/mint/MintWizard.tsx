@@ -29,12 +29,17 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected, addWallet } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet } = useActiveWallet();
   const { user } = useAuth();
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
-  const [network, setNetwork] = useState<Network>(activeWallet?.network || 'testnet');
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(activeAddress);
+
+  // Derive the selected wallet object and network from it
+  const selectedWallet = wallets.find(w => w.address === selectedWalletAddress) || activeWallet;
+  const network: Network = selectedWallet?.network === 'mainnet' ? 'mainnet' : 'testnet';
+  const mintAddress = selectedWallet?.address || activeAddress;
 
   const [nftParams, setNftParams] = useState<NFTParams>(defaultNFT);
   const [mptParams, setMptParams] = useState<MPTParams>(defaultMPT);
@@ -59,9 +64,7 @@ const MintWizard: React.FC = () => {
     return iouParams.currency_code.length === 3 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
   };
 
-  const walletNetwork = activeWallet?.network || 'mainnet';
-  const networkMismatch = network !== walletNetwork;
-  const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
+  const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';
 
   const handleGenerateFaucetWallet = useCallback(async () => {
     if (!user) return;
@@ -88,14 +91,14 @@ const MintWizard: React.FC = () => {
     }
   }, [user, addWallet]);
   const handleSubmit = useCallback(async () => {
-    if (!activeAddress || !user) return;
+    if (!mintAddress || !user) return;
     setLoading(true);
     setMintError(null);
 
     try {
       // 1. Build the transaction via edge function
       const { data: buildData, error: buildError } = await supabase.functions.invoke('xrpl-build-mint', {
-        body: { token_type: tokenType, network, wallet_address: activeAddress, params: getParams() },
+        body: { token_type: tokenType, network, wallet_address: mintAddress, params: getParams() },
       });
 
       if (buildError) throw new Error(buildError.message);
@@ -108,7 +111,7 @@ const MintWizard: React.FC = () => {
         setMintStatus('pending');
 
         const { data: submitData, error: submitError } = await supabase.functions.invoke('xrpl-submit-signed', {
-          body: { tx_json: txJson, wallet_address: activeAddress, network },
+          body: { tx_json: txJson, wallet_address: mintAddress, network },
         });
 
         if (submitError) throw new Error(submitError.message);
@@ -117,7 +120,7 @@ const MintWizard: React.FC = () => {
         // Save mint record as validated
         await supabase.from('token_mints' as any).insert({
           user_id: user.id,
-          wallet_address: activeAddress,
+          wallet_address: mintAddress,
           token_type: tokenType,
           network,
           request_json: getParams(),
@@ -146,7 +149,7 @@ const MintWizard: React.FC = () => {
         // Save mint record
         await supabase.from('token_mints' as any).insert({
           user_id: user.id,
-          wallet_address: activeAddress,
+          wallet_address: mintAddress,
           token_type: tokenType,
           network,
           request_json: getParams(),
@@ -203,7 +206,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeAddress, activeWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
+  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
 
   const handleReset = () => {
     setStep('type');
@@ -297,32 +300,33 @@ const MintWizard: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-sm font-medium mb-1 block">Network</label>
-              <Select value={network} onValueChange={v => setNetwork(v as Network)}>
+              <label className="text-sm font-medium mb-1 block">Signing Wallet</label>
+              <Select value={selectedWalletAddress || ''} onValueChange={v => setSelectedWalletAddress(v)}>
                 <SelectTrigger className="w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Select a wallet" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="testnet">Testnet (safe testing)</SelectItem>
-                  <SelectItem value="mainnet">Mainnet (live)</SelectItem>
+                  {wallets.map(w => (
+                    <SelectItem key={w.address} value={w.address}>
+                      <div className="flex items-center gap-2">
+                        <span>{w.label}</span>
+                        <Badge variant={w.network === 'testnet' ? 'secondary' : 'outline'} className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}>
+                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
+                        </Badge>
+                      </div>
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                Network: <strong className="capitalize">{network}</strong> — derived from selected wallet
+              </p>
             </div>
 
             {network === 'mainnet' && (
               <p className="text-xs text-destructive font-medium">
                 ⚠️ Mainnet transactions use real XRP and are irreversible.
               </p>
-            )}
-
-            {networkMismatch && (
-              <Alert className="border-amber-500/30 bg-amber-500/5">
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
-                <AlertDescription className="text-xs text-muted-foreground">
-                  Your active wallet is on <strong>{walletNetwork}</strong> but you selected <strong>{network}</strong>. Switch wallets or {network === 'testnet' ? 'generate a testnet wallet' : 'connect a mainnet wallet via Xaman'}.
-                </AlertDescription>
-              </Alert>
             )}
 
             <div className="flex justify-end">
@@ -367,7 +371,7 @@ const MintWizard: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Wallet</span>
-                <span className="font-mono text-xs">{activeAddress?.slice(0, 8)}...{activeAddress?.slice(-6)}</span>
+                <span className="font-mono text-xs">{mintAddress?.slice(0, 8)}...{mintAddress?.slice(-6)}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Signing</span>
@@ -416,38 +420,15 @@ const MintWizard: React.FC = () => {
               )}
             </div>
 
-            {networkMismatch ? (
-              <div className="space-y-3">
-                <Alert className="border-amber-500/30 bg-amber-500/5">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
-                  <AlertDescription className="text-xs text-muted-foreground">
-                    Your wallet is on <strong>{walletNetwork}</strong> but you're minting on <strong>{network}</strong>. Switch wallets or change the network to proceed.
-                  </AlertDescription>
-                </Alert>
-                <div className="flex justify-between">
-                  <Button variant="ghost" onClick={() => setStep('form')}>
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                  {network === 'testnet' && (
-                    <Button onClick={handleGenerateFaucetWallet} disabled={generatingFaucet} variant="hero">
-                      {generatingFaucet ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wallet className="w-4 h-4 mr-1" />}
-                      Generate Testnet Wallet
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setStep('form')}>
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
-                <Button onClick={handleSubmit} disabled={loading} variant="hero">
-                  {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                  {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={() => setStep('form')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading} variant="hero">
+                {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
+              </Button>
+            </div>
           </>
         )}
       </CardContent>
