@@ -330,7 +330,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
         </div>
         <p className="text-xs text-muted-foreground flex items-start gap-1.5">
           <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-          Owner info is stored on-chain in the token metadata. Use a business name if preferred.
+          Owner info is stored on-chain using compressed XLS-89 metadata (≤1024 bytes). Property details are encoded as compact key-value pairs.
         </p>
       </Card>
 
