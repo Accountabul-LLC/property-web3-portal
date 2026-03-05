@@ -56,6 +56,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
+  const [expandedToken, setExpandedToken] = useState<string | null>(null);
 
   // Fetch enriched metadata for all token holdings
   const { data: tokenMetaMap } = useTokenMeta(
