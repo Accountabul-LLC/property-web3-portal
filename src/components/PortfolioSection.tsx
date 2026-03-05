@@ -9,6 +9,37 @@ import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
+/** Renders a token logo from xrpscan CDN with fallback to Coins icon */
+const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currency?: string; size?: number }) => {
+  const [failed, setFailed] = useState(false);
+  const sizeClass = size === 12 ? 'w-12 h-12' : 'w-10 h-10';
+  const iconSize = size === 12 ? 'w-6 h-6' : 'w-5 h-5';
+
+  // XRP has a well-known icon URL
+  const isXRP = !issuer || currency === 'XRP';
+  const imgUrl = isXRP
+    ? 'https://cdn.xrpscan.com/avatar/XRP'
+    : `https://cdn.xrpscan.com/avatar/${issuer}`;
+
+  if (failed) {
+    return (
+      <div className={`${sizeClass} bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0`}>
+        <Coins className={`${iconSize} text-primary`} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imgUrl}
+      alt={currency || 'Token'}
+      className={`${sizeClass} rounded-full flex-shrink-0 object-cover bg-muted`}
+      onError={() => setFailed(true)}
+      loading="lazy"
+    />
+  );
+};
+
 interface PortfolioSectionProps {
   overrideAddress?: string | null;
   isReadOnly?: boolean;
