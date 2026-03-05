@@ -198,6 +198,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     setQrCode('');
     setTxHash(null);
     setErrorMsg('');
+    setShowScanner(false);
     onClose();
   };
 
