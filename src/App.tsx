@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Tokenize from "./pages/Tokenize";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import Dashboard from "./pages/Dashboard";
 import Professionals from "./pages/Professionals";
 import AIAgents from "./pages/AIAgents";
 import Portfolio from "./pages/Portfolio";
@@ -26,6 +28,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/tokenize" element={<Tokenize />} />
             <Route path="/professionals" element={<Professionals />} />
