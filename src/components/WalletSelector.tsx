@@ -18,6 +18,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
     openConnectModal, disconnectAll,
   } = useActiveWallet();
 
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
