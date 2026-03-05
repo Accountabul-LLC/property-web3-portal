@@ -24,7 +24,7 @@ const TOKEN_INFO: Record<TokenType, { label: string; desc: string; icon: React.R
 };
 
 const defaultNFT: NFTParams = { uri: '', flags: { transferable: true, burnable: false, onlyXRP: false } };
-const defaultMPT: MPTParams = { max_amount: '', asset_scale: 0, flags: { transferable: true, clawback: false } };
+const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset_scale: 0, transfer_fee: 0, flags: { can_lock: false, require_auth: false, can_escrow: false, can_trade: false, can_transfer: true, can_clawback: false } };
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
@@ -310,9 +310,21 @@ const MintWizard: React.FC = () => {
               )}
               {tokenType === 'mpt' && (
                 <>
+                  {mptParams.name && <div className="flex justify-between"><span className="text-muted-foreground">Name</span><span>{mptParams.name}</span></div>}
+                  {mptParams.description && <div className="flex justify-between"><span className="text-muted-foreground">Description</span><span className="text-xs max-w-[200px] truncate">{mptParams.description}</span></div>}
                   <div className="flex justify-between"><span className="text-muted-foreground">Max Supply</span><span>{mptParams.max_amount || 'Unlimited'}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Asset Scale</span><span>{mptParams.asset_scale}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Flags</span><span>{[mptParams.flags.transferable && 'Transferable', mptParams.flags.clawback && 'Clawback'].filter(Boolean).join(', ') || 'None'}</span></div>
+                  {mptParams.flags.can_transfer && mptParams.transfer_fee > 0 && (
+                    <div className="flex justify-between"><span className="text-muted-foreground">Transfer Fee</span><span>{(mptParams.transfer_fee / 1000).toFixed(3)}%</span></div>
+                  )}
+                  <div className="flex justify-between"><span className="text-muted-foreground">Flags</span><span className="text-right">{[
+                    mptParams.flags.can_transfer && 'Transfer',
+                    mptParams.flags.can_trade && 'Trade',
+                    mptParams.flags.can_lock && 'Lock',
+                    mptParams.flags.require_auth && 'Auth',
+                    mptParams.flags.can_escrow && 'Escrow',
+                    mptParams.flags.can_clawback && 'Clawback',
+                  ].filter(Boolean).join(', ') || 'None'}</span></div>
                 </>
               )}
               {tokenType === 'iou' && (
