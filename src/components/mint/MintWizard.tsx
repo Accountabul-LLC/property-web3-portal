@@ -64,9 +64,7 @@ const MintWizard: React.FC = () => {
     return iouParams.currency_code.length === 3 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
   };
 
-  const walletNetwork = activeWallet?.network || 'mainnet';
-  const networkMismatch = network !== walletNetwork;
-  const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
+  const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';
 
   const handleGenerateFaucetWallet = useCallback(async () => {
     if (!user) return;
