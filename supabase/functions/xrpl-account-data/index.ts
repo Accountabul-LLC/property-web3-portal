@@ -37,7 +37,12 @@ async function xrplRequest(node: string, method: string, params: Record<string, 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ method, params }),
   });
-  return res.json();
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`XRPL node returned non-JSON (status ${res.status}): ${text.slice(0, 200)}`);
+  }
 }
 
 function decodeHexString(hex: string): string {
