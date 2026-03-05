@@ -11,6 +11,8 @@ import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle,
 import { useTokenizeForm } from '@/hooks/useTokenizeForm';
 import { useAuth } from '@/hooks/useAuth';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const TokenizeSection = () => {
   const navigate = useNavigate();
@@ -28,6 +30,27 @@ const TokenizeSection = () => {
 
   const handleFileUpload = (fileType: string) => {
     setUploadedFiles(prev => [...prev, fileType]);
+  };
+
+  const handlePlaceSelect = async (placeId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke('places-details', {
+        body: { placeId },
+      });
+      if (error) throw error;
+      if (data) {
+        if (data.streetNumber && data.route) {
+          handleInputChange('propertyAddress', `${data.streetNumber} ${data.route}`);
+        }
+        if (data.city) handleInputChange('city', data.city);
+        if (data.state) handleInputChange('state', data.state);
+        if (data.zip) handleInputChange('zip', data.zip);
+        if (data.country) handleInputChange('country', data.country);
+      }
+    } catch (err) {
+      console.error('Place details error:', err);
+      toast.error('Could not auto-fill address details');
+    }
   };
 
   const handleSubmit = async () => {
@@ -77,6 +100,7 @@ const TokenizeSection = () => {
                   id="address"
                   value={formData.propertyAddress}
                   onChange={(value) => handleInputChange('propertyAddress', value)}
+                  onPlaceSelect={handlePlaceSelect}
                   placeholder="Start typing an address..."
                 />
               </div>

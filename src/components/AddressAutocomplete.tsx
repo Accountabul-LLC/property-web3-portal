@@ -11,6 +11,7 @@ interface Prediction {
 interface AddressAutocompleteProps {
   value: string;
   onChange: (value: string) => void;
+  onPlaceSelect?: (placeId: string, description: string) => void;
   placeholder?: string;
   className?: string;
   id?: string;
@@ -19,6 +20,7 @@ interface AddressAutocompleteProps {
 const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   value,
   onChange,
+  onPlaceSelect,
   placeholder = "Start typing an address...",
   className,
   id,
@@ -61,8 +63,9 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
     debounceRef.current = setTimeout(() => fetchPredictions(val), 300);
   };
 
-  const handleSelect = (description: string) => {
-    onChange(description);
+  const handleSelect = (prediction: Prediction) => {
+    onChange(prediction.description);
+    onPlaceSelect?.(prediction.place_id, prediction.description);
     setPredictions([]);
     setIsOpen(false);
   };
@@ -77,7 +80,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       setActiveIndex(i => Math.max(i - 1, 0));
     } else if (e.key === 'Enter' && activeIndex >= 0) {
       e.preventDefault();
-      handleSelect(predictions[activeIndex].description);
+      handleSelect(predictions[activeIndex]);
     } else if (e.key === 'Escape') {
       setIsOpen(false);
     }
@@ -120,7 +123,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
                 i === activeIndex ? 'bg-accent text-accent-foreground' : 'hover:bg-accent/50'
               }`}
               onMouseEnter={() => setActiveIndex(i)}
-              onClick={() => handleSelect(p.description)}
+              onClick={() => handleSelect(p)}
             >
               <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
               <span className="truncate">{p.description}</span>
