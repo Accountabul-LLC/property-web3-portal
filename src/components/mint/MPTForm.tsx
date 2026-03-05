@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
-import { Building2, User, MapPin, Coins, Settings, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface MPTParams {
   name: string;
@@ -80,6 +83,87 @@ const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: 
   </div>
 );
 
+/** Upload an image to token-logos bucket or paste a URL */
+const TokenImageUpload = ({ value, onChange }: { value: string; onChange: (url: string) => void }) => {
+  const [uploading, setUploading] = useState(false);
+  const [mode, setMode] = useState<'upload' | 'url'>(value && !value.includes('supabase') ? 'url' : 'upload');
+  const fileRef = useRef<HTMLInputElement>(null);
+  const previewUrl = value || null;
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml', 'image/gif'];
+    if (!allowed.includes(file.type)) {
+      toast.error('Please upload a JPG, PNG, WebP, SVG, or GIF image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB.');
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split('.').pop() || 'png';
+      const path = `${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('token-logos').upload(path, file, {
+        cacheControl: '31536000',
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('token-logos').getPublicUrl(path);
+      onChange(urlData.publicUrl);
+      toast.success('Image uploaded!');
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const clearImage = () => {
+    onChange('');
+    if (fileRef.current) fileRef.current.value = '';
+  };
+
+  return (
+    <div className="mt-1 space-y-2">
+      <div className="flex gap-1">
+        <Button type="button" variant={mode === 'upload' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setMode('upload')}>
+          <Upload className="w-3 h-3 mr-1" /> Upload
+        </Button>
+        <Button type="button" variant={mode === 'url' ? 'default' : 'outline'} size="sm" className="h-7 text-xs" onClick={() => setMode('url')}>
+          <ImageIcon className="w-3 h-3 mr-1" /> URL
+        </Button>
+      </div>
+      {mode === 'upload' ? (
+        <div className="flex items-center gap-3">
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml,image/gif" className="hidden" onChange={handleFileChange} />
+          <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => fileRef.current?.click()} disabled={uploading}>
+            {uploading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading…</> : <><Upload className="w-4 h-4 mr-2" /> Choose file</>}
+          </Button>
+          {previewUrl && (
+            <div className="relative">
+              <img src={previewUrl} alt="Token logo preview" className="w-12 h-12 rounded-lg object-cover border border-border" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              <button type="button" className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center" onClick={clearImage}>
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2">
+          <Input placeholder="https://… or ipfs://…" value={value} onChange={(e) => onChange(e.target.value)} className="flex-1" />
+          {previewUrl && <img src={previewUrl} alt="preview" className="w-9 h-9 rounded object-cover border border-border flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+        </div>
+      )}
+      <p className="text-xs text-muted-foreground">
+        {mode === 'upload' ? 'JPG, PNG, WebP, SVG or GIF — max 5 MB' : 'IPFS or HTTPS link to a property photo / token logo'}
+      </p>
+    </div>
+  );
+};
+
 const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
   const set = (key: string, value: string | number) => onChange({ ...params, [key]: value });
   const setFlag = (key: keyof MPTParams['flags'], value: boolean) => {
@@ -119,15 +203,11 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
         </div>
 
         <div>
-          <Label htmlFor="mpt-image">Image URL</Label>
-          <Input
-            id="mpt-image"
-            placeholder="https://… or ipfs://…"
+          <Label>Token Image</Label>
+          <TokenImageUpload
             value={params.image_url}
-            onChange={e => set('image_url', e.target.value)}
-            className="mt-1"
+            onChange={(url) => set('image_url', url)}
           />
-          <p className="text-xs text-muted-foreground mt-1">IPFS or HTTPS link to a property photo / thumbnail</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
