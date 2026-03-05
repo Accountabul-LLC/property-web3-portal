@@ -1,40 +1,37 @@
 
 
-## Ensure Fully Responsive Layout Across All Devices and Browsers
+## Problem Analysis
 
-The app already has the correct `<meta name="viewport" content="width=device-width, initial-scale=1.0">` tag and `overflow-x: hidden` on `#root`. Most page layouts use responsive Tailwind classes. However, there are specific areas that can cause horizontal overflow or poor formatting on smaller screens.
+The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
 
-### Changes
+## Approach
 
-**1. Global overflow guard on `<html>` and `<body>` (`src/index.css`)**
+Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
 
-Add `overflow-x: hidden` to both `html` and `body` in the base layer to prevent any child element from causing horizontal scroll, regardless of browser:
+### Plan
 
-```css
-@layer base {
-  * { @apply border-border; }
-  html, body { overflow-x: hidden; }
-  body { @apply bg-background text-foreground; }
-}
-```
+1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
+   - `account_info` -- XRP balance
+   - `account_lines` -- trustlines/token holdings  
+   - `account_tx` -- recent transactions
+   - Returns formatted holdings and transactions
 
-**2. Clamp hero background blurs (`src/components/HeroSection.tsx`)**
+2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
+   - XRP balance
+   - Token holdings (trustlines with balances)
+   - Recent transactions (parsed from `account_tx`)
 
-The `w-96` (384px) decorative blur circles at lines 46-47 can extend beyond the viewport on small screens. Wrap them or add `max-w-full` / use `w-[60vw]` capped with responsive classes so they never cause overflow.
+3. **Update `PortfolioSection` component** to:
+   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
+   - Display XRP balance as a summary card
+   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
+   - Show recent on-chain transactions with type, amount, date, and tx hash
+   - Keep the existing database-backed property token holdings as a separate section
 
-**3. Audit fixed-width elements across pages**
+### Technical Details
 
-Scan and fix any elements using absolute pixel widths (`w-[500px]`, fixed `min-w-` values, etc.) that don't have responsive counterparts. Key areas to check:
-- `PortfolioSection.tsx` — token cards, expanded detail panels
-- `Dashboard.tsx` — profile form layout, wallet cards  
-- `PropertyDetail.tsx` — photo gallery, financial sidebar
-- `Tokenize.tsx` / `Mint.tsx` — form containers
-
-For each, ensure containers use `max-w-full`, `w-full`, or responsive breakpoint classes instead of fixed pixel widths.
-
-**4. Add `break-words` / `truncate` to long text fields**
-
-Wallet addresses, transaction hashes, and URIs can push containers wider than the viewport on mobile. Add `break-all` or `truncate` classes where these are displayed (portfolio cards, dashboard wallet section).
-
-This is a defensive, global approach — not hardcoded to any specific device — that makes the browser's own viewport data drive the layout through standard responsive CSS.
+- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
+- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
+- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
+- **No database changes needed** -- this reads directly from the XRPL ledger
 

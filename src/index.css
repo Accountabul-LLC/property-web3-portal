@@ -142,6 +142,11 @@ All colors MUST be HSL. Professional fintech theme with trust and innovation.
     @apply border-border;
   }
 
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
