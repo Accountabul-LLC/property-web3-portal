@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
@@ -156,19 +157,16 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Backdrop overlay — covers entire screen behind menu */}
-      {isMobileMenuOpen && (
-        <div
-          className="xl:hidden fixed inset-0 z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Navigation */}
-      {isMobileMenuOpen && (
-        <div
-          className="xl:hidden border-t border-border bg-card/95 backdrop-blur-md absolute left-0 right-0 top-[72px] z-50"
-          onClick={(e) => e.stopPropagation()}
+      {/* Backdrop + Mobile Menu rendered via portal so they escape nav overflow */}
+      {isMobileMenuOpen && createPortal(
+        <>
+          <div
+            className="xl:hidden fixed inset-0 z-40"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+          <div
+            className="xl:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
             {navItems.map((item) => {
