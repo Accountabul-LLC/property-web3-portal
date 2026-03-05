@@ -257,7 +257,7 @@ serve(async (req) => {
       });
     }
 
-    const node = network === 'testnet' ? TESTNET_NODE : MAINNET_NODE;
+    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     const cacheKey = `${network || 'mainnet'}:${wallet_address}`;
     const cached = getCached(cacheKey);
@@ -267,13 +267,16 @@ serve(async (req) => {
       });
     }
 
-    const [accountInfoRes, accountLinesRes, accountTxRes, mptIssuanceRes, mptHoldingRes] = await Promise.all([
-      xrplRequest(node, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]),
-      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]),
-    ]);
+    // Sequential requests with small delays to avoid rate limiting
+    const accountInfoRes = await xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]);
+    await delay(100);
+    const accountLinesRes = await xrplRequest(nodes, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]);
+    await delay(100);
+    const accountTxRes = await xrplRequest(nodes, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]);
+    await delay(100);
+    const mptIssuanceRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]);
+    await delay(100);
+    const mptHoldingRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]);
 
     let xrpBalance = 0;
     let ownerCount = 0;
