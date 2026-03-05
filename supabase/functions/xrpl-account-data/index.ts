@@ -40,6 +40,57 @@ async function xrplRequest(node: string, method: string, params: Record<string, 
   return res.json();
 }
 
+function decodeHexString(hex: string): string {
+  try {
+    return hex.match(/../g)?.map((h: string) => String.fromCharCode(parseInt(h, 16))).join('') || '';
+  } catch {
+    return '';
+  }
+}
+
+function parseMPTIssuances(objects: any[]) {
+  return objects
+    .filter((obj: any) => obj.LedgerEntryType === 'MPTokenIssuance')
+    .map((obj: any) => {
+      let metadata: { name?: string; description?: string } = {};
+      if (obj.MPTokenMetadata) {
+        const decoded = decodeHexString(obj.MPTokenMetadata);
+        try {
+          metadata = JSON.parse(decoded);
+        } catch {
+          // Not JSON, use raw decoded string as name
+          if (decoded && /^[\x20-\x7E\s]+$/.test(decoded)) {
+            metadata = { name: decoded };
+          }
+        }
+      }
+
+      return {
+        mpt_issuance_id: obj.MPTokenIssuanceID || obj.mpt_issuance_id || null,
+        issuer: obj.Issuer || obj.Account || null,
+        max_amount: obj.MaximumAmount ? String(obj.MaximumAmount) : null,
+        outstanding_amount: obj.OutstandingAmount ? String(obj.OutstandingAmount) : null,
+        asset_scale: obj.AssetScale ?? 0,
+        transfer_fee: obj.TransferFee ?? 0,
+        flags: obj.Flags ?? 0,
+        metadata_hex: obj.MPTokenMetadata || null,
+        name: metadata.name || null,
+        description: metadata.description || null,
+      };
+    });
+}
+
+function parseMPTHoldings(objects: any[]) {
+  return objects
+    .filter((obj: any) => obj.LedgerEntryType === 'MPToken')
+    .map((obj: any) => ({
+      mpt_issuance_id: obj.MPTokenIssuanceID || null,
+      amount: obj.MPTAmount ? String(obj.MPTAmount) : '0',
+      flags: obj.Flags ?? 0,
+      locked_amount: obj.LockedAmount ? String(obj.LockedAmount) : null,
+    }));
+}
+
 function parseTransactions(txList: any[], wallet_address: string) {
   return txList.map((entry: any) => {
     const tx = entry.tx || entry.tx_json || {};
@@ -86,8 +137,7 @@ function parseTransactions(txList: any[], wallet_address: string) {
       for (const m of tx.Memos) {
         if (m.Memo?.MemoData) {
           try {
-            const hex = m.Memo.MemoData;
-            const text = hex.match(/../g)?.map((h: string) => String.fromCharCode(parseInt(h, 16))).join('') || '';
+            const text = decodeHexString(m.Memo.MemoData);
             if (text && /^[\x20-\x7E\s]+$/.test(text)) memos.push(text);
           } catch {}
         }
@@ -188,10 +238,12 @@ serve(async (req) => {
       });
     }
 
-    const [accountInfoRes, accountLinesRes, accountTxRes] = await Promise.all([
+    const [accountInfoRes, accountLinesRes, accountTxRes, mptIssuanceRes, mptHoldingRes] = await Promise.all([
       xrplRequest(node, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
       xrplRequest(node, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]),
       xrplRequest(node, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]),
+      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken_issuance', ledger_index: 'validated' }]),
+      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]),
     ]);
 
     let xrpBalance = 0;
@@ -218,6 +270,10 @@ serve(async (req) => {
 
     const transactions = parseTransactions(accountTxRes.result?.transactions || [], wallet_address);
 
+    // Parse MPT data
+    const mptIssuances = parseMPTIssuances(mptIssuanceRes.result?.account_objects || []);
+    const mptHoldings = parseMPTHoldings(mptHoldingRes.result?.account_objects || []);
+
     const responseData = {
       xrp_balance: xrpBalance,
       reserve_xrp: totalReserve,
@@ -225,6 +281,8 @@ serve(async (req) => {
       owner_count: ownerCount,
       token_holdings: tokenHoldings,
       transactions,
+      mpt_issuances: mptIssuances,
+      mpt_holdings: mptHoldings,
       account: wallet_address,
       network: network || 'mainnet',
     };

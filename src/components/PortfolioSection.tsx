@@ -3,8 +3,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets } from 'lucide-react';
-import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets, Gem } from 'lucide-react';
+import { useXRPLPortfolio, type MPTIssuance, type MPTHolding } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
@@ -316,7 +316,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Token Holdings</p>
-                  <p className="text-2xl font-bold">{xrplData.token_holdings.length + 1}</p>
+                  <p className="text-2xl font-bold">{xrplData.token_holdings.length + 1 + (xrplData.mpt_issuances?.length || 0) + (xrplData.mpt_holdings?.length || 0)}</p>
                   {portfolioValuation && portfolioValuation.pricedCount > 0 && (
                     <p className="text-xs text-muted-foreground">
                       {portfolioValuation.pricedCount} priced
@@ -591,6 +591,166 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     </Card>
                   );
                 })}
+
+                {/* MPT Issuances — tokens this wallet created */}
+                {xrplData.mpt_issuances && xrplData.mpt_issuances.length > 0 && (
+                  <>
+                    <h4 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
+                      <Gem className="w-5 h-5 text-primary" />
+                      MPT Issuances
+                      <Badge variant="secondary" className="text-xs">{xrplData.mpt_issuances.length}</Badge>
+                    </h4>
+                    {xrplData.mpt_issuances.map((mpt, idx) => {
+                      const mptKey = `mpt-issuance-${mpt.mpt_issuance_id || idx}`;
+                      const isExpanded = expandedToken === mptKey;
+                      const scale = mpt.asset_scale || 0;
+                      const outstanding = mpt.outstanding_amount ? Number(mpt.outstanding_amount) / Math.pow(10, scale) : 0;
+                      const maxAmt = mpt.max_amount ? Number(mpt.max_amount) / Math.pow(10, scale) : null;
+
+                      return (
+                        <Card
+                          key={mptKey}
+                          className={`hover:shadow-card transition-all duration-300 cursor-pointer ${isExpanded ? 'ring-1 ring-primary/30' : ''}`}
+                          onClick={() => setExpandedToken(isExpanded ? null : mptKey)}
+                        >
+                          <div className="p-5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Gem className="w-5 h-5 text-primary" />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-semibold text-lg">{mpt.name || 'MPT Token'}</p>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">Issuer</Badge>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    Multi-Purpose Token
+                                    {mpt.description && ` · ${mpt.description.slice(0, 40)}${mpt.description.length > 40 ? '…' : ''}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <p className="text-lg font-bold">{outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
+                                  <p className="text-xs text-muted-foreground">outstanding</p>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
+                              {mpt.description && (
+                                <p className="text-sm text-muted-foreground">{mpt.description}</p>
+                              )}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="bg-muted/50 rounded-lg p-3">
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium">Outstanding</p>
+                                  <p className="text-sm font-bold">{outstanding.toLocaleString()}</p>
+                                </div>
+                                {maxAmt !== null && (
+                                  <div className="bg-muted/50 rounded-lg p-3">
+                                    <p className="text-[10px] uppercase text-muted-foreground font-medium">Max Supply</p>
+                                    <p className="text-sm font-bold">{maxAmt.toLocaleString()}</p>
+                                  </div>
+                                )}
+                                <div className="bg-muted/50 rounded-lg p-3">
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium">Asset Scale</p>
+                                  <p className="text-sm font-bold">{scale}</p>
+                                </div>
+                                {mpt.transfer_fee > 0 && (
+                                  <div className="bg-muted/50 rounded-lg p-3">
+                                    <p className="text-[10px] uppercase text-muted-foreground font-medium">Transfer Fee</p>
+                                    <p className="text-sm font-bold">{(mpt.transfer_fee / 1000).toFixed(2)}%</p>
+                                  </div>
+                                )}
+                              </div>
+                              {mpt.mpt_issuance_id && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono break-all">
+                                  <span>Issuance ID:</span>
+                                  <span>{mpt.mpt_issuance_id}</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* MPT Holdings — tokens this wallet holds (not issued) */}
+                {xrplData.mpt_holdings && xrplData.mpt_holdings.length > 0 && (
+                  <>
+                    <h4 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
+                      <Gem className="w-5 h-5 text-primary" />
+                      MPT Holdings
+                      <Badge variant="secondary" className="text-xs">{xrplData.mpt_holdings.length}</Badge>
+                    </h4>
+                    {xrplData.mpt_holdings.map((mpt, idx) => {
+                      const mptKey = `mpt-holding-${mpt.mpt_issuance_id || idx}`;
+                      const isExpanded = expandedToken === mptKey;
+
+                      return (
+                        <Card
+                          key={mptKey}
+                          className={`hover:shadow-card transition-all duration-300 cursor-pointer ${isExpanded ? 'ring-1 ring-primary/30' : ''}`}
+                          onClick={() => setExpandedToken(isExpanded ? null : mptKey)}
+                        >
+                          <div className="p-5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center space-x-4">
+                                <div className="w-10 h-10 bg-accent/20 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <Gem className="w-5 h-5 text-accent-foreground" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-lg">MPT</p>
+                                  <p className="text-xs text-muted-foreground font-mono">
+                                    {mpt.mpt_issuance_id ? `${mpt.mpt_issuance_id.slice(0, 8)}…${mpt.mpt_issuance_id.slice(-6)}` : 'Unknown'}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="text-right">
+                                  <p className="text-lg font-bold">{Number(mpt.amount).toLocaleString()}</p>
+                                  <p className="text-xs text-muted-foreground">tokens</p>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {isExpanded && (
+                            <div className="px-5 pb-5 border-t border-border pt-4 space-y-3">
+                              {mpt.mpt_issuance_id && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono break-all">
+                                  <span>Issuance ID:</span>
+                                  <span>{mpt.mpt_issuance_id}</span>
+                                </div>
+                              )}
+                              {mpt.locked_amount && Number(mpt.locked_amount) > 0 && (
+                                <div className="bg-muted/50 rounded-lg p-3 inline-block">
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium">Locked</p>
+                                  <p className="text-sm font-bold">{Number(mpt.locked_amount).toLocaleString()}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </Card>
+                      );
+                    })}
+                  </>
+                )}
               </div>
             </div>
 
