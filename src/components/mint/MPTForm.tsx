@@ -6,9 +6,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon, FlaskConical, Shuffle } from 'lucide-react';
+import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon, FlaskConical, Shuffle, Link2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+export interface MPTUri {
+  u: string;  // URI link
+  c: 'website' | 'social' | 'docs' | 'other';  // category
+  t: string;  // title
+}
 
 export interface MPTParams {
   name: string;
@@ -27,7 +33,8 @@ export interface MPTParams {
   // XLS-89 compressed metadata
   ticker: string;
   image_url: string;
-  // RWA metadata
+  uris: MPTUri[];
+  // RWA metadata (stored in `ai` freeform field)
   property_address: string;
   city: string;
   state: string;
@@ -207,11 +214,16 @@ const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - 
 function generateTestData(): MPTParams {
   const prop = rand(RANDOM_PROPERTIES);
   const owner = rand(RANDOM_OWNERS);
+  const ticker = prop.ticker;
   return {
     name: prop.name,
     description: rand(RANDOM_DESCRIPTIONS),
-    ticker: prop.ticker,
+    ticker,
     image_url: rand(RANDOM_IMAGES),
+    uris: [
+      { u: `example.com/properties/${ticker.toLowerCase()}`, c: 'website' as const, t: 'Property Page' },
+      { u: `example.com/docs/${ticker.toLowerCase()}`, c: 'docs' as const, t: 'Token Docs' },
+    ],
     property_address: prop.address,
     city: prop.city,
     state: prop.state,
