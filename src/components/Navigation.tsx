@@ -232,6 +232,8 @@ const Navigation = () => {
             </div>
           </div>
         </div>
+        </>,
+        document.body
       )}
 
       {/* Wallet Connect Modal */}
