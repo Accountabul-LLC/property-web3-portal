@@ -15,6 +15,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X } from 'lucide-react';
 
+// Phone formatting helper
+function formatPhone(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 10);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function unformatPhone(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
+const US_STATES = [
+  'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+  'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+  'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+  'VA','WA','WV','WI','WY','DC',
+];
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -22,10 +41,19 @@ const Dashboard = () => {
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet } = useActiveWallet();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
-    full_name: '',
+    first_name: '',
+    last_name: '',
     account_type: 'individual',
     company_name: '',
     phone: '',
+    date_of_birth: '',
+    gender: '',
+    address_line1: '',
+    address_line2: '',
+    city: '',
+    state: '',
+    zip: '',
+    country: 'US',
   });
   const [properties, setProperties] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
@@ -41,10 +69,19 @@ const Dashboard = () => {
   useEffect(() => {
     if (profile) {
       setFormData({
-        full_name: profile.full_name || '',
+        first_name: profile.first_name || '',
+        last_name: profile.last_name || '',
         account_type: profile.account_type || 'individual',
         company_name: profile.company_name || '',
-        phone: profile.phone || '',
+        phone: profile.phone ? formatPhone(profile.phone) : '',
+        date_of_birth: profile.date_of_birth || '',
+        gender: profile.gender || '',
+        address_line1: profile.address_line1 || '',
+        address_line2: profile.address_line2 || '',
+        city: profile.city || '',
+        state: profile.state || '',
+        zip: profile.zip || '',
+        country: profile.country || 'US',
       });
     }
   }, [profile]);
@@ -63,8 +100,53 @@ const Dashboard = () => {
   }, [user]);
 
   const handleSave = async () => {
+    // Validation
+    if (!formData.first_name.trim()) {
+      toast.error('First name is required');
+      return;
+    }
+    if (!formData.last_name.trim()) {
+      toast.error('Last name is required');
+      return;
+    }
+    if (formData.phone && unformatPhone(formData.phone).length > 0 && unformatPhone(formData.phone).length < 10) {
+      toast.error('Please enter a complete 10-digit phone number');
+      return;
+    }
+    if (formData.zip && !/^\d{5}(-\d{4})?$/.test(formData.zip) && formData.zip.length > 0) {
+      toast.error('Please enter a valid ZIP code');
+      return;
+    }
+    if (formData.date_of_birth) {
+      const dob = new Date(formData.date_of_birth);
+      const now = new Date();
+      if (dob > now) {
+        toast.error('Date of birth cannot be in the future');
+        return;
+      }
+      const age = (now.getTime() - dob.getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      if (age < 18) {
+        toast.error('You must be at least 18 years old');
+        return;
+      }
+    }
+
     setSaving(true);
-    const { error } = await updateProfile(formData);
+    const { error } = await updateProfile({
+      first_name: formData.first_name.trim(),
+      last_name: formData.last_name.trim(),
+      account_type: formData.account_type,
+      company_name: formData.account_type === 'business' ? formData.company_name.trim() : null,
+      phone: unformatPhone(formData.phone) || null,
+      date_of_birth: formData.date_of_birth || null,
+      gender: formData.gender || null,
+      address_line1: formData.address_line1.trim() || null,
+      address_line2: formData.address_line2.trim() || null,
+      city: formData.city.trim() || null,
+      state: formData.state || null,
+      zip: formData.zip.trim() || null,
+      country: formData.country || 'US',
+    });
     if (error) {
       toast.error(error);
     } else {
@@ -102,6 +184,8 @@ const Dashboard = () => {
     }
   };
 
+  const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.full_name || 'Your Profile';
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
@@ -124,7 +208,7 @@ const Dashboard = () => {
                 <User className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h2 className="text-xl font-semibold">{profile?.full_name || 'Your Profile'}</h2>
+                <h2 className="text-xl font-semibold">{displayName}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
               </div>
             </div>
@@ -139,26 +223,72 @@ const Dashboard = () => {
           </div>
 
           {editing ? (
-            <div className="space-y-4">
+            <div className="space-y-5">
+              {/* Name */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label>Full Name</Label>
+                  <Label>First Name <span className="text-destructive">*</span></Label>
                   <Input
-                    value={formData.full_name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                    value={formData.first_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, first_name: e.target.value }))}
+                    placeholder="John"
                     className="mt-1"
+                    maxLength={50}
                   />
                 </div>
                 <div>
-                  <Label>Phone</Label>
+                  <Label>Last Name <span className="text-destructive">*</span></Label>
                   <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    value={formData.last_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, last_name: e.target.value }))}
+                    placeholder="Doe"
                     className="mt-1"
+                    maxLength={50}
                   />
                 </div>
               </div>
+
+              {/* Phone & DOB */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Phone Number</Label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                    placeholder="(555) 123-4567"
+                    className="mt-1"
+                    type="tel"
+                  />
+                </div>
+                <div>
+                  <Label>Date of Birth</Label>
+                  <Input
+                    type="date"
+                    value={formData.date_of_birth}
+                    onChange={(e) => setFormData(prev => ({ ...prev, date_of_birth: e.target.value }))}
+                    className="mt-1"
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+              </div>
+
+              {/* Gender & Account Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Gender</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(v) => setFormData(prev => ({ ...prev, gender: v }))}
+                  >
+                    <SelectTrigger className="mt-1"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-Binary</SelectItem>
+                      <SelectItem value="prefer-not-to-say">Prefer Not to Say</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div>
                   <Label>Account Type</Label>
                   <Select
@@ -172,27 +302,117 @@ const Dashboard = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                {formData.account_type === 'business' && (
+              </div>
+
+              {/* Company (conditional) */}
+              {formData.account_type === 'business' && (
+                <div>
+                  <Label>Company Name</Label>
+                  <Input
+                    value={formData.company_name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
+                    placeholder="Acme Corp"
+                    className="mt-1"
+                    maxLength={100}
+                  />
+                </div>
+              )}
+
+              {/* Address */}
+              <div className="border-t border-border pt-4">
+                <p className="text-sm font-medium text-muted-foreground mb-3">Address</p>
+                <div className="space-y-3">
                   <div>
-                    <Label>Company Name</Label>
+                    <Label>Street Address</Label>
                     <Input
-                      value={formData.company_name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
+                      value={formData.address_line1}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address_line1: e.target.value }))}
+                      placeholder="123 Main St"
                       className="mt-1"
+                      maxLength={200}
                     />
                   </div>
-                )}
+                  <div>
+                    <Label>Apt / Suite / Unit</Label>
+                    <Input
+                      value={formData.address_line2}
+                      onChange={(e) => setFormData(prev => ({ ...prev, address_line2: e.target.value }))}
+                      placeholder="Apt 4B"
+                      className="mt-1"
+                      maxLength={100}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="col-span-2 md:col-span-1">
+                      <Label>City</Label>
+                      <Input
+                        value={formData.city}
+                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                        placeholder="New York"
+                        className="mt-1"
+                        maxLength={100}
+                      />
+                    </div>
+                    <div>
+                      <Label>State</Label>
+                      <Select
+                        value={formData.state}
+                        onValueChange={(v) => setFormData(prev => ({ ...prev, state: v }))}
+                      >
+                        <SelectTrigger className="mt-1"><SelectValue placeholder="State" /></SelectTrigger>
+                        <SelectContent>
+                          {US_STATES.map(s => (
+                            <SelectItem key={s} value={s}>{s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>ZIP</Label>
+                      <Input
+                        value={formData.zip}
+                        onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
+                        placeholder="10001"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cancel button */}
+              <div className="flex justify-end">
+                <Button variant="ghost" onClick={() => setEditing(false)} className="mr-2">Cancel</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  <Save className="w-4 h-4 mr-1" /> Save Changes
+                </Button>
               </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Account Type</p>
-                <p className="font-medium capitalize">{profile?.account_type || 'Individual'}</p>
+                <p className="text-muted-foreground">First Name</p>
+                <p className="font-medium">{profile?.first_name || '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Last Name</p>
+                <p className="font-medium">{profile?.last_name || '—'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Phone</p>
-                <p className="font-medium">{profile?.phone || '—'}</p>
+                <p className="font-medium">{profile?.phone ? formatPhone(profile.phone) : '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Date of Birth</p>
+                <p className="font-medium">{profile?.date_of_birth ? new Date(profile.date_of_birth + 'T00:00:00').toLocaleDateString() : '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Gender</p>
+                <p className="font-medium capitalize">{profile?.gender?.replace('-', ' ') || '—'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Account Type</p>
+                <p className="font-medium capitalize">{profile?.account_type || 'Individual'}</p>
               </div>
               {profile?.account_type === 'business' && (
                 <div>
@@ -206,6 +426,15 @@ const Dashboard = () => {
                   {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}
                 </p>
               </div>
+              {(profile?.address_line1 || profile?.city) && (
+                <div className="col-span-2">
+                  <p className="text-muted-foreground">Address</p>
+                  <p className="font-medium">
+                    {[profile?.address_line1, profile?.address_line2].filter(Boolean).join(', ')}
+                    {profile?.city && <><br />{[profile?.city, profile?.state, profile?.zip].filter(Boolean).join(', ')}</>}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </Card>
