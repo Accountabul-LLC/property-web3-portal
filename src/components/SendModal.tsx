@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   ArrowRight, Loader2, CheckCircle, XCircle, ExternalLink, ArrowLeft,
-  Coins, Search, ChevronRight, Camera,
+  Coins, Search, ChevronRight, Camera, Send,
 } from 'lucide-react';
 import QRScanner from '@/components/QRScanner';
 import { supabase } from '@/integrations/supabase/client';
