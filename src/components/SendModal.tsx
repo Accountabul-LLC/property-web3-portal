@@ -14,6 +14,7 @@ import {
 import QRScanner from '@/components/QRScanner';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import type { XRPLTokenHolding } from '@/hooks/useXRPLPortfolio';
 
 interface SendModalProps {
@@ -61,6 +62,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
   const [errorMsg, setErrorMsg] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
@@ -174,6 +176,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             clearInterval(pollInterval);
             setTxHash(checkData.tx_hash || null);
             setStep('success');
+            queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', walletAddress] });
           } else if (checkData?.cancelled || checkData?.expired) {
             clearInterval(pollInterval);
             setErrorMsg(checkData.cancelled ? 'Transaction was rejected' : 'Signing request expired');
