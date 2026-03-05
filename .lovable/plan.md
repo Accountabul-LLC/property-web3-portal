@@ -1,47 +1,37 @@
 
 
-## Multi-Tenant Authentication and User Profiles
+## Problem Analysis
 
-The project already has basic auth infrastructure (Auth page, useAuth hook, properties linked via `owner_user_id`). What's missing is: user profiles, account type tracking (business vs individual), protected routes, and visible sign-in/sign-out in the navigation.
+The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+
+## Approach
+
+Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
 
 ### Plan
 
-**1. Create `profiles` table (database migration)**
-- `id` (uuid, PK, references auth.users ON DELETE CASCADE)
-- `email` (text)
-- `full_name` (text)
-- `account_type` (text: 'individual' or 'business')
-- `company_name` (text, nullable -- only for business accounts)
-- `phone` (text, nullable)
-- `created_at`, `updated_at`
-- RLS: users can read/update their own profile; admins can read all
-- Trigger: auto-create profile row on signup (via `auth.users` insert trigger)
+1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
+   - `account_info` -- XRP balance
+   - `account_lines` -- trustlines/token holdings  
+   - `account_tx` -- recent transactions
+   - Returns formatted holdings and transactions
 
-**2. Update Auth page**
-- Add account type selector (Individual / Business) on the sign-up form
-- Add full name field (and company name if business is selected)
-- After signup, insert profile data with account type
-- Add password reset flow (forgot password link + /reset-password page)
+2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
+   - XRP balance
+   - Token holdings (trustlines with balances)
+   - Recent transactions (parsed from `account_tx`)
 
-**3. Add sign-in/sign-out to Navigation**
-- Show user email/name + Sign Out button when authenticated
-- Show Sign In button when not authenticated
-- Link to `/auth`
+3. **Update `PortfolioSection` component** to:
+   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
+   - Display XRP balance as a summary card
+   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
+   - Show recent on-chain transactions with type, amount, date, and tx hash
+   - Keep the existing database-backed property token holdings as a separate section
 
-**4. Protect the Tokenize page**
-- Redirect unauthenticated users to `/auth` from `/tokenize`
-- Show the user's existing draft properties (already queries by `owner_user_id`)
+### Technical Details
 
-**5. Create a basic profile/dashboard page**
-- `/dashboard` route showing user info, account type, and their submitted properties
-- Allow editing profile details
-
-### Files to create/modify
-- **Database migration**: Create `profiles` table + auto-create trigger
-- `src/pages/Auth.tsx`: Add name, account type fields to signup
-- `src/pages/ResetPassword.tsx`: New page for password reset
-- `src/pages/Dashboard.tsx`: New user dashboard
-- `src/components/Navigation.tsx`: Add auth state UI (sign in/out)
-- `src/hooks/useAuth.ts`: Optionally extend to fetch profile
-- `src/App.tsx`: Add new routes (`/dashboard`, `/reset-password`)
+- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
+- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
+- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
+- **No database changes needed** -- this reads directly from the XRPL ledger
 

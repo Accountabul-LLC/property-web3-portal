@@ -1,15 +1,17 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
+import { useAuth } from '@/hooks/useAuth';
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, signOut } = useAuth();
   const {
     isConnected,
     isConnectModalOpen,
@@ -101,9 +103,35 @@ const Navigation = () => {
                 Connect Wallet
               </Button>
             )}
-            <Button variant="hero" className="h-10 px-6 font-medium">
-              Help / AI Assistant
-            </Button>
+            {user ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/dashboard')}
+                  className="h-10 px-4 font-medium"
+                >
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={signOut}
+                  className="h-10 px-4 font-medium text-muted-foreground"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="hero"
+                onClick={() => navigate('/auth')}
+                className="h-10 px-6 font-medium"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
+              </Button>
+            )}
           </div>
 
           {/* Mobile wallet info */}
@@ -171,9 +199,35 @@ const Navigation = () => {
                   Connect Wallet
                 </Button>
               )}
-              <Button variant="hero" className="w-full h-10 font-medium">
-                Help / AI Assistant
-              </Button>
+              {user ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}
+                    className="w-full h-10 font-medium"
+                  >
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={signOut}
+                    className="w-full h-10 font-medium text-muted-foreground"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="hero"
+                  onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}
+                  className="w-full h-10 font-medium"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         </div>
