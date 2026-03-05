@@ -240,9 +240,9 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           : tx.taker_pays.currency;
                         amountLine = `${tx.taker_gets.value.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${getCur} → ${tx.taker_pays.value.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${payCur}`;
                       } else if (tx.delivered_amount !== null && tx.delivered_amount !== undefined) {
-                        amountLine = `${formatXRP(tx.delivered_amount)} ${tx.delivered_currency || tx.currency}`;
+                        amountLine = `${formatXRP(tx.delivered_amount)} ${decodeCurrency(tx.delivered_currency || tx.currency)}`;
                       } else if (tx.amount > 0) {
-                        amountLine = `${formatXRP(tx.amount)} ${tx.currency}`;
+                        amountLine = `${formatXRP(tx.amount)} ${decodeCurrency(tx.currency)}`;
                       }
 
                       const counterparty = tx.direction === 'received' ? tx.sender : tx.destination;
