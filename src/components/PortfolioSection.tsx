@@ -701,8 +701,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 <p className="text-sm text-muted-foreground">{mpt.description}</p>
                               )}
 
-                              {/* Collection & Image */}
-                              {(mpt.collection || mpt.image) && (
+                              {/* Image & Issuer Info */}
+                              {(mpt.image || mpt.issuer_name || mpt.asset_class) && (
                                 <div className="flex items-start gap-4">
                                   {mpt.image && (
                                     <img
@@ -712,16 +712,17 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                     />
                                   )}
-                                  {mpt.collection && (
-                                    <div>
-                                      {mpt.collection.name && (
-                                        <p className="text-xs text-muted-foreground">Collection: <span className="text-foreground font-medium">{mpt.collection.name}</span></p>
-                                      )}
-                                      {mpt.collection.family && (
-                                        <p className="text-xs text-muted-foreground">Family: <span className="text-foreground font-medium">{mpt.collection.family}</span></p>
-                                      )}
-                                    </div>
-                                  )}
+                                  <div className="space-y-1">
+                                    {mpt.issuer_name && (
+                                      <p className="text-xs text-muted-foreground">Issuer: <span className="text-foreground font-medium">{mpt.issuer_name}</span></p>
+                                    )}
+                                    {mpt.collection && mpt.collection.name && (
+                                      <p className="text-xs text-muted-foreground">Class: <span className="text-foreground font-medium">{mpt.collection.name}</span></p>
+                                    )}
+                                    {mpt.collection && mpt.collection.family && (
+                                      <p className="text-xs text-muted-foreground">Type: <span className="text-foreground font-medium">{mpt.collection.family}</span></p>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
