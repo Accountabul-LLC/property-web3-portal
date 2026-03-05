@@ -5,7 +5,7 @@ import PortfolioSection from '@/components/PortfolioSection';
 import Footer from '@/components/Footer';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 
-const Portfolio = () => {
+const PortfolioInner = () => {
   const [searchParams] = useSearchParams();
   const { activeAddress } = useActiveWallet();
 
@@ -14,12 +14,18 @@ const Portfolio = () => {
   const isViewingOther = viewingAccount && viewingAccount !== activeAddress;
 
   return (
+    <PortfolioSection
+      overrideAddress={viewingAccount}
+      isReadOnly={!!isViewingOther}
+    />
+  );
+};
+
+const Portfolio = () => {
+  return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <PortfolioSection
-        overrideAddress={viewingAccount}
-        isReadOnly={!!isViewingOther}
-      />
+      <PortfolioInner />
       <Footer />
     </div>
   );
