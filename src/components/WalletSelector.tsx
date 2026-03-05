@@ -59,7 +59,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
         >
           <Wallet className={compact ? 'w-3.5 h-3.5 text-primary' : 'w-4 h-4 text-primary'} />
           <span className="font-medium text-primary">
-            {compact ? shortenAddress(activeAddress!) : `${activeWallet.label} (${shortenAddress(activeAddress!)})`}
+            {activeWallet.label || activeWallet.xamanName || shortenAddress(activeAddress!)}
           </span>
           {wallets.length > 1 && (
             <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
