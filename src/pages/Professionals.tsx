@@ -1,11 +1,11 @@
 import Navigation from '@/components/Navigation';
-import MarketplaceSection from '@/components/MarketplaceSection';
+import ProfessionalsSection from '@/components/ProfessionalsSection';
 import Footer from '@/components/Footer';
 
 const Professionals = () => (
   <div className="min-h-screen bg-background">
     <Navigation />
-    <MarketplaceSection />
+    <ProfessionalsSection />
     <Footer />
   </div>
 );
