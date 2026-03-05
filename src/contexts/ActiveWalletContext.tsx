@@ -9,6 +9,7 @@ export interface ConnectedWallet {
   label: string;
   xamanName: string | null;
   provider: string;
+  network: 'testnet' | 'mainnet';
   connectedAt: string;
   lastUsedAt: string;
   status: string;
@@ -20,7 +21,7 @@ interface ActiveWalletContextType {
   activeAddress: string | null;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => void;
+  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'testnet' | 'mainnet') => void;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
@@ -88,6 +89,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
         provider: w.provider || 'xaman',
+        network: (w.network === 'testnet' ? 'testnet' : 'mainnet') as 'testnet' | 'mainnet',
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -141,7 +143,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, [user]);
 
-  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => {
+  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'testnet' | 'mainnet') => {
     if (!user) return;
 
     // Upsert into user_wallets
@@ -155,6 +157,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       revoked_at: null,
       ...(provider ? { provider } : {}),
       ...(walletSecret ? { wallet_secret: walletSecret } : {}),
+      ...(network ? { network } : {}),
     };
 
     const { data, error } = await supabase
@@ -181,6 +184,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
       provider: w.provider || 'xaman',
+      network: (w.network === 'testnet' ? 'testnet' : 'mainnet') as 'testnet' | 'mainnet',
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,

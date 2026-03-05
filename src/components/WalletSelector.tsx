@@ -38,7 +38,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       const secret = data.secret || null;
 
       // Add it as a wallet via the context (with secret + testnet_faucet provider)
-      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret);
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
 
       toast({
         title: '🧪 Testnet Wallet Created',
@@ -152,7 +152,15 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                       <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                     )}
                     <div className="text-left min-w-0">
-                      <p className="text-xs font-medium truncate">{w.label}</p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-xs font-medium truncate">{w.label}</p>
+                        <Badge
+                          variant={w.network === 'testnet' ? 'secondary' : 'outline'}
+                          className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}
+                        >
+                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
+                        </Badge>
+                      </div>
                       {w.xamanName && w.xamanName !== w.label && (
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
