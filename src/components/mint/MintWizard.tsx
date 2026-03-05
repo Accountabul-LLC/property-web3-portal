@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -332,6 +332,18 @@ const MintWizard: React.FC = () => {
                 <span className="text-muted-foreground">Wallet</span>
                 <span className="font-mono text-xs">{activeAddress?.slice(0, 8)}...{activeAddress?.slice(-6)}</span>
               </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Signing</span>
+                {network === 'testnet' && isTestnetFaucetWallet ? (
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <FlaskConical className="w-3 h-3" /> Auto-sign (testnet)
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <QrCode className="w-3 h-3" /> Xaman QR
+                  </Badge>
+                )}
+              </div>
               <hr className="border-border" />
               {tokenType === 'nft' && (
                 <>
@@ -373,7 +385,7 @@ const MintWizard: React.FC = () => {
               </Button>
               <Button onClick={handleSubmit} disabled={loading} variant="hero">
                 {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                Sign & Submit
+                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
               </Button>
             </div>
           </>
