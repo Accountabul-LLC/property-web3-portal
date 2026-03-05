@@ -1,32 +1,37 @@
 
 
-## Plan: Fix Refresh Button for Multi-Wallet Portfolio
+## Problem Analysis
 
-### Problem
-When multiple wallets are connected, the refresh button only works for the first wallet. Switching to a second wallet and clicking refresh does not fetch new data. Network requests confirm only the first wallet address is being queried.
+The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
 
-### Root Cause
-The `refetch()` function from `useXRPLPortfolio` is correctly keyed per wallet address, so it should work. However, the refresh button only refetches the XRPL account data query -- it does not also invalidate the token metadata query (`useTokenMeta`). Additionally, when switching wallets on the same route, React Query's `staleTime: 15_000` may serve cached data and the manual `refetch()` call may not be propagating correctly if the component doesn't fully re-render on wallet switch.
+## Approach
 
-### Fix
+Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
 
-**1. Update refresh handler in `PortfolioSection.tsx`**
-Instead of calling `refetch()` on just the portfolio query, use `queryClient.invalidateQueries` to invalidate ALL queries related to the current wallet address. This ensures both `xrpl_portfolio` and `xrpl_token_meta` queries are refetched:
+### Plan
 
-```tsx
-const queryClient = useQueryClient();
+1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
+   - `account_info` -- XRP balance
+   - `account_lines` -- trustlines/token holdings  
+   - `account_tx` -- recent transactions
+   - Returns formatted holdings and transactions
 
-const handleRefresh = () => {
-  queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress] });
-  queryClient.invalidateQueries({ queryKey: ['xrpl_token_meta'] });
-};
-```
+2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
+   - XRP balance
+   - Token holdings (trustlines with balances)
+   - Recent transactions (parsed from `account_tx`)
 
-Replace the refresh button's `onClick={() => refetch()}` with `onClick={handleRefresh}`.
+3. **Update `PortfolioSection` component** to:
+   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
+   - Display XRP balance as a summary card
+   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
+   - Show recent on-chain transactions with type, amount, date, and tx hash
+   - Keep the existing database-backed property token holdings as a separate section
 
-**2. Ensure `refetchOnMount: 'always'` is working**
-The `useXRPLPortfolio` hook already has `refetchOnMount: 'always'`, but when switching wallets on the same `/portfolio` route, the component doesn't remount -- it re-renders. The query key change (`['xrpl_portfolio', newAddress]`) should trigger a new fetch, but we should verify by also setting `staleTime` behavior to not block initial fetches for new keys.
+### Technical Details
 
-### Files to modify
-- `src/components/PortfolioSection.tsx` -- add `useQueryClient` import, replace `refetch()` with `invalidateQueries` for both portfolio and token meta queries
+- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
+- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
+- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
+- **No database changes needed** -- this reads directly from the XRPL ledger
 
