@@ -8,6 +8,25 @@ interface TokenQuery {
   issuer: string;
 }
 
+/** Fetch the current XRP/USD price from CoinGecko (free, no API key) */
+async function getXrpUsdPrice(): Promise<number> {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd',
+      { headers: { 'Accept': 'application/json' } }
+    );
+    if (!res.ok) {
+      console.error('CoinGecko API error:', res.status);
+      return 0;
+    }
+    const data = await res.json();
+    return data?.ripple?.usd ?? 0;
+  } catch (e) {
+    console.error('Failed to fetch XRP/USD price:', e);
+    return 0;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -26,51 +45,98 @@ Deno.serve(async (req) => {
     // Limit to 20 tokens per request to avoid abuse
     const limited = tokens.slice(0, 20);
 
-    // Fetch metadata for each token from XRPL Meta API in parallel
-    const results = await Promise.allSettled(
-      limited.map(async (t) => {
+    // Fetch XRP/USD price and all token metadata in parallel
+    const [xrpUsd, ...results] = await Promise.all([
+      getXrpUsdPrice(),
+      ...limited.map(async (t) => {
         const identifier = `${t.currency}:${t.issuer}`;
         const url = `https://s1.xrplmeta.org/token/${encodeURIComponent(identifier)}`;
         
-        const res = await fetch(url, {
-          headers: { 'Accept': 'application/json' },
-        });
+        try {
+          const res = await fetch(url, {
+            headers: { 'Accept': 'application/json' },
+          });
 
-        if (!res.ok) {
-          console.error(`XRPL Meta API error for ${identifier}: ${res.status}`);
+          if (!res.ok) {
+            console.error(`XRPL Meta API error for ${identifier}: ${res.status}`);
+            return { currency: t.currency, issuer: t.issuer, meta: null };
+          }
+
+          const data = await res.json();
+
+          // xrplmeta prices are denominated in XRP — convert to USD
+          const priceInXrp = data.metrics?.price ? Number(data.metrics.price) : null;
+          const marketCapInXrp = data.metrics?.marketcap ? Number(data.metrics.marketcap) : null;
+
+          // Extract website from urls array or issuer domain
+          const urls = data.meta?.token?.urls || [];
+          const websiteEntry = urls.find((u: any) => u.type === 'website');
+          const website = websiteEntry?.url || data.meta?.issuer?.domain || null;
+
+          return {
+            currency: t.currency,
+            issuer: t.issuer,
+            priceInXrp,
+            marketCapInXrp,
+            rawMeta: {
+              name: data.meta?.token?.name || null,
+              issuer_name: data.meta?.issuer?.name || null,
+              description: data.meta?.token?.desc || data.meta?.token?.description || null,
+              icon: data.meta?.token?.icon || null,
+              website,
+              domain: data.meta?.issuer?.domain || null,
+              trust_level: data.meta?.token?.trust_level ?? null,
+              holders: data.metrics?.holders ?? null,
+              supply: data.metrics?.supply ? Number(data.metrics.supply) : null,
+              trustlines: data.metrics?.trustlines ?? null,
+              volume_24h_xrp: data.metrics?.volume_24h ? Number(data.metrics.volume_24h) : null,
+              exchanges_24h: data.metrics?.exchanges_24h ? Number(data.metrics.exchanges_24h) : null,
+            },
+          };
+        } catch (e) {
+          console.error(`Error fetching ${identifier}:`, e);
           return { currency: t.currency, issuer: t.issuer, meta: null };
         }
+      }),
+    ]);
 
-        const data = await res.json();
+    console.log(`XRP/USD price: $${xrpUsd}`);
 
-        return {
-          currency: t.currency,
-          issuer: t.issuer,
-          meta: {
-            name: data.meta?.token?.name || null,
-            issuer_name: data.meta?.issuer?.name || null,
-            description: data.meta?.token?.description || null,
-            icon: data.meta?.token?.icon || null,
-            website: data.meta?.issuer?.website || data.meta?.token?.website || null,
-            domain: data.meta?.issuer?.domain || null,
-            trust_level: data.meta?.token?.trust_level ?? null,
-            price: data.metrics?.price ?? null,
-            price_currency: 'USD',
-            market_cap: data.metrics?.marketcap ?? null,
-            holders: data.metrics?.holders ?? null,
-            supply: data.metrics?.supply ?? null,
-          },
-        };
-      })
-    );
+    // Convert XRP-denominated prices to USD
+    const tokenMeta = results.map((r: any) => {
+      if (!r || !r.currency) return null;
+      if (r.meta === null) return { currency: r.currency, issuer: r.issuer, meta: null };
 
-    const tokenMeta = results.map((r) => {
-      if (r.status === 'fulfilled') return r.value;
-      return { currency: '', issuer: '', meta: null };
-    }).filter(r => r.currency);
+      const priceUsd = r.priceInXrp && xrpUsd ? r.priceInXrp * xrpUsd : null;
+      const marketCapUsd = r.marketCapInXrp && xrpUsd ? r.marketCapInXrp * xrpUsd : null;
+      const volume24hUsd = r.rawMeta?.volume_24h_xrp && xrpUsd ? r.rawMeta.volume_24h_xrp * xrpUsd : null;
+
+      return {
+        currency: r.currency,
+        issuer: r.issuer,
+        meta: {
+          name: r.rawMeta.name,
+          issuer_name: r.rawMeta.issuer_name,
+          description: r.rawMeta.description,
+          icon: r.rawMeta.icon,
+          website: r.rawMeta.website,
+          domain: r.rawMeta.domain,
+          trust_level: r.rawMeta.trust_level,
+          price: priceUsd,
+          price_currency: 'USD',
+          market_cap: marketCapUsd,
+          holders: r.rawMeta.holders,
+          supply: r.rawMeta.supply,
+          trustlines: r.rawMeta.trustlines,
+          volume_24h: volume24hUsd,
+          trades_24h: r.rawMeta.exchanges_24h,
+          xrp_price: xrpUsd,
+        },
+      };
+    }).filter(Boolean);
 
     return new Response(
-      JSON.stringify({ tokens: tokenMeta }),
+      JSON.stringify({ tokens: tokenMeta, xrp_usd: xrpUsd }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
