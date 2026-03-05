@@ -220,3 +220,58 @@ interface ConnectedWallet {
 8. **No offline/error recovery** — If Xaman signing is interrupted, no way to resume
 9. **Hardcoded reserves** — 10 XRP base + 2 XRP/object; should query `server_info` dynamically
 10. **No token metadata** — No lookup for token names, icons, or issuer verification status
+
+---
+
+## 11. Tokenization Intake (Simplified V1)
+
+### Overview
+
+`/tokenize` saves directly into the `properties` table. `properties.status` drives the entire workflow — no separate `tokenization_requests` table needed.
+
+### Flow
+
+1. **Save Draft** — User fills out `/tokenize` form → upserts into `properties` with `status = 'draft'`
+2. **Submit** — User clicks submit → updates the same row to `status = 'submitted'` and sets `submitted_at = now()`
+3. **Admin Review** — Admin changes status through the pipeline: `under_review` → `needs_info` → `approved` → `rejected`
+
+### Status Enum (V1)
+
+`draft` | `submitted` | `under_review` | `needs_info` | `approved` | `rejected`
+
+### Database
+
+Uses the existing `properties` table with these additional columns:
+
+| Column | Type | Notes |
+|---|---|---|
+| `owner_user_id` | uuid (FK → auth.users) | Supabase Auth user who submitted |
+| `address_display` | text | Human-readable address string |
+| `address_json` | jsonb | Structured address (optional) |
+| `submitted_at` | timestamptz | Set when status changes to submitted |
+| `review_notes` | text | Admin feedback / notes |
+
+### API (Edge Function: `tokenization-pipeline`)
+
+| Method | Path Hint | Auth | Description |
+|---|---|---|---|
+| GET | `/mine` | Authenticated user | Returns `properties` where `owner_user_id = auth.uid()` |
+| GET | `/` | Admin only | Returns properties with `status IN (submitted, under_review, needs_info, approved, rejected)` |
+| PATCH | `/` | Admin only | Updates `status` and `review_notes` for a given `property_id` |
+
+### Security (RLS)
+
+- Users can only read/write their own properties (`owner_user_id = auth.uid()`)
+- Admins (via `user_roles` table + `has_role()` security definer function) can read/write all properties
+- Anonymous users can read `approved` properties only (public marketplace, V2)
+
+### Authentication
+
+Supabase Auth (email/password) at `/auth`. The `owner_user_id` column links properties to authenticated users.
+
+### Acceptance Criteria
+
+- [ ] Submitting creates/updates a `properties` row with correct status
+- [ ] Admin pipeline API returns all `submitted+` properties
+- [ ] Users only see their own records
+- [ ] Approved properties can be exposed publicly in V2

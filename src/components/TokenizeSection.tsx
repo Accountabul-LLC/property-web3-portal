@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,40 +7,52 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle, Save } from 'lucide-react';
+import { useTokenizeForm } from '@/hooks/useTokenizeForm';
+import { useAuth } from '@/hooks/useAuth';
 
 const TokenizeSection = () => {
-  const [formData, setFormData] = React.useState({
-    propertyAddress: '',
-    propertyType: '',
-    squareFootage: '',
-    bedrooms: '',
-    bathrooms: '',
-    lotSize: '',
-    yearBuilt: '',
-    appraisalValue: '',
-    monthlyRent: '',
-    description: '',
-    zoning: '',
-    propertyTax: ''
-  });
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const {
+    formData,
+    handleInputChange,
+    saveDraft,
+    submitForTokenization,
+    saving,
+  } = useTokenizeForm();
 
   const [currentStep, setCurrentStep] = React.useState(1);
   const [uploadedFiles, setUploadedFiles] = React.useState<string[]>([]);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   const handleFileUpload = (fileType: string) => {
     setUploadedFiles(prev => [...prev, fileType]);
+  };
+
+  const handleSubmit = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    const success = await submitForTokenization();
+    if (success) {
+      navigate('/');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    await saveDraft();
   };
 
   const steps = [
     { id: 1, title: 'Property Details', icon: MapPin },
     { id: 2, title: 'Financial Info', icon: DollarSign },
     { id: 3, title: 'Documentation', icon: FileText },
-    { id: 4, title: 'Verification', icon: Shield }
+    { id: 4, title: 'Verification', icon: Shield },
   ];
 
   const requiredDocuments = [
@@ -48,7 +61,7 @@ const TokenizeSection = () => {
     { name: 'Property Photos', uploaded: uploadedFiles.includes('photos'), required: true },
     { name: 'Insurance Policy', uploaded: uploadedFiles.includes('insurance'), required: false },
     { name: 'Tax Records', uploaded: uploadedFiles.includes('tax'), required: false },
-    { name: 'Floor Plans', uploaded: uploadedFiles.includes('floorplans'), required: false }
+    { name: 'Floor Plans', uploaded: uploadedFiles.includes('floorplans'), required: false },
   ];
 
   const renderStepContent = () => {
@@ -258,7 +271,7 @@ const TokenizeSection = () => {
                       </div>
                     </div>
                     <Button
-                      variant={doc.uploaded ? "success" : "outline"}
+                      variant={doc.uploaded ? "default" : "outline"}
                       size="sm"
                       onClick={() => !doc.uploaded && handleFileUpload(doc.name.toLowerCase().replace(' ', ''))}
                     >
@@ -353,6 +366,11 @@ const TokenizeSection = () => {
           Transform your real estate into liquid, tradeable tokens. Our secure platform guides you through 
           every step of the tokenization process.
         </p>
+        {!user && (
+          <p className="text-sm text-warning mt-2">
+            You'll need to <button onClick={() => navigate('/auth')} className="underline text-primary">sign in</button> to save or submit.
+          </p>
+        )}
       </div>
 
       {/* Progress Steps */}
@@ -391,24 +409,33 @@ const TokenizeSection = () => {
         {renderStepContent()}
         
         <div className="flex justify-between mt-8 pt-6 border-t border-border">
-          <Button
-            variant="outline"
-            onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-            disabled={currentStep === 1}
-          >
-            Previous
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
+              disabled={currentStep === 1}
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSaveDraft}
+              disabled={saving}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Draft
+            </Button>
+          </div>
           
           {currentStep < 4 ? (
             <Button
-              variant="hero"
               onClick={() => setCurrentStep(Math.min(4, currentStep + 1))}
             >
               Next Step
             </Button>
           ) : (
-            <Button variant="premium" className="animate-pulse-glow">
-              Submit for Tokenization
+            <Button onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Submitting...' : 'Submit for Tokenization'}
             </Button>
           )}
         </div>
