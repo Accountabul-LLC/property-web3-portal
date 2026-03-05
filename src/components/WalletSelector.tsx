@@ -7,7 +7,7 @@ import { Wallet, ChevronDown, Plus, X, Check, Pencil, FlaskConical, Loader2, Ext
 import { Input } from '@/components/ui/input';
 import { useActiveWallet, type ConnectedWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface WalletSelectorProps {
   compact?: boolean;
@@ -40,13 +40,10 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       // Add it as a wallet via the context (with secret + testnet_faucet provider)
       await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
 
-      toast({
-        title: '🧪 Testnet Wallet Created',
-        description: `Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`,
-      });
+      toast.success(`🧪 Testnet Wallet Created — Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
       setIsOpen(false);
     } catch (err: any) {
-      toast({ title: 'Failed to generate testnet wallet', description: err.message, variant: 'destructive' });
+      toast.error(`Failed to generate testnet wallet: ${err.message}`);
     } finally {
       setGeneratingTestnet(false);
     }

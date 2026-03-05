@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, Check, AlertTriangle } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 interface ReceiveModalProps {
   isOpen: boolean;
@@ -14,16 +14,16 @@ interface ReceiveModalProps {
 
 const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => {
   const [copied, setCopied] = useState(false);
-  const { toast } = useToast();
+  
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(walletAddress);
       setCopied(true);
-      toast({ title: 'Address copied', description: 'Wallet address copied to clipboard.' });
+      toast.success('Address copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast({ title: 'Copy failed', description: 'Please copy the address manually.', variant: 'destructive' });
+      toast.error('Copy failed — please copy the address manually');
     }
   };
 

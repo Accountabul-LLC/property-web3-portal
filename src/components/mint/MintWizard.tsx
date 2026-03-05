@@ -8,7 +8,7 @@ import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrC
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import NFTForm, { type NFTParams } from './NFTForm';
 import MPTForm, { type MPTParams } from './MPTForm';
 import IOUForm, { type IOUParams } from './IOUForm';
