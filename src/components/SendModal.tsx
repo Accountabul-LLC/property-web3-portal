@@ -116,8 +116,12 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        if (error) {
+          // For FunctionsHttpError, the body contains the JSON error
+          const msg = typeof error === 'object' && 'message' in error ? error.message : String(error);
+          throw new Error(msg);
+        }
+        if (data?.error) throw new Error(data.error);
         setBuildResult(data);
       } else {
         const { data, error } = await supabase.functions.invoke('xrpl-build-token-payment', {
@@ -131,14 +135,18 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
+        if (error) {
+          const msg = typeof error === 'object' && 'message' in error ? error.message : String(error);
+          throw new Error(msg);
+        }
+        if (data?.error) throw new Error(data.error);
         setBuildResult(data);
       }
       setStep('review');
     } catch (err: any) {
-      setErrorMsg(err.message || 'Failed to build transaction');
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      const message = err.message || 'Failed to build transaction';
+      setErrorMsg(message);
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsBuilding(false);
     }
