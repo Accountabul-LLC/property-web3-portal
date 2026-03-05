@@ -228,12 +228,18 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
         <>
           {/* Total Wallet Value Header */}
           {portfolioValuation && (
-            <Card className="p-6 mb-8 bg-gradient-card border-primary/10">
+            <Card className={`p-6 mb-8 bg-gradient-card ${isTestnet ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/10'}`}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="w-5 h-5 text-primary" />
                     <p className="text-sm text-muted-foreground font-medium">Account Worth</p>
+                    {isTestnet && (
+                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1">
+                        <FlaskConical className="w-3 h-3" />
+                        Testnet
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
                     ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -251,16 +257,30 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isFetching}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  {isTestnet && !isReadOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFaucetFund}
+                      disabled={isFunding}
+                      className="gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                    >
+                      {isFunding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplets className="w-3.5 h-3.5" />}
+                      Fund with Faucet
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isFetching}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
               </div>
             </Card>
           )}
@@ -414,7 +434,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                               About XRP
                             </a>
                             <a
-                              href={`https://livenet.xrpl.org/accounts/${displayAddress}`}
+                              href={`${explorerBase}/accounts/${displayAddress}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
@@ -436,7 +456,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                   const issuerLabel = meta?.issuer_name || shortenAddress(token.issuer);
                   const tokenKey = `${token.currency}-${token.issuer}`;
                   const isExpanded = expandedToken === tokenKey;
-                  const explorerUrl = `https://livenet.xrpl.org/token/${token.currency}.${token.issuer}`;
+                  const explorerUrl = `${explorerBase}/token/${token.currency}.${token.issuer}`;
                   const websiteUrl = meta?.website
                     ? (meta.website.startsWith('http') ? meta.website : `https://${meta.website}`)
                     : null;
