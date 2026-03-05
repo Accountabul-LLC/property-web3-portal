@@ -33,19 +33,37 @@ function setCache(key: string, data: unknown) {
   }
 }
 
-async function xrplRequest(node: string, method: string, params: Record<string, unknown>[]) {
-  const res = await fetch(node, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`XRPL node returned non-JSON (status ${res.status}): ${text.slice(0, 200)}`);
+async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
+  let lastError: Error | null = null;
+  for (const node of nodes) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        const res = await fetch(node, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, params }),
+        });
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          lastError = new Error(`Non-JSON from ${node} (${res.status}): ${text.slice(0, 120)}`);
+          if (text.toLowerCase().includes('rate limit')) {
+            console.warn(`Rate limited by ${node}, attempt ${attempt + 1}`);
+            continue; // retry same node
+          }
+          break; // try next node
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+      }
+    }
   }
+  throw lastError || new Error('All XRPL nodes failed');
 }
+
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 function decodeHexString(hex: string): string {
   try {
