@@ -670,10 +670,13 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <p className="font-semibold text-lg">{mpt.name || 'MPT Token'}</p>
+                                    {mpt.ticker && (
+                                      <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-primary/30">{mpt.ticker}</Badge>
+                                    )}
                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">Issuer</Badge>
                                   </div>
                                   <p className="text-xs text-muted-foreground">
-                                    Multi-Purpose Token
+                                    {mpt.issuer_name ? `${mpt.issuer_name} · ` : ''}Multi-Purpose Token
                                     {mpt.description && ` · ${mpt.description.slice(0, 40)}${mpt.description.length > 40 ? '…' : ''}`}
                                   </p>
                                 </div>
