@@ -106,8 +106,10 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     setErrorMsg('');
 
     try {
+      let responseData: any;
+      
       if (selectedAsset.type === 'xrp') {
-        const { data, error } = await supabase.functions.invoke('xrpl-build-payment', {
+        const result = await supabase.functions.invoke('xrpl-build-payment', {
           body: {
             from_address: walletAddress,
             to_address: toAddress.trim(),
@@ -116,15 +118,21 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (error) {
-          // For FunctionsHttpError, the body contains the JSON error
-          const msg = typeof error === 'object' && 'message' in error ? error.message : String(error);
+        if (result.error) {
+          // Try to parse error context from FunctionsHttpError
+          let msg = result.error.message || 'Failed to build payment';
+          try {
+            const ctx = result.error as any;
+            if (ctx.context?.body) {
+              const body = typeof ctx.context.body === 'string' ? JSON.parse(ctx.context.body) : ctx.context.body;
+              if (body?.error) msg = body.error;
+            }
+          } catch {}
           throw new Error(msg);
         }
-        if (data?.error) throw new Error(data.error);
-        setBuildResult(data);
+        responseData = result.data;
       } else {
-        const { data, error } = await supabase.functions.invoke('xrpl-build-token-payment', {
+        const result = await supabase.functions.invoke('xrpl-build-token-payment', {
           body: {
             from_address: walletAddress,
             to_address: toAddress.trim(),
@@ -135,13 +143,22 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             memo: memo.trim() || undefined,
           },
         });
-        if (error) {
-          const msg = typeof error === 'object' && 'message' in error ? error.message : String(error);
+        if (result.error) {
+          let msg = result.error.message || 'Failed to build payment';
+          try {
+            const ctx = result.error as any;
+            if (ctx.context?.body) {
+              const body = typeof ctx.context.body === 'string' ? JSON.parse(ctx.context.body) : ctx.context.body;
+              if (body?.error) msg = body.error;
+            }
+          } catch {}
           throw new Error(msg);
         }
-        if (data?.error) throw new Error(data.error);
-        setBuildResult(data);
+        responseData = result.data;
       }
+
+      if (responseData?.error) throw new Error(responseData.error);
+      setBuildResult(responseData);
       setStep('review');
     } catch (err: any) {
       const message = err.message || 'Failed to build transaction';
