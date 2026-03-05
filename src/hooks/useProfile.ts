@@ -19,6 +19,7 @@ export interface Profile {
   state: string | null;
   zip: string | null;
   country: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,7 +27,7 @@ export interface Profile {
 export type ProfileUpdate = Partial<Pick<Profile,
   'full_name' | 'first_name' | 'last_name' | 'account_type' | 'company_name' |
   'phone' | 'date_of_birth' | 'gender' | 'address_line1' | 'address_line2' |
-  'city' | 'state' | 'zip' | 'country'
+  'city' | 'state' | 'zip' | 'country' | 'avatar_url'
 >>;
 
 export function useProfile() {

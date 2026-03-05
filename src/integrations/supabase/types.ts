@@ -224,6 +224,7 @@ export type Database = {
           account_type: string
           address_line1: string | null
           address_line2: string | null
+          avatar_url: string | null
           city: string | null
           company_name: string | null
           country: string | null
@@ -244,6 +245,7 @@ export type Database = {
           account_type?: string
           address_line1?: string | null
           address_line2?: string | null
+          avatar_url?: string | null
           city?: string | null
           company_name?: string | null
           country?: string | null
@@ -264,6 +266,7 @@ export type Database = {
           account_type?: string
           address_line1?: string | null
           address_line2?: string | null
+          avatar_url?: string | null
           city?: string | null
           company_name?: string | null
           country?: string | null

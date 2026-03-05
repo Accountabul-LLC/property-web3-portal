@@ -13,7 +13,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle } from 'lucide-react';
+import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera } from 'lucide-react';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -59,6 +60,44 @@ const Dashboard = () => {
   const [saving, setSaving] = useState(false);
   const [editingWalletAddr, setEditingWalletAddr] = useState<string | null>(null);
   const [walletLabel, setWalletLabel] = useState('');
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a valid image (JPEG, PNG, WebP, GIF, or SVG)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const ext = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error('Upload failed: ' + uploadError.message);
+      setUploadingAvatar(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
+
+    await updateProfile({ avatar_url: avatarUrl } as any);
+    toast.success('Profile picture updated!');
+    setUploadingAvatar(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -222,9 +261,32 @@ const Dashboard = () => {
         <Card className="p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="w-6 h-6 text-primary" />
-              </div>
+              <button
+                type="button"
+                className="relative group w-12 h-12 rounded-full overflow-hidden cursor-pointer"
+                onClick={() => avatarInputRef.current?.click()}
+                disabled={uploadingAvatar}
+                title="Click to upload profile picture"
+              >
+                <Avatar className="w-12 h-12">
+                  {profile?.avatar_url ? (
+                    <AvatarImage src={profile.avatar_url} alt={displayName} />
+                  ) : null}
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="w-6 h-6 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-full">
+                  <Camera className="w-4 h-4 text-white" />
+                </div>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                />
+              </button>
               <div>
                 <h2 className="text-xl font-semibold">{displayName}</h2>
                 <p className="text-sm text-muted-foreground">{user?.email}</p>
