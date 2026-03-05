@@ -14,10 +14,20 @@ export interface XRPLTransaction {
   direction: 'sent' | 'received';
   amount: number;
   currency: string;
+  issuer?: string | null;
+  delivered_amount?: number | null;
+  delivered_currency?: string | null;
   date: string | null;
   fee: number;
+  sender?: string | null;
   destination: string | null;
+  destination_tag?: number | null;
+  memos?: string[] | null;
   result: string | null;
+  is_swap?: boolean;
+  taker_pays?: { currency: string; value: number; issuer?: string } | null;
+  taker_gets?: { currency: string; value: number; issuer?: string } | null;
+  balance_changes?: Array<{ account: string; currency: string; issuer?: string; value: number }> | null;
 }
 
 export interface XRPLPortfolioData {
