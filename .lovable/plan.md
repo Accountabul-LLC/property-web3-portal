@@ -1,37 +1,47 @@
 
 
-## Problem Analysis
+## Fix Mint Token Flow — Polling Bugs
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+### Root Cause
+The "Invalid transaction JSON" error from xaman-send-payment appears resolved (confirmed working via direct API test). However, **two critical bugs in MintWizard.tsx prevent the full mint flow from completing**:
 
-## Approach
+### Bug 1: Parameter Key Mismatch (Polling Always Fails)
+**File**: `src/components/mint/MintWizard.tsx` line 106
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+The wizard sends:
+```js
+body: { payload_uuid: uuid }
+```
+But `xaman-check-payload` expects:
+```js
+const { uuid } = await req.json()
+```
+`uuid` is always `undefined`, causing "UUID is required" error on every poll.
 
-### Plan
+**Fix**: Change `payload_uuid` → `uuid` in the invoke call.
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+### Bug 2: Wrong Status Field Name
+**File**: `src/components/mint/MintWizard.tsx` line 119
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
+The wizard checks:
+```js
+checkData?.rejected
+```
+But `xaman-check-payload` returns:
+```js
+cancelled: xamanData.meta?.cancelled || false
+```
+Cancelled/rejected payloads are never detected, so polling continues until the 5-minute timeout.
 
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+**Fix**: Change `checkData?.rejected` → `checkData?.cancelled`.
 
-### Technical Details
+### Changes
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+**`src/components/mint/MintWizard.tsx`** — Two line fixes:
+- Line 106: `{ payload_uuid: uuid }` → `{ uuid }`
+- Line 119: `checkData?.rejected` → `checkData?.cancelled`
+- Line 122: Update error message for cancelled state
+
+### Files to modify
+- `src/components/mint/MintWizard.tsx` (2 line changes)
 
