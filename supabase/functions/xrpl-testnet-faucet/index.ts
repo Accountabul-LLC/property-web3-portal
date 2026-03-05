@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
       throw new Error('Faucet did not return an address');
     }
 
-    const secret = data.account?.secret;
+    const secret = data.account?.secret || data.seed;
 
     return new Response(JSON.stringify({
       success: true,
