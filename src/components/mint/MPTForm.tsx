@@ -93,10 +93,28 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
             min={0}
             max={15}
             value={params.asset_scale}
-            onChange={e => onChange({ ...params, asset_scale: Number(e.target.value) })}
+            onChange={e => onChange({ ...params, asset_scale: Math.min(15, Math.max(0, Number(e.target.value))) })}
             className="mt-1"
           />
-          <p className="text-xs text-muted-foreground mt-1">Decimal places (0-15)</p>
+          <p className="text-xs text-muted-foreground mt-1">Decimal places (0 = whole tokens, 2 = like USD)</p>
+          {params.asset_scale > 0 && (
+            <div className="mt-2 rounded-md bg-muted/50 p-2.5 text-xs space-y-1">
+              <p className="text-muted-foreground font-medium">Divisibility Preview</p>
+              <p className="font-mono">
+                1 token = <span className="text-foreground font-semibold">1.{'0'.repeat(params.asset_scale)}</span>
+              </p>
+              <p className="font-mono">
+                Smallest unit = <span className="text-foreground font-semibold">0.{'0'.repeat(params.asset_scale - 1)}1</span>
+              </p>
+              {params.max_amount && (
+                <p className="font-mono">
+                  Max supply = <span className="text-foreground font-semibold">
+                    {Number(params.max_amount).toLocaleString('en-US', { minimumFractionDigits: params.asset_scale, maximumFractionDigits: params.asset_scale })}
+                  </span>
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
