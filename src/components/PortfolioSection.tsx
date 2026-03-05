@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
@@ -194,45 +194,121 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                   const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
                   const displayName = meta?.name || decodeCurrency(token.currency);
                   const issuerLabel = meta?.issuer_name || shortenAddress(token.issuer);
+                  const tokenKey = `${token.currency}-${token.issuer}`;
+                  const isExpanded = expandedToken === tokenKey;
+                  const explorerUrl = `https://livenet.xrpl.org/token/${token.currency}.${token.issuer}`;
+                  const websiteUrl = meta?.website
+                    ? (meta.website.startsWith('http') ? meta.website : `https://${meta.website}`)
+                    : null;
 
                   return (
-                    <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <TokenAvatar issuer={token.issuer} currency={token.currency} />
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-semibold text-lg">{displayName}</p>
-                              {meta?.website && (
-                                <a
-                                  href={meta.website.startsWith('http') ? meta.website : `https://${meta.website}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="text-muted-foreground hover:text-primary transition-colors"
-                                  title={meta.website}
-                                >
-                                  <Globe className="w-3.5 h-3.5" />
-                                </a>
+                    <Card
+                      key={`${tokenKey}-${idx}`}
+                      className={`hover:shadow-card transition-all duration-300 cursor-pointer ${isExpanded ? 'ring-1 ring-primary/30' : ''}`}
+                      onClick={() => setExpandedToken(isExpanded ? null : tokenKey)}
+                    >
+                      <div className="p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <TokenAvatar issuer={token.issuer} currency={token.currency} />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-lg">{displayName}</p>
+                                {meta?.trust_level != null && meta.trust_level >= 2 && (
+                                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Verified</Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground">
+                                {issuerLabel}
+                                {meta?.domain && ` · ${meta.domain}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                              {meta?.price ? (
+                                <p className="text-xs text-muted-foreground">
+                                  ≈ ${(Number(token.balance) * meta.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
                               )}
                             </div>
-                            <p className="text-xs text-muted-foreground">
-                              {issuerLabel}
-                              {meta?.domain && ` · ${meta.domain}`}
-                            </p>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
                           </div>
                         </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
-                          {meta?.price ? (
-                            <p className="text-xs text-muted-foreground">
-                              ≈ ${(Number(token.balance) * meta.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                            </p>
-                          ) : (
-                            <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
-                          )}
-                        </div>
                       </div>
+
+                      {/* Expanded detail panel */}
+                      {isExpanded && (
+                        <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
+                          {meta?.description && (
+                            <p className="text-sm text-muted-foreground">{meta.description}</p>
+                          )}
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {meta?.price != null && (
+                              <div className="bg-muted/50 rounded-lg p-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">Price</p>
+                                <p className="text-sm font-bold">${meta.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
+                              </div>
+                            )}
+                            {meta?.market_cap != null && (
+                              <div className="bg-muted/50 rounded-lg p-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">Market Cap</p>
+                                <p className="text-sm font-bold">${(meta.market_cap / 1e6).toFixed(1)}M</p>
+                              </div>
+                            )}
+                            {meta?.holders != null && (
+                              <div className="bg-muted/50 rounded-lg p-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">Holders</p>
+                                <p className="text-sm font-bold">{meta.holders.toLocaleString()}</p>
+                              </div>
+                            )}
+                            {meta?.supply != null && (
+                              <div className="bg-muted/50 rounded-lg p-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">Supply</p>
+                                <p className="text-sm font-bold">{(meta.supply / 1e6).toFixed(1)}M</p>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
+                            <span>Issuer:</span>
+                            <span>{token.issuer}</span>
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <a
+                              href={explorerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              XRPL Explorer
+                            </a>
+                            {websiteUrl && (
+                              <a
+                                href={websiteUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                              >
+                                <Globe className="w-3.5 h-3.5" />
+                                {meta?.domain || 'Website'}
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </Card>
                   );
                 })}
