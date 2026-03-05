@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
@@ -99,6 +99,15 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <p className="text-sm text-muted-foreground">XRP Balance</p>
                   <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)} XRP</p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                      <ShieldCheck className="w-3 h-3" />
+                      Reserve: {formatXRP(xrplData.reserve_xrp)} XRP
+                    </span>
+                    <span className="text-xs text-primary font-medium">
+                      Spendable: {formatXRP(xrplData.spendable_xrp)} XRP
+                    </span>
+                  </div>
                 </div>
               </div>
             </Card>

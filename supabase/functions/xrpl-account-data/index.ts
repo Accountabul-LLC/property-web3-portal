@@ -70,11 +70,22 @@ serve(async (req) => {
       xrplRequest('account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]),
     ]);
 
-    // Parse XRP balance (in drops, convert to XRP)
+    // Parse XRP balance and reserve (in drops, convert to XRP)
     let xrpBalance = 0;
-    if (accountInfoRes.result?.account_data?.Balance) {
-      xrpBalance = Number(accountInfoRes.result.account_data.Balance) / 1_000_000;
+    let ownerCount = 0;
+    const accountData = accountInfoRes.result?.account_data;
+    if (accountData?.Balance) {
+      xrpBalance = Number(accountData.Balance) / 1_000_000;
     }
+    if (accountData?.OwnerCount !== undefined) {
+      ownerCount = Number(accountData.OwnerCount);
+    }
+
+    // XRPL reserve: base reserve (1 XRP) + owner reserve (0.2 XRP per owned object)
+    const baseReserve = 1;
+    const ownerReserve = 0.2;
+    const totalReserve = baseReserve + (ownerCount * ownerReserve);
+    const spendableXrp = Math.max(0, xrpBalance - totalReserve);
 
     // Parse trustlines/token holdings
     const tokenHoldings = (accountLinesRes.result?.lines || []).map((line: any) => ({
@@ -217,6 +228,9 @@ serve(async (req) => {
 
     const responseData = {
       xrp_balance: xrpBalance,
+      reserve_xrp: totalReserve,
+      spendable_xrp: spendableXrp,
+      owner_count: ownerCount,
       token_holdings: tokenHoldings,
       transactions,
       account: wallet_address,
