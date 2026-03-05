@@ -44,6 +44,13 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ method, params }),
         });
+        // Handle HTTP-level rate limiting
+        if (res.status === 429 || res.status === 503) {
+          lastError = new Error(`${node} returned ${res.status}`);
+          console.warn(`${node} returned ${res.status}, attempt ${attempt + 1}`);
+          if (attempt < MAX_RETRIES) continue; // retry same node
+          break; // try next node
+        }
         const text = await res.text();
         try {
           return JSON.parse(text);
@@ -51,12 +58,13 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
           lastError = new Error(`Non-JSON from ${node} (${res.status}): ${text.slice(0, 120)}`);
           if (text.toLowerCase().includes('rate limit')) {
             console.warn(`Rate limited by ${node}, attempt ${attempt + 1}`);
-            continue; // retry same node
+            if (attempt < MAX_RETRIES) continue;
           }
           break; // try next node
         }
       } catch (e) {
         lastError = e instanceof Error ? e : new Error(String(e));
+        break; // network error, try next node immediately
       }
     }
   }
