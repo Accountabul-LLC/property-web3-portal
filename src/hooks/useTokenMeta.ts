@@ -46,8 +46,9 @@ export function useTokenMeta(tokens: TokenQuery[] | undefined) {
   return useQuery({
     queryKey: ['token_meta', key],
     queryFn: async (): Promise<TokenMetaData> => {
+      const safeTokens = Array.isArray(tokens) ? tokens : [];
       const { data, error } = await supabase.functions.invoke('xrpl-token-meta', {
-        body: { tokens: tokens || [] },
+        body: { tokens: safeTokens },
       });
 
       if (error) throw error;
@@ -60,8 +61,7 @@ export function useTokenMeta(tokens: TokenQuery[] | undefined) {
       }
       return { tokenMap: map, xrpUsd: data.xrp_usd || 0 };
     },
-    // Always enabled once we have a defined tokens array (even empty) — we need xrpUsd price
-    enabled: tokens !== undefined,
+    enabled: Array.isArray(tokens),
     staleTime: 5 * 60_000,
     gcTime: 30 * 60_000,
   });
