@@ -15,7 +15,7 @@ interface PortfolioSectionProps {
 }
 
 const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
-  const { activeAddress, isConnected } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
   const { data: xrplData, isLoading, error } = useXRPLPortfolio(displayAddress);
@@ -58,6 +58,12 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
         </h2>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           {isReadOnly ? 'Viewing portfolio for' : 'Live on-chain data for'}{' '}
+          {!isReadOnly && activeWallet?.xamanName && (
+            <span className="font-semibold text-foreground">{activeWallet.xamanName} · </span>
+          )}
+          {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
+            <span className="text-foreground">{activeWallet.label} · </span>
+          )}
           <span className="font-mono text-sm">{shortenAddress(displayAddress!)}</span>
         </p>
         {!isReadOnly && (
