@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Button } from '@/components/ui/button';
-import { Camera, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface QRScannerProps {
   onScan: (value: string) => void;
@@ -10,8 +10,22 @@ interface QRScannerProps {
 
 const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const isRunningRef = useRef(false);
   const containerId = 'qr-scanner-container';
   const [error, setError] = useState('');
+
+  const handleScan = useCallback((decodedText: string) => {
+    let address = decodedText.trim();
+    if (address.startsWith('xrpl:')) address = address.replace('xrpl:', '').split('?')[0];
+    if (address.startsWith('ripple:')) address = address.replace('ripple:', '').split('?')[0];
+    
+    // Stop scanner before calling onScan
+    if (scannerRef.current && isRunningRef.current) {
+      isRunningRef.current = false;
+      scannerRef.current.stop().catch(() => {});
+    }
+    onScan(address);
+  }, [onScan]);
 
   useEffect(() => {
     const scanner = new Html5Qrcode(containerId);
@@ -21,36 +35,25 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose }) => {
       .start(
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText) => {
-          // Extract r-address from QR (could be raw address or URI)
-          let address = decodedText.trim();
-          // Handle xrpl: URI format
-          if (address.startsWith('xrpl:')) {
-            address = address.replace('xrpl:', '').split('?')[0];
-          }
-          // Handle ripple: URI format  
-          if (address.startsWith('ripple:')) {
-            address = address.replace('ripple:', '').split('?')[0];
-          }
-          if (/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address)) {
-            onScan(address);
-          } else {
-            // Try raw text as-is
-            onScan(decodedText.trim());
-          }
-          scanner.stop().catch(() => {});
-        },
-        () => {} // ignore scan failures (no QR in frame)
+        (decodedText) => handleScan(decodedText),
+        () => {} // ignore no-QR frames
       )
+      .then(() => {
+        isRunningRef.current = true;
+      })
       .catch((err) => {
-        console.error('QR Scanner error:', err);
+        console.error('QR Scanner start error:', err);
         setError('Could not access camera. Please check permissions.');
+        isRunningRef.current = false;
       });
 
     return () => {
-      scanner.stop().catch(() => {});
+      if (scannerRef.current && isRunningRef.current) {
+        isRunningRef.current = false;
+        scannerRef.current.stop().catch(() => {});
+      }
     };
-  }, [onScan]);
+  }, [handleScan]);
 
   return (
     <div className="space-y-3">
