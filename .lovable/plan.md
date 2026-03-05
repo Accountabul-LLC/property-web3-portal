@@ -1,37 +1,65 @@
 
 
-## Problem Analysis
+## Enhance MPT Form — Full XRPL Spec Coverage
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+### Problem
+The current MPT form only has 2 flags (transferable, clawback) with **incorrect hex values** in the edge function, and is missing key fields like token name/metadata and transfer fee.
 
-## Approach
+### What Changes
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+**1. MPTForm.tsx — Add fields and all 6 flags**
 
-### Plan
+New fields to add:
+- **Token Name** (text input) — used in MPTokenMetadata JSON
+- **Token Description** (textarea) — used in MPTokenMetadata JSON  
+- **Transfer Fee** (number, 0-50000, shown as 0.000%-50.000%) — maps to `TransferFee` field. Only enabled when "Can Transfer" flag is checked.
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+All 6 XRPL flags (currently only 2):
+| Flag | Hex | Description |
+|---|---|---|
+| tfMPTCanLock | 0x02 | Can be locked individually/globally |
+| tfMPTRequireAuth | 0x04 | Holders must be authorized |
+| tfMPTCanEscrow | 0x08 | Holders can escrow balances |
+| tfMPTCanTrade | 0x10 | Holders can trade on DEX |
+| tfMPTCanTransfer | 0x20 | Transferable between non-issuer accounts |
+| tfMPTCanClawback | 0x40 | Issuer can clawback |
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
+Update `MPTParams` interface:
+```typescript
+export interface MPTParams {
+  name: string;           // NEW
+  description: string;    // NEW
+  max_amount: string;
+  asset_scale: number;
+  transfer_fee: number;   // NEW (0-50000)
+  flags: {
+    can_lock: boolean;
+    require_auth: boolean;
+    can_escrow: boolean;
+    can_trade: boolean;
+    can_transfer: boolean;
+    can_clawback: boolean;
+  };
+}
+```
 
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+**2. Edge function `xrpl-build-mint` — Fix flag hex values and add new fields**
 
-### Technical Details
+Current (wrong):
+- transferable: 0x02 (should be 0x20)
+- clawback: 0x04 (should be 0x40)
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+Updated to build all 6 flags correctly, plus:
+- Build `MPTokenMetadata` as hex-encoded JSON from name/description
+- Include `TransferFee` field (only if can_transfer is true)
+
+**3. MintWizard.tsx — Update default state and review display**
+
+- Update `defaultMPT` to include new fields
+- Update review step to show name, description, transfer fee, and all 6 flags
+
+### Files to modify
+- `src/components/mint/MPTForm.tsx` — expanded form
+- `src/components/mint/MintWizard.tsx` — updated defaults + review
+- `supabase/functions/xrpl-build-mint/index.ts` — corrected flags + new fields
 
