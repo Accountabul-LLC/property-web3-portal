@@ -32,10 +32,10 @@ const Navigation = () => {
   }, [isMobileMenuOpen]);
 
   const navItems = [
-    { path: '/marketplace', label: 'Real Estate Marketplace', icon: Building2 },
-    { path: '/tokenize', label: 'Tokenize Property', icon: TrendingUp },
-    { path: '/professionals', label: 'Professional Marketplace', icon: Users },
-    { path: '/ai-agents', label: 'AI Agent Marketplace', icon: Bot },
+    { path: '/marketplace', label: 'Marketplace', icon: Building2 },
+    { path: '/tokenize', label: 'Tokenize', icon: TrendingUp },
+    { path: '/professionals', label: 'Professionals', icon: Users },
+    { path: '/ai-agents', label: 'AI Agents', icon: Bot },
     { path: '/portfolio', label: 'Portfolio', icon: Wallet },
   ];
 
