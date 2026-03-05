@@ -152,10 +152,15 @@ serve(async (req) => {
     }
 
     if (memo && memo.trim()) {
+      const toHex = (str: string) =>
+        Array.from(new TextEncoder().encode(str))
+          .map(b => b.toString(16).padStart(2, '0'))
+          .join('')
+          .toUpperCase();
       txJson.Memos = [{
         Memo: {
-          MemoType: Buffer.from('text/plain', 'utf8').toString('hex').toUpperCase(),
-          MemoData: Buffer.from(memo.trim(), 'utf8').toString('hex').toUpperCase(),
+          MemoType: toHex('text/plain'),
+          MemoData: toHex(memo.trim()),
         }
       }];
     }
