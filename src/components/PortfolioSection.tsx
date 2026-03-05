@@ -726,16 +726,38 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 </div>
                               )}
 
-                              {/* XLS-24d Attributes */}
+                              {/* Attributes */}
                               {mpt.attributes && mpt.attributes.length > 0 && (
                                 <div>
-                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Attributes</p>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Property Details</p>
                                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {mpt.attributes.map((attr, attrIdx) => (
                                       <div key={attrIdx} className="bg-muted/50 rounded-lg p-2.5">
                                         <p className="text-[10px] uppercase text-muted-foreground font-medium">{attr.trait_type}</p>
                                         <p className="text-sm font-semibold truncate">{typeof attr.value === 'number' ? attr.value.toLocaleString() : attr.value}</p>
                                       </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Verification URIs */}
+                              {mpt.uris && mpt.uris.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Verification Links</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {mpt.uris.map((uri, uriIdx) => (
+                                      <a
+                                        key={uriIdx}
+                                        href={uri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2.5 py-1.5 rounded-md"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        {uri.replace(/^https?:\/\//, '').slice(0, 30)}{uri.length > 30 ? '…' : ''}
+                                      </a>
                                     ))}
                                   </div>
                                 </div>
