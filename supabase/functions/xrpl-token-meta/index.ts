@@ -35,10 +35,19 @@ Deno.serve(async (req) => {
   try {
     const { tokens } = await req.json() as { tokens: TokenQuery[] };
 
-    if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+    if (!tokens || !Array.isArray(tokens)) {
       return new Response(
         JSON.stringify({ error: 'tokens array is required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Handle empty tokens array — still return XRP/USD price
+    if (tokens.length === 0) {
+      const xrpUsd = await getXrpUsdPrice();
+      return new Response(
+        JSON.stringify({ tokens: [], xrp_usd: xrpUsd }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
