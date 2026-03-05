@@ -139,10 +139,10 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                   <ShieldCheck className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">XRP Reserve</p>
-                  <p className="text-2xl font-bold">{formatXRP(xrplData.reserve_xrp)}</p>
-                  <p className="text-xs text-primary font-medium">
-                    Spendable: {formatXRP(xrplData.spendable_xrp)} XRP
+                  <p className="text-sm text-muted-foreground">Spendable XRP</p>
+                  <p className="text-2xl font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Reserve: {formatXRP(xrplData.reserve_xrp)} XRP
                   </p>
                 </div>
               </div>
