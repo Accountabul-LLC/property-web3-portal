@@ -88,11 +88,14 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
           <Label htmlFor="mpt-scale">Asset Scale</Label>
           <Input
             id="mpt-scale"
-            type="number"
-            min={0}
-            max={15}
-            value={params.asset_scale}
-            onChange={e => onChange({ ...params, asset_scale: Math.min(15, Math.max(0, Number(e.target.value))) })}
+            type="text"
+            inputMode="numeric"
+            value={params.asset_scale.toString()}
+            onChange={e => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              const num = raw === '' ? 0 : Math.min(15, parseInt(raw, 10));
+              onChange({ ...params, asset_scale: num });
+            }}
             className="mt-1"
           />
           <p className="text-xs text-muted-foreground mt-1">Decimal places (0 = whole tokens, 2 = like USD)</p>
