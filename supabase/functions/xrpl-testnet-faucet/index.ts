@@ -9,10 +9,25 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse optional destination from body (fund existing account)
+    let destination: string | undefined;
+    try {
+      const body = await req.json();
+      destination = body?.destination;
+    } catch {
+      // No body or invalid JSON — create new account
+    }
+
+    const faucetBody: Record<string, unknown> = {};
+    if (destination) {
+      faucetBody.destination = destination;
+    }
+
     // Call XRPL testnet faucet
     const faucetRes = await fetch('https://faucet.altnet.rippletest.net/accounts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(faucetBody),
     });
 
     if (!faucetRes.ok) {
@@ -39,6 +54,7 @@ Deno.serve(async (req) => {
       address,
       balance,
       secret,
+      funded_existing: !!destination,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

@@ -1,41 +1,37 @@
 
 
-## Testnet-Aware Portfolio Section with Faucet Top-Up
+## Problem Analysis
 
-### Problem
-The "Account Worth" card and portfolio view look identical for testnet and mainnet wallets. Users can't tell at a glance which network they're on, and there's no way to top up XRP on testnet wallets without generating a brand new one.
+The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
 
-### Changes
+## Approach
 
-#### 1. **PortfolioSection.tsx** — Testnet visual distinction + faucet button
+Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
 
-- Import `activeWallet` from context and check `activeWallet?.provider === 'testnet_faucet'`
-- When testnet wallet is active:
-  - Add a `Badge` with `FlaskConical` icon reading "Testnet" next to "Account Worth" heading
-  - Change the card's border/gradient to use an amber/yellow accent (e.g. `border-amber-500/30 bg-amber-500/5`)
-  - Add a "Fund with Faucet" button next to the Refresh button that calls the existing `xrpl-testnet-faucet` edge function to fund the *current* wallet address (not create a new one)
-  - Update the XRPL Explorer link to point to `testnet.xrpl.org` instead of `livenet.xrpl.org`
-- When mainnet wallet: no changes, current behavior
+### Plan
 
-#### 2. **xrpl-testnet-faucet edge function** — Support funding existing address
+1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
+   - `account_info` -- XRP balance
+   - `account_lines` -- trustlines/token holdings  
+   - `account_tx` -- recent transactions
+   - Returns formatted holdings and transactions
 
-- Currently the faucet always creates a new account. Add an optional `destination` param in the request body.
-- If `destination` is provided, call the XRPL testnet faucet with `{ destination }` so the faucet funds that existing address instead of generating a new one.
-- If no destination, keep current behavior (create new account + return secret).
+2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
+   - XRP balance
+   - Token holdings (trustlines with balances)
+   - Recent transactions (parsed from `account_tx`)
 
-#### 3. **xrpl-account-data edge function** — Testnet-aware endpoint selection
+3. **Update `PortfolioSection` component** to:
+   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
+   - Display XRP balance as a summary card
+   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
+   - Show recent on-chain transactions with type, amount, date, and tx hash
+   - Keep the existing database-backed property token holdings as a separate section
 
-- Currently this function likely hits mainnet. Need to check if it accepts a `network` param and routes to the correct XRPL node (`s.altnet.rippletest.net` for testnet vs `s1.ripple.com` for mainnet).
-- The portfolio hook will need to pass the network context so the correct ledger is queried.
+### Technical Details
 
-#### 4. **useXRPLPortfolio hook** — Pass network context
-
-- Accept `network` param (derived from active wallet provider)
-- Pass it to the edge function so it queries the correct XRPL node
-
-### Files to modify
-- `src/components/PortfolioSection.tsx` — Testnet badge, amber styling, faucet button, correct explorer URLs
-- `supabase/functions/xrpl-testnet-faucet/index.ts` — Accept optional `destination` to fund existing accounts
-- `supabase/functions/xrpl-account-data/index.ts` — Route to testnet/mainnet node based on `network` param
-- `src/hooks/useXRPLPortfolio.ts` — Pass network to edge function
+- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
+- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
+- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
+- **No database changes needed** -- this reads directly from the XRPL ledger
 

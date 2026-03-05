@@ -3,13 +3,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 /** Renders a token logo from Bithomp CDN with fallback to Coins icon */
 const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currency?: string; size?: number }) => {
@@ -54,10 +56,33 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress);
+  const isTestnet = activeWallet?.provider === 'testnet_faucet';
+  const network = isTestnet ? 'testnet' : 'mainnet';
+  const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
+  const [isFunding, setIsFunding] = useState(false);
+
+  const explorerBase = isTestnet ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
+
+  const handleFaucetFund = async () => {
+    if (!displayAddress) return;
+    setIsFunding(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('xrpl-testnet-faucet', {
+        body: { destination: displayAddress },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || 'Faucet failed');
+      toast.success(`Funded! Balance: ${data.balance} XRP`);
+      queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
+    } catch (err: any) {
+      toast.error(`Faucet error: ${err.message}`);
+    } finally {
+      setIsFunding(false);
+    }
+  };
 
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress] });
+    queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
     queryClient.invalidateQueries({ queryKey: ['token_meta'] });
   };
   useXRPLSubscription(displayAddress);
@@ -203,12 +228,18 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
         <>
           {/* Total Wallet Value Header */}
           {portfolioValuation && (
-            <Card className="p-6 mb-8 bg-gradient-card border-primary/10">
+            <Card className={`p-6 mb-8 bg-gradient-card ${isTestnet ? 'border-amber-500/30 bg-amber-500/5' : 'border-primary/10'}`}>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="w-5 h-5 text-primary" />
                     <p className="text-sm text-muted-foreground font-medium">Account Worth</p>
+                    {isTestnet && (
+                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 gap-1">
+                        <FlaskConical className="w-3 h-3" />
+                        Testnet
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
                     ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -226,16 +257,30 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     )}
                   </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={isFetching}
-                  className="gap-2"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                  {isTestnet && !isReadOnly && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleFaucetFund}
+                      disabled={isFunding}
+                      className="gap-2 border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+                    >
+                      {isFunding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Droplets className="w-3.5 h-3.5" />}
+                      Fund with Faucet
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRefresh}
+                    disabled={isFetching}
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                    Refresh
+                  </Button>
+                </div>
               </div>
             </Card>
           )}
@@ -389,7 +434,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                               About XRP
                             </a>
                             <a
-                              href={`https://livenet.xrpl.org/accounts/${displayAddress}`}
+                              href={`${explorerBase}/accounts/${displayAddress}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
@@ -411,7 +456,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                   const issuerLabel = meta?.issuer_name || shortenAddress(token.issuer);
                   const tokenKey = `${token.currency}-${token.issuer}`;
                   const isExpanded = expandedToken === tokenKey;
-                  const explorerUrl = `https://livenet.xrpl.org/token/${token.currency}.${token.issuer}`;
+                  const explorerUrl = `${explorerBase}/token/${token.currency}.${token.issuer}`;
                   const websiteUrl = meta?.website
                     ? (meta.website.startsWith('http') ? meta.website : `https://${meta.website}`)
                     : null;
