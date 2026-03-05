@@ -511,19 +511,48 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
               <Loader2 className="h-4 w-4 animate-spin" />
               <p className="text-sm font-medium">Waiting for signature...</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Scan the QR code with your Xaman app to sign the payment
-            </p>
-            {qrCode && (
-              <div className="flex justify-center">
-                <img src={qrCode} alt="Sign Payment QR" className="w-48 h-48 border-2 border-border rounded-lg" />
-              </div>
+            {wasPushed ? (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  A signing request has been sent to your Xaman app
+                </p>
+                <div className="flex justify-center">
+                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Send className="w-10 h-10 text-primary" />
+                  </div>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>1. Check your Xaman notification</p>
+                  <p>2. Review &amp; sign the payment</p>
+                </div>
+                {qrCode && (
+                  <details className="text-left">
+                    <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                      Didn't get the notification? Show QR code
+                    </summary>
+                    <div className="flex justify-center mt-2">
+                      <img src={qrCode} alt="Sign Payment QR" className="w-40 h-40 border-2 border-border rounded-lg" />
+                    </div>
+                  </details>
+                )}
+              </>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  Scan the QR code with your Xaman app to sign the payment
+                </p>
+                {qrCode && (
+                  <div className="flex justify-center">
+                    <img src={qrCode} alt="Sign Payment QR" className="w-48 h-48 border-2 border-border rounded-lg" />
+                  </div>
+                )}
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>1. Open Xaman wallet</p>
+                  <p>2. Scan QR code</p>
+                  <p>3. Review &amp; sign the payment</p>
+                </div>
+              </>
             )}
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p>1. Open Xaman wallet</p>
-              <p>2. Scan QR code</p>
-              <p>3. Review &amp; sign the payment</p>
-            </div>
             <Button variant="outline" onClick={handleClose}>Cancel</Button>
           </div>
         )}
