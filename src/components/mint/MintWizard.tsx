@@ -29,12 +29,17 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected, addWallet } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet } = useActiveWallet();
   const { user } = useAuth();
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
-  const [network, setNetwork] = useState<Network>(activeWallet?.network || 'testnet');
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(activeAddress);
+
+  // Derive the selected wallet object and network from it
+  const selectedWallet = wallets.find(w => w.address === selectedWalletAddress) || activeWallet;
+  const network: Network = selectedWallet?.network === 'mainnet' ? 'mainnet' : 'testnet';
+  const mintAddress = selectedWallet?.address || activeAddress;
 
   const [nftParams, setNftParams] = useState<NFTParams>(defaultNFT);
   const [mptParams, setMptParams] = useState<MPTParams>(defaultMPT);
