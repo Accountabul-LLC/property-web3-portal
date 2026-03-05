@@ -50,7 +50,24 @@ export function useProfile() {
         .single();
 
       if (!error && data) {
-        setProfile(data as any as Profile);
+        const profileData = data as any as Profile;
+        setProfile(profileData);
+
+        // Backfill from Google metadata for existing users
+        const meta = user.user_metadata;
+        if (meta && !profileData.first_name && meta.given_name) {
+          const backfill: Record<string, string | null> = {
+            first_name: meta.given_name || null,
+            last_name: meta.family_name || null,
+            full_name: meta.full_name || null,
+            updated_at: new Date().toISOString(),
+          };
+          await supabase
+            .from('profiles' as any)
+            .update(backfill as any)
+            .eq('id', user.id);
+          setProfile(prev => prev ? { ...prev, ...backfill } as Profile : null);
+        }
       }
       setLoading(false);
     };
