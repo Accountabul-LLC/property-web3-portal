@@ -1,37 +1,26 @@
 
 
-## Problem Analysis
+## Show Token Image in MPT Card Icon
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+The selected element at line 667 is the circular icon container on each MPT issuance card. Currently it always shows a generic `Gem` icon. Since MPTs now carry an `image` field in their decoded metadata, the card should display the token's uploaded image when available, falling back to the Gem icon when not.
 
-## Approach
+### Change
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+**File: `src/components/PortfolioSection.tsx` (lines 667-669)**
 
-### Plan
+Replace the static Gem icon div with a conditional that renders:
+- An `<img>` tag (rounded, 40x40, object-cover) when `mpt.image` exists
+- The existing Gem icon fallback when no image is available
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+```tsx
+<div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-primary/10">
+  {mpt.image ? (
+    <img src={mpt.image} alt={mpt.name || 'MPT'} className="w-full h-full object-cover" />
+  ) : (
+    <Gem className="w-5 h-5 text-primary" />
+  )}
+</div>
+```
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
-
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
-
-### Technical Details
-
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+This mirrors how other token holdings on the page display their icons from the XRPL Meta API. Single file, 3-line change.
 
