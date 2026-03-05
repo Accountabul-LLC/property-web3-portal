@@ -222,6 +222,8 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          address_display: string | null
+          address_json: Json | null
           amenities: string[] | null
           bathrooms: number | null
           bedrooms: number | null
@@ -232,14 +234,17 @@ export type Database = {
           id: string
           images: string[] | null
           market_cap: number | null
+          owner_user_id: string | null
           owner_wallet: string | null
           price_per_token: number | null
           projected_annual_return: number | null
           projected_rental_yield: number | null
           property_type: string | null
+          review_notes: string | null
           square_feet: number | null
           state: string | null
           status: string
+          submitted_at: string | null
           title: string
           tokens_available: number | null
           total_tokens: number | null
@@ -249,6 +254,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          address_display?: string | null
+          address_json?: Json | null
           amenities?: string[] | null
           bathrooms?: number | null
           bedrooms?: number | null
@@ -259,14 +266,17 @@ export type Database = {
           id?: string
           images?: string[] | null
           market_cap?: number | null
+          owner_user_id?: string | null
           owner_wallet?: string | null
           price_per_token?: number | null
           projected_annual_return?: number | null
           projected_rental_yield?: number | null
           property_type?: string | null
+          review_notes?: string | null
           square_feet?: number | null
           state?: string | null
           status?: string
+          submitted_at?: string | null
           title: string
           tokens_available?: number | null
           total_tokens?: number | null
@@ -276,6 +286,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          address_display?: string | null
+          address_json?: Json | null
           amenities?: string[] | null
           bathrooms?: number | null
           bedrooms?: number | null
@@ -286,14 +298,17 @@ export type Database = {
           id?: string
           images?: string[] | null
           market_cap?: number | null
+          owner_user_id?: string | null
           owner_wallet?: string | null
           price_per_token?: number | null
           projected_annual_return?: number | null
           projected_rental_yield?: number | null
           property_type?: string | null
+          review_notes?: string | null
           square_feet?: number | null
           state?: string | null
           status?: string
+          submitted_at?: string | null
           title?: string
           tokens_available?: number | null
           total_tokens?: number | null
@@ -536,6 +551,24 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallet_audit_log: {
         Row: {
           created_at: string
@@ -625,10 +658,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -755,6 +794,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "moderator", "user"],
+    },
   },
 } as const
