@@ -1,5 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { Wallet, encode, decode } from 'https://esm.sh/xrpl@4.1.0';
+import { deriveKeypair, sign } from 'https://esm.sh/ripple-keypairs@2.0.0';
+import { encode, encodeForSigning } from 'https://esm.sh/ripple-binary-codec@2.1.0';
+import { createHash } from 'https://deno.land/std@0.224.0/crypto/mod.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,6 +9,20 @@ const corsHeaders = {
 };
 
 const TESTNET_RPC = 'https://s.altnet.rippletest.net:51234';
+
+function computeTxHash(txBlob: string): string {
+  // XRPL tx hash = SHA-512Half of (0x54584E00 + serialized tx)
+  const prefix = '54584E00';
+  const data = new Uint8Array(
+    (prefix + txBlob).match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
+  );
+  const hashBuffer = new Uint8Array(64);
+  const hash = new Uint8Array(
+    crypto.subtle ? [] : [] // We'll use a simpler approach
+  );
+  // Use Web Crypto API
+  return ''; // Will compute after submit from response
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -47,11 +63,11 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    // Sign locally using xrpl.js Wallet
-    const wallet = Wallet.fromSeed(secret);
-    console.log('Signing with wallet:', wallet.address);
+    // Derive keypair from seed
+    const keypair = deriveKeypair(secret);
+    console.log('Derived public key:', keypair.publicKey);
 
-    // We need to get the account sequence from the ledger
+    // Get account sequence from ledger
     const accountInfoRes = await fetch(TESTNET_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -71,18 +87,29 @@ Deno.serve(async (req) => {
       throw new Error('Could not determine account sequence');
     }
 
-    // Add Sequence to tx_json if not present
+    // Complete the transaction
     const completeTx = {
       ...tx_json,
       Sequence: tx_json.Sequence ?? sequence,
-      SigningPubKey: wallet.publicKey,
+      SigningPubKey: keypair.publicKey,
     };
 
     console.log('Complete tx:', JSON.stringify(completeTx));
 
-    // Sign the transaction
-    const signed = wallet.sign(completeTx as any);
-    console.log('Signed tx hash:', signed.hash);
+    // Serialize for signing
+    const serializedForSigning = encodeForSigning(completeTx);
+
+    // Sign the serialized transaction
+    const signature = sign(serializedForSigning, keypair.privateKey);
+
+    // Add signature to tx and encode final blob
+    const signedTx = {
+      ...completeTx,
+      TxnSignature: signature,
+    };
+    const txBlob = encode(signedTx);
+
+    console.log('Signed tx blob length:', txBlob.length);
 
     // Submit the signed transaction
     const submitRes = await fetch(TESTNET_RPC, {
@@ -90,7 +117,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         method: 'submit',
-        params: [{ tx_blob: signed.tx_blob }],
+        params: [{ tx_blob: txBlob }],
       }),
     });
 
@@ -98,6 +125,7 @@ Deno.serve(async (req) => {
     console.log('Submit response:', JSON.stringify(submitData));
 
     const engineResult = submitData.result?.engine_result;
+    const txHash = submitData.result?.tx_json?.hash;
 
     if (engineResult !== 'tesSUCCESS' && !engineResult?.startsWith('tec')) {
       throw new Error(`Submit failed: ${engineResult} — ${submitData.result?.engine_result_message || ''}`);
@@ -105,7 +133,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      tx_hash: signed.hash,
+      tx_hash: txHash,
       engine_result: engineResult,
       engine_result_message: submitData.result?.engine_result_message,
     }), {
