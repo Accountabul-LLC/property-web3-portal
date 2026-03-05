@@ -209,27 +209,17 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="mpt-collection">Collection Name</Label>
-            <Input
-              id="mpt-collection"
-              placeholder="RWA Property Tokens"
-              value={params.collection_name}
-              onChange={e => set('collection_name', e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="mpt-family">Collection Family</Label>
-            <Input
-              id="mpt-family"
-              placeholder="Real Estate"
-              value={params.collection_family}
-              onChange={e => set('collection_family', e.target.value)}
-              className="mt-1"
-            />
-          </div>
+        <div>
+          <Label htmlFor="mpt-ticker">Ticker Symbol</Label>
+          <Input
+            id="mpt-ticker"
+            placeholder="e.g. OAK"
+            maxLength={5}
+            value={params.ticker}
+            onChange={e => set('ticker', e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase())}
+            className="mt-1 uppercase"
+          />
+          <p className="text-xs text-muted-foreground mt-1">3–5 uppercase letters, auto-generated from name if blank</p>
         </div>
 
         <div>
