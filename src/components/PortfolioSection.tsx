@@ -678,8 +678,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="text-right">
-                                  <p className="text-lg font-bold">{outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
-                                  <p className="text-xs text-muted-foreground">circulating</p>
+                                  <p className="text-lg font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
+                                  <p className="text-xs text-muted-foreground">supply</p>
                                 </div>
                                 {isExpanded ? (
                                   <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -737,8 +737,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
 
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div className="bg-muted/50 rounded-lg p-3">
-                                  <p className="text-[10px] uppercase text-muted-foreground font-medium">Outstanding</p>
-                                  <p className="text-sm font-bold">{outstanding.toLocaleString()}</p>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium">Supply</p>
+                                  <p className="text-sm font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString()}</p>
                                 </div>
                                 {maxAmt !== null && (
                                   <div className="bg-muted/50 rounded-lg p-3">
