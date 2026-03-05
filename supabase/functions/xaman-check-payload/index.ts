@@ -27,7 +27,10 @@ Deno.serve(async (req) => {
     const { uuid } = await req.json();
     
     if (!uuid) {
-      throw new Error('UUID is required');
+      return new Response(
+        JSON.stringify({ success: false, error: 'UUID is required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
     }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
