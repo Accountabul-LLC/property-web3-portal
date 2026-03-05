@@ -60,7 +60,31 @@ const MintWizard: React.FC = () => {
   };
 
   const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
+  const needsFaucetWallet = network === 'testnet' && !isTestnetFaucetWallet;
 
+  const handleGenerateFaucetWallet = useCallback(async () => {
+    if (!user) return;
+    setGeneratingFaucet(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('xrpl-testnet-faucet', {});
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Faucet failed');
+
+      await addWallet(
+        data.address,
+        'Testnet Faucet Wallet',
+        null,
+        'testnet_faucet',
+        data.secret
+      );
+
+      toast({ title: '✅ Testnet wallet created', description: `Funded with ${data.balance} XRP` });
+    } catch (err: any) {
+      toast({ title: 'Faucet error', description: err.message, variant: 'destructive' });
+    } finally {
+      setGeneratingFaucet(false);
+    }
+  }, [user, addWallet]);
   const handleSubmit = useCallback(async () => {
     if (!activeAddress || !user) return;
     setLoading(true);
