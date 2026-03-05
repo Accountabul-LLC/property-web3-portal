@@ -201,7 +201,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="w-5 h-5 text-primary" />
-                    <p className="text-sm text-muted-foreground font-medium">Estimated Total Value</p>
+                    <p className="text-sm text-muted-foreground font-medium">Account Worth</p>
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
                     ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
