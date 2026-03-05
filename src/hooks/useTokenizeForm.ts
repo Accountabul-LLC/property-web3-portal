@@ -1,0 +1,140 @@
+import { useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './useAuth';
+import { toast } from 'sonner';
+
+export interface TokenizeFormData {
+  propertyAddress: string;
+  propertyType: string;
+  squareFootage: string;
+  bedrooms: string;
+  bathrooms: string;
+  lotSize: string;
+  yearBuilt: string;
+  appraisalValue: string;
+  monthlyRent: string;
+  description: string;
+  zoning: string;
+  propertyTax: string;
+}
+
+const initialFormData: TokenizeFormData = {
+  propertyAddress: '',
+  propertyType: '',
+  squareFootage: '',
+  bedrooms: '',
+  bathrooms: '',
+  lotSize: '',
+  yearBuilt: '',
+  appraisalValue: '',
+  monthlyRent: '',
+  description: '',
+  zoning: '',
+  propertyTax: '',
+};
+
+export function useTokenizeForm() {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState<TokenizeFormData>(initialFormData);
+  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const handleInputChange = (field: string, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const parseNum = (val: string) => {
+    const n = parseFloat(val.replace(/,/g, ''));
+    return isNaN(n) ? null : n;
+  };
+
+  const buildRow = (status: 'draft' | 'submitted') => ({
+    owner_user_id: user?.id,
+    title: formData.propertyAddress || 'Untitled Property',
+    address: formData.propertyAddress,
+    address_display: formData.propertyAddress,
+    property_type: formData.propertyType || null,
+    square_feet: parseNum(formData.squareFootage) ? Math.round(parseNum(formData.squareFootage)!) : null,
+    bedrooms: parseNum(formData.bedrooms) ? Math.round(parseNum(formData.bedrooms)!) : null,
+    bathrooms: parseNum(formData.bathrooms),
+    year_built: parseNum(formData.yearBuilt) ? Math.round(parseNum(formData.yearBuilt)!) : null,
+    estimated_value: parseNum(formData.appraisalValue),
+    description: formData.description || null,
+    status,
+    ...(status === 'submitted' ? { submitted_at: new Date().toISOString() } : {}),
+  });
+
+  const saveDraft = async () => {
+    if (!user) {
+      toast.error('Please sign in to save your property.');
+      return null;
+    }
+    setSaving(true);
+    try {
+      const row = buildRow('draft');
+      if (propertyId) {
+        const { error } = await supabase
+          .from('properties' as any)
+          .update(row as any)
+          .eq('id', propertyId);
+        if (error) throw error;
+        toast.success('Draft saved.');
+        return propertyId;
+      } else {
+        const { data, error } = await supabase
+          .from('properties' as any)
+          .insert(row as any)
+          .select('id')
+          .single();
+        if (error) throw error;
+        const id = (data as any).id;
+        setPropertyId(id);
+        toast.success('Draft created.');
+        return id;
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save draft.');
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitForTokenization = async () => {
+    if (!user) {
+      toast.error('Please sign in to submit.');
+      return false;
+    }
+    setSaving(true);
+    try {
+      let id = propertyId;
+      if (!id) {
+        // Save as draft first, then update to submitted
+        id = await saveDraft();
+        if (!id) return false;
+      }
+      const { error } = await supabase
+        .from('properties' as any)
+        .update({ status: 'submitted', submitted_at: new Date().toISOString() } as any)
+        .eq('id', id);
+      if (error) throw error;
+      toast.success('Property submitted for tokenization!');
+      return true;
+    } catch (err: any) {
+      toast.error(err.message || 'Submission failed.');
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return {
+    formData,
+    handleInputChange,
+    saveDraft,
+    submitForTokenization,
+    saving,
+    propertyId,
+    setFormData,
+  };
+}
