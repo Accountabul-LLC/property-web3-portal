@@ -1,7 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { deriveKeypair, sign } from 'https://esm.sh/ripple-keypairs@2.0.0';
-import { encode, encodeForSigning } from 'https://esm.sh/ripple-binary-codec@2.1.0';
-import { createHash } from 'https://deno.land/std@0.224.0/crypto/mod.ts';
+import rippleKeypairs from 'https://esm.sh/ripple-keypairs@1.3.1';
+import rippleBinaryCodec from 'https://esm.sh/ripple-binary-codec@1.11.0';
+
+const { deriveKeypair, sign: signMessage } = rippleKeypairs;
+const { encode, encodeForSigning } = rippleBinaryCodec;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -9,20 +11,6 @@ const corsHeaders = {
 };
 
 const TESTNET_RPC = 'https://s.altnet.rippletest.net:51234';
-
-function computeTxHash(txBlob: string): string {
-  // XRPL tx hash = SHA-512Half of (0x54584E00 + serialized tx)
-  const prefix = '54584E00';
-  const data = new Uint8Array(
-    (prefix + txBlob).match(/.{1,2}/g)!.map(byte => parseInt(byte, 16))
-  );
-  const hashBuffer = new Uint8Array(64);
-  const hash = new Uint8Array(
-    crypto.subtle ? [] : [] // We'll use a simpler approach
-  );
-  // Use Web Crypto API
-  return ''; // Will compute after submit from response
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -100,7 +88,7 @@ Deno.serve(async (req) => {
     const serializedForSigning = encodeForSigning(completeTx);
 
     // Sign the serialized transaction
-    const signature = sign(serializedForSigning, keypair.privateKey);
+    const signature = signMessage(serializedForSigning, keypair.privateKey);
 
     // Add signature to tx and encode final blob
     const signedTx = {
