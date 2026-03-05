@@ -56,6 +56,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [qrCode, setQrCode] = useState('');
+  const [wasPushed, setWasPushed] = useState(false);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showScanner, setShowScanner] = useState(false);
