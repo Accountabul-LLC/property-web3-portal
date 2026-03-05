@@ -22,7 +22,7 @@ interface ActiveWalletContextType {
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
-  onWalletConnected: (address: string) => void;
+  onWalletConnected: (address: string, xamanName?: string | null) => void;
 }
 
 const STORAGE_KEY = 'accountabul_wallets';

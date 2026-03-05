@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWalletConnected: (walletAddress: string) => void;
+  onWalletConnected: (walletAddress: string, accountName?: string | null) => void;
 }
 
 export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: WalletConnectModalProps) {
