@@ -1,37 +1,44 @@
 
 
-## Problem Analysis
+## Problem
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+When an MPT (Multi-Purpose Token) is minted, it doesn't show up in the wallet's portfolio. This is because:
 
-## Approach
+1. **The `xrpl-account-data` edge function only fetches `account_lines`** (trust lines / IOU tokens). MPTs are a different ledger object type (`MPTokenIssuance` for issuers, `MPToken` for holders) and require the `account_objects` RPC call to retrieve.
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+2. **The issuer doesn't hold MPTokens** — they hold `MPTokenIssuance` entries. Holders get `MPToken` entries. So after minting, the issuer's `account_objects` will contain an `MPTokenIssuance` object showing the token they created.
 
-### Plan
+## Plan
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+### 1. Update `xrpl-account-data` edge function to fetch MPT data
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
+Add an `account_objects` RPC call (filtered to `mptoken_issuance` type) alongside the existing `account_info`, `account_lines`, and `account_tx` calls. Parse the results into a new `mpt_issuances` array (tokens this account issued) and also fetch `mptoken` type objects for tokens this account holds.
 
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+Return two new fields:
+- `mpt_issuances`: tokens this wallet issued (from `MPTokenIssuance` objects) — includes `MPTokenIssuanceID`, `MaximumAmount`, `OutstandingAmount`, `AssetScale`, metadata, flags
+- `mpt_holdings`: MPTs this wallet holds but did not issue (from `MPToken` objects) — includes `MPTokenIssuanceID`, `MPTAmount`
+
+### 2. Update `useXRPLPortfolio` hook types
+
+Add `mpt_issuances` and `mpt_holdings` arrays to the `XRPLPortfolioData` interface.
+
+### 3. Update `PortfolioSection` UI to display MPT tokens
+
+Add a section (or integrate into the existing token holdings list) that shows:
+- MPTs issued by this wallet (with name/description decoded from metadata hex, supply info)
+- MPTs held by this wallet (with amount and issuance ID)
+
+These will appear alongside existing IOU trust line tokens in the portfolio view.
 
 ### Technical Details
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+**RPC calls to add** (in parallel with existing calls):
+```
+account_objects({ account, type: "mptoken_issuance", ledger_index: "validated" })
+account_objects({ account, type: "mptoken", ledger_index: "validated" })
+```
+
+**MPTokenIssuance fields** to parse: `MPTokenIssuanceID`, `MaximumAmount`, `OutstandingAmount`, `AssetScale`, `TransferFee`, `MPTokenMetadata` (hex-encoded JSON with name/description), `Flags`
+
+**MPToken fields** to parse: `MPTokenIssuanceID`, `MPTAmount`, `Flags`
 
