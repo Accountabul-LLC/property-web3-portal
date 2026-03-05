@@ -194,6 +194,45 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
         </Card>
       ) : xrplData ? (
         <>
+          {/* Total Wallet Value Header */}
+          {portfolioValuation && (
+            <Card className="p-6 mb-8 bg-gradient-card border-primary/10">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                    <p className="text-sm text-muted-foreground font-medium">Estimated Total Value</p>
+                  </div>
+                  <p className="text-4xl font-bold tracking-tight">
+                    ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Updated {updatedAgo || 'now'}
+                    </span>
+                    {portfolioValuation.unpricedCount > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        {portfolioValuation.unpricedCount} asset{portfolioValuation.unpricedCount > 1 ? 's' : ''} without USD price
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="gap-2"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+            </Card>
+          )}
+
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
@@ -204,9 +243,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <p className="text-sm text-muted-foreground">Spendable XRP</p>
                   <p className="text-2xl font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Reserve: {formatXRP(xrplData.reserve_xrp)} XRP
-                  </p>
+                  {xrpUsdPrice > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ≈ ${((xrplData.spendable_xrp ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -218,6 +259,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <div>
                   <p className="text-sm text-muted-foreground">Token Holdings</p>
                   <p className="text-2xl font-bold">{xrplData.token_holdings.length + 1}</p>
+                  {portfolioValuation && portfolioValuation.pricedCount > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {portfolioValuation.pricedCount} priced
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
