@@ -79,10 +79,10 @@ export function useXRPLPortfolio(walletAddress: string | null, network: 'mainnet
       return data as XRPLPortfolioData;
     },
     enabled: !!walletAddress,
-    staleTime: 15_000,
+    staleTime: 30_000,
     gcTime: 5 * 60_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+    refetchInterval: 90_000,
+    refetchOnWindowFocus: false,
     refetchOnMount: 'always',
   });
 }

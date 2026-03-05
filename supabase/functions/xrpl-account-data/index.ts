@@ -5,9 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const MAINNET_NODE = 'https://xrplcluster.com';
-const TESTNET_NODE = 'https://s.altnet.rippletest.net:51234';
-const CACHE_TTL_MS = 10_000;
+const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
+const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const CACHE_TTL_MS = 30_000;
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
 const responseCache = new Map<string, { data: unknown; expiresAt: number }>();
 
@@ -31,19 +33,45 @@ function setCache(key: string, data: unknown) {
   }
 }
 
-async function xrplRequest(node: string, method: string, params: Record<string, unknown>[]) {
-  const res = await fetch(node, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`XRPL node returned non-JSON (status ${res.status}): ${text.slice(0, 200)}`);
+async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
+  let lastError: Error | null = null;
+  for (const node of nodes) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        const res = await fetch(node, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, params }),
+        });
+        // Handle HTTP-level rate limiting
+        if (res.status === 429 || res.status === 503) {
+          lastError = new Error(`${node} returned ${res.status}`);
+          console.warn(`${node} returned ${res.status}, attempt ${attempt + 1}`);
+          if (attempt < MAX_RETRIES) continue; // retry same node
+          break; // try next node
+        }
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          lastError = new Error(`Non-JSON from ${node} (${res.status}): ${text.slice(0, 120)}`);
+          if (text.toLowerCase().includes('rate limit')) {
+            console.warn(`Rate limited by ${node}, attempt ${attempt + 1}`);
+            if (attempt < MAX_RETRIES) continue;
+          }
+          break; // try next node
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        break; // network error, try next node immediately
+      }
+    }
   }
+  throw lastError || new Error('All XRPL nodes failed');
 }
+
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 function decodeHexString(hex: string): string {
   try {
@@ -237,7 +265,7 @@ serve(async (req) => {
       });
     }
 
-    const node = network === 'testnet' ? TESTNET_NODE : MAINNET_NODE;
+    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     const cacheKey = `${network || 'mainnet'}:${wallet_address}`;
     const cached = getCached(cacheKey);
@@ -247,13 +275,16 @@ serve(async (req) => {
       });
     }
 
-    const [accountInfoRes, accountLinesRes, accountTxRes, mptIssuanceRes, mptHoldingRes] = await Promise.all([
-      xrplRequest(node, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]),
-      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]),
-      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]),
-    ]);
+    // Sequential requests with small delays to avoid rate limiting
+    const accountInfoRes = await xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]);
+    await delay(100);
+    const accountLinesRes = await xrplRequest(nodes, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]);
+    await delay(100);
+    const accountTxRes = await xrplRequest(nodes, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]);
+    await delay(100);
+    const mptIssuanceRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]);
+    await delay(100);
+    const mptHoldingRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]);
 
     let xrpBalance = 0;
     let ownerCount = 0;
