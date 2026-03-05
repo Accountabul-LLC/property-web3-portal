@@ -593,14 +593,58 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 })}
 
                 {/* MPT Issuances — tokens this wallet created */}
-                {xrplData.mpt_issuances && xrplData.mpt_issuances.length > 0 && (
+                {xrplData.mpt_issuances && xrplData.mpt_issuances.length > 0 && (() => {
+                  const filtered = xrplData.mpt_issuances.filter(mpt => {
+                    if (!mptSearchQuery) return true;
+                    const q = mptSearchQuery.toLowerCase();
+                    return (mpt.name || '').toLowerCase().includes(q) ||
+                           (mpt.description || '').toLowerCase().includes(q) ||
+                           (mpt.collection?.name || '').toLowerCase().includes(q) ||
+                           (mpt.mpt_issuance_id || '').toLowerCase().includes(q);
+                  });
+                  const sorted = [...filtered].sort((a, b) => {
+                    if (mptSortMode === 'alpha') return (a.name || '').localeCompare(b.name || '');
+                    if (mptSortMode === 'supply') return (Number(b.max_amount || 0)) - (Number(a.max_amount || 0));
+                    // newest: higher issuance ID = newer
+                    return (b.mpt_issuance_id || '').localeCompare(a.mpt_issuance_id || '');
+                  });
+                  return (
                   <>
-                    <h4 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
-                      <Gem className="w-5 h-5 text-primary" />
-                      MPT Issuances
-                      <Badge variant="secondary" className="text-xs">{xrplData.mpt_issuances.length}</Badge>
-                    </h4>
-                    {xrplData.mpt_issuances.map((mpt, idx) => {
+                    <div className="mt-8 mb-3 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-lg font-semibold flex items-center gap-2">
+                          <Gem className="w-5 h-5 text-primary" />
+                          MPT Issuances
+                          <Badge variant="secondary" className="text-xs">{xrplData.mpt_issuances.length}</Badge>
+                        </h4>
+                        <div className="flex items-center gap-1">
+                          {(['newest', 'alpha', 'supply'] as const).map((mode) => (
+                            <Button
+                              key={mode}
+                              variant={mptSortMode === mode ? 'default' : 'ghost'}
+                              size="sm"
+                              className="h-7 text-xs px-2"
+                              onClick={() => setMptSortMode(mode)}
+                            >
+                              {mode === 'newest' ? 'Newest' : mode === 'alpha' ? 'A–Z' : 'Supply'}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                      {xrplData.mpt_issuances.length > 3 && (
+                        <input
+                          type="text"
+                          placeholder="Search issuances..."
+                          value={mptSearchQuery}
+                          onChange={(e) => setMptSearchQuery(e.target.value)}
+                          className="w-full h-8 px-3 text-sm rounded-md border border-border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                        />
+                      )}
+                    </div>
+                    {sorted.length === 0 && (
+                      <p className="text-sm text-muted-foreground py-4 text-center">No issuances match your search.</p>
+                    )}
+                    {sorted.map((mpt, idx) => {
                       const mptKey = `mpt-issuance-${mpt.mpt_issuance_id || idx}`;
                       const isExpanded = expandedToken === mptKey;
                       const scale = mpt.asset_scale || 0;
