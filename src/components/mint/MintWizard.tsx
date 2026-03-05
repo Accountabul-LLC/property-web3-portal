@@ -313,6 +313,16 @@ const MintWizard: React.FC = () => {
               </p>
             )}
 
+            {needsFaucetWallet && (
+              <Alert className="border-amber-500/30 bg-amber-500/5">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Testnet wallet needed</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground">
+                  Your current wallet is connected via Xaman and can't auto-sign testnet transactions. You'll be able to generate a testnet wallet in the review step.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex justify-end">
               <Button onClick={() => setStep('form')}>
                 Next <ArrowRight className="w-4 h-4 ml-1" />
