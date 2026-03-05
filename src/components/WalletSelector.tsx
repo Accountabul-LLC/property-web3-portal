@@ -35,9 +35,10 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
 
       const address = data.address;
       const balance = data.balance || 0;
+      const secret = data.secret || null;
 
-      // Add it as a wallet via the context
-      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null);
+      // Add it as a wallet via the context (with secret + testnet_faucet provider)
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret);
 
       toast({
         title: '🧪 Testnet Wallet Created',
