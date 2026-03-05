@@ -34,7 +34,7 @@ const MintWizard: React.FC = () => {
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
-  const [network, setNetwork] = useState<Network>(activeWallet?.network === 'testnet' ? 'testnet' : 'testnet');
+  const [network, setNetwork] = useState<Network>(activeWallet?.network || 'testnet');
 
   const [nftParams, setNftParams] = useState<NFTParams>(defaultNFT);
   const [mptParams, setMptParams] = useState<MPTParams>(defaultMPT);
