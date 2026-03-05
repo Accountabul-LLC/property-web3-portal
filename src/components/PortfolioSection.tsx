@@ -432,17 +432,23 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                             <div className="text-right">
                               <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
                               {meta?.price ? (
-                                <p className="text-xs text-muted-foreground">
-                                  ≈ ${(Number(token.balance) * meta.price).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                                </p>
+                                <>
+                                  <p className="text-sm font-semibold text-primary">
+                                    ${(Number(token.balance) * meta.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground">
+                                    @ ${meta.price < 0.01 ? meta.price.toExponential(2) : meta.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}/{decodeCurrency(token.currency)}
+                                  </p>
+                                </>
                               ) : (
-                                <p className="text-xs text-muted-foreground">Limit: {Number(token.limit).toLocaleString()}</p>
+                                <p className="text-xs text-muted-foreground">No USD price</p>
                               )}
                             </div>
                             {isExpanded ? (
                               <ChevronUp className="w-4 h-4 text-muted-foreground" />
                             ) : (
                               <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
                             )}
                           </div>
                         </div>
