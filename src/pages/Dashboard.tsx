@@ -60,6 +60,44 @@ const Dashboard = () => {
   const [saving, setSaving] = useState(false);
   const [editingWalletAddr, setEditingWalletAddr] = useState<string | null>(null);
   const [walletLabel, setWalletLabel] = useState('');
+  const avatarInputRef = React.useRef<HTMLInputElement>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a valid image (JPEG, PNG, WebP, GIF, or SVG)');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB');
+      return;
+    }
+
+    setUploadingAvatar(true);
+    const ext = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) {
+      toast.error('Upload failed: ' + uploadError.message);
+      setUploadingAvatar(false);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
+
+    await updateProfile({ avatar_url: avatarUrl } as any);
+    toast.success('Profile picture updated!');
+    setUploadingAvatar(false);
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
