@@ -109,6 +109,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                     )}
                     <div className="text-left min-w-0">
                       <p className="text-xs font-medium truncate">{w.label}</p>
+                      {w.xamanName && w.xamanName !== w.label && (
+                        <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
+                      )}
                       <p className="text-[10px] font-mono text-muted-foreground">{shortenAddress(w.address)}</p>
                     </div>
                   </div>

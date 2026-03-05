@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ConnectedWallet {
   address: string;
   label: string;
+  xamanName: string | null;
   connectedAt: string;
   lastUsedAt: string;
 }
@@ -14,14 +15,14 @@ interface ActiveWalletContextType {
   activeAddress: string | null;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string) => void;
+  addWallet: (address: string, label?: string, xamanName?: string | null) => void;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
-  onWalletConnected: (address: string) => void;
+  onWalletConnected: (address: string, xamanName?: string | null) => void;
 }
 
 const STORAGE_KEY = 'accountabul_wallets';
@@ -69,6 +70,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       const w: ConnectedWallet = {
         address: oldAddr,
         label: 'Primary',
+        xamanName: null,
         connectedAt: new Date().toISOString(),
         lastUsedAt: new Date().toISOString(),
       };
@@ -114,7 +116,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, []);
 
-  const addWallet = useCallback((address: string, label?: string) => {
+  const addWallet = useCallback((address: string, label?: string, xamanName?: string | null) => {
     const now = new Date().toISOString();
     let isNew = false;
 
@@ -122,7 +124,9 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       const existing = prev.find(w => w.address === address);
       if (existing) {
         const updated = prev.map(w =>
-          w.address === address ? { ...w, lastUsedAt: now } : w
+          w.address === address
+            ? { ...w, lastUsedAt: now, xamanName: xamanName ?? w.xamanName }
+            : w
         );
         saveWallets(updated);
         return updated;
@@ -130,7 +134,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       isNew = true;
       const newWallet: ConnectedWallet = {
         address,
-        label: label || `Wallet ${prev.length + 1}`,
+        label: label || xamanName || `Wallet ${prev.length + 1}`,
+        xamanName: xamanName || null,
         connectedAt: now,
         lastUsedAt: now,
       };
@@ -143,7 +148,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
 
     // Audit: log connect event
-    logAuditEvent(address, 'connect', { is_new: isNew, label: label || null });
+    logAuditEvent(address, 'connect', { is_new: isNew, label: label || null, xaman_name: xamanName || null });
   }, []);
 
   const removeWallet = useCallback((address: string) => {
@@ -184,8 +189,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = null;
   }, [wallets]);
 
-  const onWalletConnected = useCallback((address: string) => {
-    addWallet(address);
+  const onWalletConnected = useCallback((address: string, xamanName?: string | null) => {
+    addWallet(address, undefined, xamanName);
     setConnectModalOpen(false);
   }, [addWallet]);
 

@@ -5,6 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
+// Try to resolve a human-readable account name from xrpscan (free, no key)
+async function resolveAccountName(address: string): Promise<string | null> {
+  try {
+    const res = await fetch(`https://api.xrpscan.com/api/v1/account/${address}/name`, {
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data?.name || data?.username || null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -56,6 +70,7 @@ Deno.serve(async (req) => {
 
     let status = 'pending';
     let wallet_address = null;
+    let account_name: string | null = null;
 
     if (xamanData.meta?.signed && xamanData.response) {
       status = 'signed';
@@ -63,6 +78,10 @@ Deno.serve(async (req) => {
       const userToken = xamanData.response?.user_token || null;
       
       console.log('Wallet signed in:', wallet_address, 'user_token present:', !!userToken);
+
+      // Resolve account name from xrpscan (non-blocking, best-effort)
+      account_name = await resolveAccountName(wallet_address);
+      console.log('Resolved account name:', account_name);
 
       await supabase
         .from('xaman_payloads')
@@ -73,7 +92,7 @@ Deno.serve(async (req) => {
         })
         .eq('uuid', uuid);
 
-      // Create or update user profile (including user_token for push notifications)
+      // Create or update user profile (including user_token and account name)
       const { data: existingProfile } = await supabase
         .from('wallet_profiles')
         .select('*')
@@ -88,10 +107,12 @@ Deno.serve(async (req) => {
             created_at: new Date().toISOString(),
             last_login: new Date().toISOString(),
             xaman_user_token: userToken,
+            xaman_account_name: account_name,
           });
       } else {
         const updateData: Record<string, unknown> = { last_login: new Date().toISOString() };
         if (userToken) updateData.xaman_user_token = userToken;
+        if (account_name) updateData.xaman_account_name = account_name;
         await supabase
           .from('wallet_profiles')
           .update(updateData)
@@ -118,6 +139,7 @@ Deno.serve(async (req) => {
         status,
         signed: xamanData.meta?.signed || false,
         wallet_address,
+        account_name,
         expired: xamanData.meta?.expired || false,
         cancelled: xamanData.meta?.cancelled || false
       }),

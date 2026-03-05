@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWalletConnected: (walletAddress: string) => void;
+  onWalletConnected: (walletAddress: string, accountName?: string | null) => void;
 }
 
 export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: WalletConnectModalProps) {
@@ -57,7 +57,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
             setStep('success');
             setIsPolling(false);
             clearInterval(pollInterval);
-            onWalletConnected(data.wallet_address);
+            onWalletConnected(data.wallet_address, data.account_name || null);
           } else if (data.cancelled || data.expired) {
             setError(data.cancelled ? 'Payment request was cancelled' : 'Payment request expired');
             setStep('error');

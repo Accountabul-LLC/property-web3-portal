@@ -640,6 +640,7 @@ export type Database = {
           id: string
           last_login: string | null
           wallet_address: string
+          xaman_account_name: string | null
           xaman_user_token: string | null
         }
         Insert: {
@@ -649,6 +650,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           wallet_address: string
+          xaman_account_name?: string | null
           xaman_user_token?: string | null
         }
         Update: {
@@ -658,6 +660,7 @@ export type Database = {
           id?: string
           last_login?: string | null
           wallet_address?: string
+          xaman_account_name?: string | null
           xaman_user_token?: string | null
         }
         Relationships: []
