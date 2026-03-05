@@ -6,9 +6,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon, FlaskConical, Shuffle } from 'lucide-react';
+import { Building2, User, MapPin, Coins, Settings, Info, Upload, X, Loader2, ImageIcon, FlaskConical, Shuffle, Link2, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+export interface MPTUri {
+  u: string;  // URI link
+  c: 'website' | 'social' | 'docs' | 'other';  // category
+  t: string;  // title
+}
 
 export interface MPTParams {
   name: string;
@@ -27,7 +33,8 @@ export interface MPTParams {
   // XLS-89 compressed metadata
   ticker: string;
   image_url: string;
-  // RWA metadata
+  uris: MPTUri[];
+  // RWA metadata (stored in `ai` freeform field)
   property_address: string;
   city: string;
   state: string;
@@ -207,11 +214,16 @@ const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - 
 function generateTestData(): MPTParams {
   const prop = rand(RANDOM_PROPERTIES);
   const owner = rand(RANDOM_OWNERS);
+  const ticker = prop.ticker;
   return {
     name: prop.name,
     description: rand(RANDOM_DESCRIPTIONS),
-    ticker: prop.ticker,
+    ticker,
     image_url: rand(RANDOM_IMAGES),
+    uris: [
+      { u: `example.com/properties/${ticker.toLowerCase()}`, c: 'website' as const, t: 'Property Page' },
+      { u: `example.com/docs/${ticker.toLowerCase()}`, c: 'docs' as const, t: 'Token Docs' },
+    ],
     property_address: prop.address,
     city: prop.city,
     state: prop.state,
@@ -413,19 +425,94 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="mpt-owner">Full Name</Label>
-            <Input id="mpt-owner" placeholder="Jane Doe" value={params.owner_name} onChange={e => set('owner_name', e.target.value)} className="mt-1" />
+            <Label htmlFor="mpt-owner">Issuer Name *</Label>
+            <Input id="mpt-owner" placeholder="Jane Doe or Acme Holdings" value={params.owner_name} onChange={e => set('owner_name', e.target.value)} className="mt-1" />
+            <p className="text-xs text-muted-foreground mt-1">Required by XLS-89 — the entity issuing this token</p>
           </div>
           <div>
             <Label htmlFor="mpt-email">Contact Email</Label>
             <Input id="mpt-email" type="email" placeholder="jane@example.com" value={params.owner_email} onChange={e => set('owner_email', e.target.value)} className="mt-1" />
           </div>
         </div>
-        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-          <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-          Owner info is stored on-chain using compressed XLS-89 metadata (≤1024 bytes). Property details are encoded as compact key-value pairs.
-        </p>
       </Card>
+
+      {/* URIs (XLS-89 `us` field) */}
+      <Card className="p-4 space-y-4 border-primary/10">
+        <SectionHeader icon={Link2} title="Links (URIs)" />
+        <p className="text-xs text-muted-foreground -mt-2">
+          Add website, docs, or social links. These are stored on-chain per the XLS-89 standard.
+        </p>
+
+        {params.uris.map((uri, idx) => (
+          <div key={idx} className="flex items-start gap-2">
+            <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <Input
+                placeholder="example.com/property"
+                value={uri.u}
+                onChange={e => {
+                  const newUris = [...params.uris];
+                  newUris[idx] = { ...newUris[idx], u: e.target.value };
+                  onChange({ ...params, uris: newUris });
+                }}
+              />
+              <Select
+                value={uri.c}
+                onValueChange={v => {
+                  const newUris = [...params.uris];
+                  newUris[idx] = { ...newUris[idx], c: v as MPTUri['c'] };
+                  onChange({ ...params, uris: newUris });
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="website">Website</SelectItem>
+                  <SelectItem value="docs">Docs</SelectItem>
+                  <SelectItem value="social">Social</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Title (e.g. Property Page)"
+                value={uri.t}
+                onChange={e => {
+                  const newUris = [...params.uris];
+                  newUris[idx] = { ...newUris[idx], t: e.target.value };
+                  onChange({ ...params, uris: newUris });
+                }}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+              onClick={() => {
+                const newUris = params.uris.filter((_, i) => i !== idx);
+                onChange({ ...params, uris: newUris });
+              }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+        ))}
+
+        {params.uris.length < 5 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+            onClick={() => onChange({ ...params, uris: [...params.uris, { u: '', c: 'website', t: '' }] })}
+          >
+            <Plus className="w-3 h-3 mr-1" /> Add Link
+          </Button>
+        )}
+      </Card>
+
+      <p className="text-xs text-muted-foreground flex items-start gap-1.5 px-1">
+        <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+        Metadata is encoded on-chain using the XLS-89 compressed schema (≤1024 bytes). Required fields: ticker, name, icon, asset_class, issuer_name.
+      </p>
 
       {/* Token Economics */}
       <Card className="p-4 space-y-4 border-primary/10">
