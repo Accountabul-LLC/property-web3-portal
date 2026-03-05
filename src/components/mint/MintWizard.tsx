@@ -8,7 +8,7 @@ import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrC
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import NFTForm, { type NFTParams } from './NFTForm';
 import MPTForm, { type MPTParams } from './MPTForm';
 import IOUForm, { type IOUParams } from './IOUForm';
@@ -83,9 +83,9 @@ const MintWizard: React.FC = () => {
         'testnet'
       );
 
-      toast({ title: '✅ Testnet wallet created', description: `Funded with ${data.balance} XRP` });
+      toast.success(`✅ Testnet wallet created — Funded with ${data.balance} XRP`);
     } catch (err: any) {
-      toast({ title: 'Faucet error', description: err.message, variant: 'destructive' });
+      toast.error(`Faucet error: ${err.message}`);
     } finally {
       setGeneratingFaucet(false);
     }
@@ -131,7 +131,7 @@ const MintWizard: React.FC = () => {
 
         setMintStatus('validated');
         setTxHash(submitData.tx_hash || null);
-        toast({ title: '✅ Token minted successfully!' });
+        toast.success('✅ Token minted successfully!');
 
       } else {
         // Mainnet / Xaman flow: send to Xaman for QR-code signing
@@ -175,7 +175,7 @@ const MintWizard: React.FC = () => {
                 .update({ status: 'validated', tx_hash: checkData.tx_hash })
                 .eq('xaman_payload_uuid', uuid);
 
-              toast({ title: '✅ Token minted successfully!' });
+              toast.success('✅ Token minted successfully!');
             } else if (checkData?.expired || checkData?.cancelled) {
               clearInterval(poll);
               setMintStatus('failed');

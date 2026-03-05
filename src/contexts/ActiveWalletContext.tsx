@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export interface ConnectedWallet {
   id: string;
@@ -256,10 +256,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     addWallet(address, undefined, xamanName);
     setConnectModalOpen(false);
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
-    toast({
-      title: '✅ Wallet Connected',
-      description: `Signed in as ${displayName}`,
-    });
+    toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);
   }, [addWallet]);
 
   return (

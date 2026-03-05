@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import QRScanner from '@/components/QRScanner';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 import { useQueryClient } from '@tanstack/react-query';
 import type { XRPLTokenHolding } from '@/hooks/useXRPLPortfolio';
 
@@ -61,7 +61,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
   const [txHash, setTxHash] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [showScanner, setShowScanner] = useState(false);
-  const { toast } = useToast();
+  
   const queryClient = useQueryClient();
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
@@ -145,7 +145,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     } catch (err: any) {
       const message = err.message || 'Failed to build transaction';
       setErrorMsg(message);
-      toast({ title: 'Insufficient Balance', description: message, variant: 'destructive' });
+      toast.error(`Insufficient Balance: ${message}`);
     } finally {
       setIsBuilding(false);
     }
