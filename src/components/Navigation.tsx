@@ -137,7 +137,7 @@ const Navigation = () => {
             )}
           </div>
 
-          {/* Mobile wallet info */}
+          {/* Mobile header actions */}
           <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
             <ThemeToggle />
             {isConnected ? (
@@ -151,6 +151,27 @@ const Navigation = () => {
               >
                 <Wallet className="w-3.5 h-3.5 mr-1.5" />
                 Connect
+              </Button>
+            )}
+            {user ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="h-8 px-3 text-xs font-medium"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+                Dashboard
+              </Button>
+            ) : (
+              <Button
+                variant="hero"
+                size="sm"
+                onClick={() => navigate('/auth')}
+                className="h-8 px-3 text-xs font-medium"
+              >
+                <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                Sign In
               </Button>
             )}
           </div>
