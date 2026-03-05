@@ -664,8 +664,12 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           <div className="p-5">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center space-x-4">
-                                <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Gem className="w-5 h-5 text-primary" />
+                                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-primary/10">
+                                  {mpt.image ? (
+                                    <img src={mpt.image} alt={mpt.name || 'MPT'} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <Gem className="w-5 h-5 text-primary" />
+                                  )}
                                 </div>
                                 <div>
                                   <div className="flex items-center gap-2">
