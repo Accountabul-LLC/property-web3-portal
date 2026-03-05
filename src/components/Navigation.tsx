@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
@@ -36,6 +36,7 @@ const Navigation = () => {
     { path: '/tokenize', label: 'Tokenize', icon: TrendingUp },
     { path: '/professionals', label: 'Professionals', icon: Users },
     { path: '/ai-agents', label: 'AI Agents', icon: Bot },
+    { path: '/mint', label: 'Mint', icon: Coins },
     { path: '/portfolio', label: 'Portfolio', icon: Wallet },
   ];
 
