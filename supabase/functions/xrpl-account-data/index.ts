@@ -5,11 +5,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const MAINNET_NODES = ['https://xrplcluster.com', 'https://s1.ripple.com:51234'];
+const MAINNET_NODES = ['https://s1.ripple.com:51234', 'https://xrplcluster.com'];
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
-const CACHE_TTL_MS = 15_000;
+const CACHE_TTL_MS = 30_000;
 const MAX_RETRIES = 2;
-const RETRY_DELAY_MS = 800;
+const RETRY_DELAY_MS = 1000;
 
 const responseCache = new Map<string, { data: unknown; expiresAt: number }>();
 
