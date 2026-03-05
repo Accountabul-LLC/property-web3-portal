@@ -162,6 +162,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
       if (!data?.success) throw new Error(data?.error || 'Failed to create signing request');
 
       setQrCode(data.qr_code);
+      setWasPushed(data.pushed || false);
 
       const pollInterval = setInterval(async () => {
         try {
@@ -201,6 +202,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     setDestinationTag('');
     setBuildResult(null);
     setQrCode('');
+    setWasPushed(false);
     setTxHash(null);
     setErrorMsg('');
     setShowScanner(false);
