@@ -692,6 +692,7 @@ export type Database = {
           status: string
           user_id: string
           wallet_address: string
+          wallet_secret: string | null
           xaman_account_name: string | null
           xaman_user_token: string | null
         }
@@ -706,6 +707,7 @@ export type Database = {
           status?: string
           user_id: string
           wallet_address: string
+          wallet_secret?: string | null
           xaman_account_name?: string | null
           xaman_user_token?: string | null
         }
@@ -720,6 +722,7 @@ export type Database = {
           status?: string
           user_id?: string
           wallet_address?: string
+          wallet_secret?: string | null
           xaman_account_name?: string | null
           xaman_user_token?: string | null
         }

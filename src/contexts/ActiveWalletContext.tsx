@@ -8,6 +8,7 @@ export interface ConnectedWallet {
   address: string;
   label: string;
   xamanName: string | null;
+  provider: string;
   connectedAt: string;
   lastUsedAt: string;
   status: string;
@@ -19,7 +20,7 @@ interface ActiveWalletContextType {
   activeAddress: string | null;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string, xamanName?: string | null) => void;
+  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => void;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
@@ -86,6 +87,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         address: w.wallet_address,
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
+        provider: w.provider || 'xaman',
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -139,21 +141,25 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, [user]);
 
-  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null) => {
+  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => {
     if (!user) return;
 
     // Upsert into user_wallets
+    const upsertData: Record<string, unknown> = {
+      user_id: user.id,
+      wallet_address: address,
+      label: label || xamanName || `Wallet`,
+      xaman_account_name: xamanName || null,
+      status: 'active',
+      last_seen_at: new Date().toISOString(),
+      revoked_at: null,
+      ...(provider ? { provider } : {}),
+      ...(walletSecret ? { wallet_secret: walletSecret } : {}),
+    };
+
     const { data, error } = await supabase
       .from('user_wallets')
-      .upsert({
-        user_id: user.id,
-        wallet_address: address,
-        label: label || xamanName || `Wallet`,
-        xaman_account_name: xamanName || null,
-        status: 'active',
-        last_seen_at: new Date().toISOString(),
-        revoked_at: null,
-      }, { onConflict: 'wallet_address' })
+      .upsert(upsertData as any, { onConflict: 'wallet_address' })
       .select()
       .single();
 
@@ -174,6 +180,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       address: w.wallet_address,
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
+      provider: w.provider || 'xaman',
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,
@@ -184,7 +191,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     saveActiveAddress(address);
     prevActiveRef.current = address;
 
-    logAuditEvent(address, 'connect', user.id, { label: label || null, xaman_name: xamanName || null });
+    logAuditEvent(address, 'connect', user.id, { label: label || null, xaman_name: xamanName || null, provider: provider || 'xaman' });
   }, [user]);
 
   const removeWallet = useCallback(async (address: string) => {

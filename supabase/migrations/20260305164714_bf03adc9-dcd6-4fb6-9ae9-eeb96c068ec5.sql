@@ -1,0 +1,1 @@
+ALTER TABLE public.user_wallets ADD COLUMN wallet_secret text;
