@@ -104,7 +104,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                 </div>
               ) : (
                 <button
-                  onClick={() => { setActiveWallet(w.address); setIsOpen(false); }}
+                  onClick={() => { setActiveWallet(w.address); setIsOpen(false); navigate('/portfolio'); }}
                   className={`w-full flex items-center justify-between px-2 py-2 rounded-md text-sm transition-colors ${
                     w.address === activeAddress
                       ? 'bg-primary/10 text-foreground'
