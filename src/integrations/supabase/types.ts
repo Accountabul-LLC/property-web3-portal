@@ -222,33 +222,63 @@ export type Database = {
       profiles: {
         Row: {
           account_type: string
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
           company_name: string | null
+          country: string | null
           created_at: string
+          date_of_birth: string | null
           email: string | null
+          first_name: string | null
           full_name: string | null
+          gender: string | null
           id: string
+          last_name: string | null
           phone: string | null
+          state: string | null
           updated_at: string
+          zip: string | null
         }
         Insert: {
           account_type?: string
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: string | null
           id: string
+          last_name?: string | null
           phone?: string | null
+          state?: string | null
           updated_at?: string
+          zip?: string | null
         }
         Update: {
           account_type?: string
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
           company_name?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           email?: string | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: string | null
           id?: string
+          last_name?: string | null
           phone?: string | null
+          state?: string | null
           updated_at?: string
+          zip?: string | null
         }
         Relationships: []
       }
