@@ -112,11 +112,12 @@ const Navigation = () => {
               <>
                 <Button
                   variant="outline"
+                  size="icon"
                   onClick={() => navigate('/dashboard')}
-                  className="h-10 px-4 font-medium"
+                  className="h-10 w-10 font-medium"
+                  title="Dashboard"
                 >
-                  <LayoutDashboard className="w-4 h-4 mr-2" />
-                  Dashboard
+                  <LayoutDashboard className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="ghost"
