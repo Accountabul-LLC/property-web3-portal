@@ -1,0 +1,1 @@
+ALTER TABLE public.wallet_profiles ADD COLUMN IF NOT EXISTS xaman_user_token TEXT DEFAULT NULL;
