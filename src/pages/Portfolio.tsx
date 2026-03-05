@@ -1,4 +1,4 @@
-import React from 'react';
+import React from 'react'; // portfolio page
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import PortfolioSection from '@/components/PortfolioSection';
