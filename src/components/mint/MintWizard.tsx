@@ -91,7 +91,7 @@ const MintWizard: React.FC = () => {
     }
   }, [user, addWallet]);
   const handleSubmit = useCallback(async () => {
-    if (!activeAddress || !user) return;
+    if (!mintAddress || !user) return;
     setLoading(true);
     setMintError(null);
 
