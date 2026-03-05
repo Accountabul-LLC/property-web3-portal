@@ -602,6 +602,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_wallets: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          label: string | null
+          last_seen_at: string
+          provider: string
+          revoked_at: string | null
+          status: string
+          user_id: string
+          wallet_address: string
+          xaman_account_name: string | null
+          xaman_user_token: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          last_seen_at?: string
+          provider?: string
+          revoked_at?: string | null
+          status?: string
+          user_id: string
+          wallet_address: string
+          xaman_account_name?: string | null
+          xaman_user_token?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          label?: string | null
+          last_seen_at?: string
+          provider?: string
+          revoked_at?: string | null
+          status?: string
+          user_id?: string
+          wallet_address?: string
+          xaman_account_name?: string | null
+          xaman_user_token?: string | null
+        }
+        Relationships: []
+      }
       wallet_audit_log: {
         Row: {
           created_at: string
@@ -610,6 +655,7 @@ export type Database = {
           ip_hint: string | null
           metadata: Json | null
           user_agent: string | null
+          user_id: string | null
           wallet_address: string
         }
         Insert: {
@@ -619,6 +665,7 @@ export type Database = {
           ip_hint?: string | null
           metadata?: Json | null
           user_agent?: string | null
+          user_id?: string | null
           wallet_address: string
         }
         Update: {
@@ -628,6 +675,7 @@ export type Database = {
           ip_hint?: string | null
           metadata?: Json | null
           user_agent?: string | null
+          user_id?: string | null
           wallet_address?: string
         }
         Relationships: []
