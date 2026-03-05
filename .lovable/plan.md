@@ -1,37 +1,83 @@
 
 
-## Problem Analysis
+## Migrate MPT Metadata to XRPL Compressed Key Format (XLS-89)
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+The current implementation uses verbose XLS-24d metadata keys (`name`, `description`, `image`, `collection`, `attributes` with `trait_type`/`value` pairs) which wastes bytes in the 1024-byte on-chain limit. The user has provided the XRPL-recommended compressed key schema that fits far more data.
 
-## Approach
+### What Changes
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+**1. Edge function: `xrpl-build-mint/index.ts` — metadata encoding**
 
-### Plan
+Replace the current XLS-24d metadata builder (lines 174-240) with the compressed key format:
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+```json
+{"t":"TKR","n":"Token Name","d":"Short desc","i":"ipfs://CID","ac":"rwa","as":"real_estate","in":"Issuer Name","us":["https://verify.url"],"ai":{"adr":"123 Main St","ct":"Miami","st":"FL","zip":"33101","cc":"US","pt":"sfh","b":3,"ba":2,"sf":1800,"yb":2005,"val":350000,"cur":"USD","asof":"2026-03-05"}}
+```
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
+Key mapping:
+- `t` = ticker (derived from token name, e.g. first 3-5 chars uppercase)
+- `n` = name
+- `d` = description (truncated short)
+- `i` = icon/image URI
+- `ac` = asset class ("rwa")
+- `as` = asset subclass (property type mapped to short codes: "sfh", "mf", "condo", "comm", etc.)
+- `in` = issuer name
+- `us` = URIs array (verification links)
+- `ai` = additional info object with compact property keys (`adr`, `ct`, `st`, `zip`, `cc`, `pt`, `b`, `ba`, `sf`, `yb`, `val`, `cur`, `asof`)
 
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+Remove `schema`, `nftType`, `collection`, and `attributes` array format entirely. The trimming logic stays but is simplified since the compact format is much smaller.
 
-### Technical Details
+**2. Edge function: `xrpl-account-data/index.ts` — metadata decoding**
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+Update `parseMPTIssuances()` to detect and decode both formats:
+- **New format**: Look for `t`, `n`, `d`, `i`, `ac`, `ai` keys and map them back to the `MPTIssuance` interface fields
+- **Legacy format**: Keep existing XLS-24d parsing as fallback for previously minted tokens
+
+Map compressed keys back to display fields:
+- `n` or `name` → `name`
+- `d` or `description` → `description`  
+- `i` or `image` → `image`
+- `ai.adr`, `ai.ct`, etc. → reconstruct `attributes` array for display
+- `ac`/`as` → could populate `collection` for backward compatibility
+
+**3. Interface: `useXRPLPortfolio.ts` — MPTIssuance type**
+
+Add optional fields to capture new metadata:
+- `ticker: string | null`
+- `asset_class: string | null`
+- `asset_subclass: string | null`  
+- `issuer_name: string | null`
+- `uris: string[] | null`
+
+**4. Portfolio display: `PortfolioSection.tsx`**
+
+- Show ticker badge next to name when available
+- Display issuer name in expanded view
+- Show URIs as clickable verification links
+- Property facts from `ai` rendered in the existing attribute grid (already works if we reconstruct the attributes array during decoding)
+
+**5. MPT Form: `MPTForm.tsx`**
+
+- Remove "Collection Name" and "Collection Family" fields (no longer part of on-chain schema)
+- Add a "Ticker" field (3-5 uppercase chars, auto-suggested from name)
+- Update the info text about on-chain metadata to reflect the compressed format
+- Remove `collection_name` and `collection_family` from `MPTParams` interface
+
+### Property Type Short Code Map
+
+```text
+Single Family   → sfh
+Multi-Family    → mf
+Condo/Apartment → condo
+Townhouse       → th
+Commercial      → comm
+Industrial      → ind
+Land/Lot        → land
+Mixed-Use       → mix
+Other           → other
+```
+
+### Backward Compatibility
+
+The decoder in `xrpl-account-data` will handle both old XLS-24d tokens (already on-chain) and new compressed tokens seamlessly by checking for key presence (`n` vs `name`).
 
