@@ -71,13 +71,56 @@ const TokenizeSection = () => {
         return (
           <div className="space-y-6">
             <div>
-              <Label htmlFor="address">Property Address *</Label>
+              <Label htmlFor="address">Street Address *</Label>
               <div className="mt-2">
                 <AddressAutocomplete
                   id="address"
                   value={formData.propertyAddress}
                   onChange={(value) => handleInputChange('propertyAddress', value)}
                   placeholder="Start typing an address..."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="city">City *</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => handleInputChange('city', e.target.value)}
+                  placeholder="New York"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="state">State *</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => handleInputChange('state', e.target.value)}
+                  placeholder="NY"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="zip">ZIP Code *</Label>
+                <Input
+                  id="zip"
+                  value={formData.zip}
+                  onChange={(e) => handleInputChange('zip', e.target.value)}
+                  placeholder="10001"
+                  className="mt-2"
+                />
+              </div>
+              <div>
+                <Label htmlFor="country">Country</Label>
+                <Input
+                  id="country"
+                  value={formData.country}
+                  onChange={(e) => handleInputChange('country', e.target.value)}
+                  placeholder="US"
+                  className="mt-2"
                 />
               </div>
             </div>
