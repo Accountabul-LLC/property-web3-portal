@@ -22,7 +22,7 @@ Deno.serve(async (req) => {
 
     const { tx_json } = await req.json();
 
-    if (!tx_json || tx_json.TransactionType !== 'Payment') {
+    if (!tx_json || !tx_json.TransactionType) {
       throw new Error('Invalid transaction JSON');
     }
 
