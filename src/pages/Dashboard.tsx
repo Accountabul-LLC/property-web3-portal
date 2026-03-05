@@ -13,7 +13,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X } from 'lucide-react';
+import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle } from 'lucide-react';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -199,6 +199,24 @@ const Dashboard = () => {
             Tokenize Property
           </Button>
         </div>
+
+        {/* Complete Profile Banner */}
+        {profile && (!profile.first_name || !profile.phone) && !editing && (
+          <Card className="p-4 mb-4 border-primary/30 bg-primary/5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium">Complete your profile</p>
+                  <p className="text-xs text-muted-foreground">Add your name and contact info to unlock all features.</p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                Complete Now
+              </Button>
+            </div>
+          </Card>
+        )}
 
         {/* Profile Card */}
         <Card className="p-6 mb-8">
