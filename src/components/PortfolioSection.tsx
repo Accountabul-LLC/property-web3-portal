@@ -177,38 +177,108 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
               <h3 className="text-2xl font-bold mb-6">Token Holdings</h3>
               <div className="space-y-4">
                 {/* XRP as first holding */}
-                <Card className="p-5 hover:shadow-card transition-all duration-300 border-primary/20">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <TokenAvatar currency="XRP" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-lg">XRP</p>
-                          <a
-                            href="https://xrpl.org/about/xrp"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-primary transition-colors"
-                            title="Learn about XRP"
-                          >
-                            <Globe className="w-3.5 h-3.5" />
-                          </a>
+                {(() => {
+                  const isXrpExpanded = expandedToken === 'XRP_NATIVE';
+                  return (
+                    <Card
+                      className={`hover:shadow-card transition-all duration-300 border-primary/20 cursor-pointer ${isXrpExpanded ? 'ring-1 ring-primary/30' : ''}`}
+                      onClick={() => setExpandedToken(isXrpExpanded ? null : 'XRP_NATIVE')}
+                    >
+                      <div className="p-5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <TokenAvatar currency="XRP" />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-lg">XRP</p>
+                                <a
+                                  href="https://xrpl.org/about/xrp"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-muted-foreground hover:text-primary transition-colors"
+                                  title="Learn about XRP"
+                                >
+                                  <Globe className="w-3.5 h-3.5" />
+                                </a>
+                              </div>
+                              <p className="text-xs text-muted-foreground">Native token · XRP Ledger</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
+                              {xrpUsdPrice > 0 ? (
+                                <p className="text-xs text-muted-foreground">
+                                  ≈ ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                                </p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                              )}
+                            </div>
+                            {isXrpExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </div>
                         </div>
-                        <p className="text-xs text-muted-foreground">Native token</p>
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
-                      {xrpUsdPrice > 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          ≈ ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                        </p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+
+                      {isXrpExpanded && (
+                        <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
+                          <p className="text-sm text-muted-foreground">
+                            XRP is the native digital asset of the XRP Ledger — a decentralized, open-source blockchain. It's used for fast, low-cost cross-border payments and serves as the bridge currency on the XRPL DEX.
+                          </p>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            {xrpUsdPrice > 0 && (
+                              <div className="bg-muted/50 rounded-lg p-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">Price</p>
+                                <p className="text-sm font-bold">${xrpUsdPrice.toLocaleString(undefined, { maximumFractionDigits: 4 })}</p>
+                              </div>
+                            )}
+                            <div className="bg-muted/50 rounded-lg p-3">
+                              <p className="text-[10px] uppercase text-muted-foreground font-medium">Balance</p>
+                              <p className="text-sm font-bold">{formatXRP(xrplData.xrp_balance)} XRP</p>
+                            </div>
+                            <div className="bg-muted/50 rounded-lg p-3">
+                              <p className="text-[10px] uppercase text-muted-foreground font-medium">Reserve</p>
+                              <p className="text-sm font-bold">{formatXRP(xrplData.reserve_xrp)} XRP</p>
+                            </div>
+                            <div className="bg-muted/50 rounded-lg p-3">
+                              <p className="text-[10px] uppercase text-muted-foreground font-medium">Spendable</p>
+                              <p className="text-sm font-bold">{formatXRP(xrplData.spendable_xrp)} XRP</p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-1">
+                            <a
+                              href="https://xrpl.org/about/xrp"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <Globe className="w-3.5 h-3.5" />
+                              About XRP
+                            </a>
+                            <a
+                              href={`https://livenet.xrpl.org/accounts/${displayAddress}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                              XRPL Explorer
+                            </a>
+                          </div>
+                        </div>
                       )}
-                    </div>
-                  </div>
-                </Card>
+                    </Card>
+                  );
+                })()}
                 {/* Issued tokens */}
                 {xrplData.token_holdings.map((token, idx) => {
                   const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
