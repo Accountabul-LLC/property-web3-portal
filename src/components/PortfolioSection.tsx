@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
@@ -18,6 +19,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
   const { data: xrplData, isLoading, error } = useXRPLPortfolio(displayAddress);
+  useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
 

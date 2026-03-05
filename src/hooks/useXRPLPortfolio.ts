@@ -53,8 +53,8 @@ export function useXRPLPortfolio(walletAddress: string | null) {
     staleTime: 15_000,
     // Keep inactive wallet data in cache for 5 minutes so toggling back doesn't refetch
     gcTime: 5 * 60_000,
-    // Auto-refresh active wallet every 30s
-    refetchInterval: 30_000,
+    // Auto-refresh active wallet every 60s (WebSocket handles real-time updates)
+    refetchInterval: 60_000,
     // Refetch when user returns to the tab/page
     refetchOnWindowFocus: true,
     // Always refetch when component remounts (e.g. navigating back to portfolio)
