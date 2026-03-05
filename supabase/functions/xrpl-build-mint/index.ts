@@ -171,48 +171,54 @@ Deno.serve(async (req) => {
         txJson.MaximumAmount = String(max_amount);
       }
 
-      // Build compressed XLS-89 MPTokenMetadata (max 1024 bytes)
+      // Build XLS-89 compliant MPTokenMetadata (max 1024 bytes)
       if (name || description) {
-        const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url } = params || {};
+        const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = params || {};
 
-        // Property type short code map
+        // Property type short code map for asset_subclass
         const ptMap: Record<string, string> = {
-          'Single Family': 'sfh', 'Multi-Family': 'mf', 'Condo / Apartment': 'condo',
-          'Townhouse': 'th', 'Commercial': 'comm', 'Industrial': 'ind',
-          'Land / Lot': 'land', 'Mixed-Use': 'mix', 'Other': 'other',
+          'Single Family': 'real_estate', 'Multi-Family': 'real_estate', 'Condo / Apartment': 'real_estate',
+          'Townhouse': 'real_estate', 'Commercial': 'real_estate', 'Industrial': 'real_estate',
+          'Land / Lot': 'real_estate', 'Mixed-Use': 'real_estate', 'Other': 'other',
         };
 
         // Auto-generate ticker from name if not provided
         const autoTicker = ticker || (name ? name.replace(/[^A-Za-z]/g, '').substring(0, 5).toUpperCase() : undefined);
 
+        // XLS-89 required keys: t, n, i, ac, in
         const metaObj: Record<string, unknown> = {};
-        if (autoTicker) metaObj.t = autoTicker;
-        if (name) metaObj.n = name;
-        if (description) metaObj.d = description;
-        if (image_url) metaObj.i = image_url;
-        metaObj.ac = 'rwa';
-        if (property_type && ptMap[property_type]) metaObj.as = ptMap[property_type];
-        else if (property_type) metaObj.as = property_type.toLowerCase().replace(/\s+/g, '_');
-        if (owner_name) metaObj.in = owner_name;
+        if (autoTicker) metaObj.t = autoTicker;       // ticker (required)
+        if (name) metaObj.n = name;                     // name (required)
+        if (description) metaObj.d = description;       // desc (optional)
+        if (image_url) metaObj.i = image_url;           // icon (required)
+        metaObj.ac = 'rwa';                             // asset_class (required)
+        metaObj.as = ptMap[property_type] || 'real_estate'; // asset_subclass
+        if (owner_name) metaObj.in = owner_name;        // issuer_name (required)
 
-        // Build additional_info with compact keys
+        // URIs array (XLS-89 `us` field)
+        if (uris && Array.isArray(uris) && uris.length > 0) {
+          const validUris = uris.filter((u: any) => u.u && u.c && u.t);
+          if (validUris.length > 0) {
+            metaObj.us = validUris.map((u: any) => ({ u: u.u, c: u.c, t: u.t }));
+          }
+        }
+
+        // additional_info — freeform property details
         const ai: Record<string, unknown> = {};
-        if (property_address) ai.adr = property_address;
-        if (city) ai.ct = city;
-        if (state) ai.st = state;
+        if (property_address) ai.address = property_address;
+        if (city) ai.city = city;
+        if (state) ai.state = state;
         if (zip) ai.zip = zip;
-        if (country) ai.cc = country;
-        if (property_type) ai.pt = ptMap[property_type] || property_type;
-        if (bedrooms) ai.b = Number(bedrooms);
-        if (bathrooms) ai.ba = Number(bathrooms);
-        if (square_feet) ai.sf = Number(square_feet);
-        if (year_built) ai.yb = Number(year_built);
-        if (estimated_value) ai.val = Number(estimated_value);
-        ai.cur = 'USD';
-        ai.asof = new Date().toISOString().split('T')[0];
-        if (owner_email) ai.em = owner_email;
+        if (country) ai.country = country;
+        if (property_type) ai.property_type = property_type;
+        if (bedrooms) ai.bedrooms = Number(bedrooms);
+        if (bathrooms) ai.bathrooms = Number(bathrooms);
+        if (square_feet) ai.sqft = Number(square_feet);
+        if (year_built) ai.year_built = Number(year_built);
+        if (estimated_value) ai.value_usd = Number(estimated_value);
+        if (owner_email) ai.contact = owner_email;
 
-        if (Object.keys(ai).length > 2) metaObj.ai = ai; // >2 because cur+asof always present
+        if (Object.keys(ai).length > 0) metaObj.ai = ai;
 
         // Enforce XRPL 1024-byte limit
         let metaJson = JSON.stringify(metaObj);
@@ -225,16 +231,22 @@ Deno.serve(async (req) => {
             metaJson = JSON.stringify(metaObj);
             metaBytes = new TextEncoder().encode(metaJson).length;
           }
+          // Remove URIs if still too big
+          if (metaBytes > 1024) {
+            delete metaObj.us;
+            metaJson = JSON.stringify(metaObj);
+            metaBytes = new TextEncoder().encode(metaJson).length;
+          }
           // Remove image if still too big
           if (metaBytes > 1024) {
             delete metaObj.i;
             metaJson = JSON.stringify(metaObj);
             metaBytes = new TextEncoder().encode(metaJson).length;
           }
-          // Remove ai fields progressively
+          // Trim ai fields progressively
           if (metaBytes > 1024 && metaObj.ai) {
             const aiObj = metaObj.ai as Record<string, unknown>;
-            for (const key of ['em', 'cc', 'zip', 'adr', 'ct', 'st']) {
+            for (const key of ['contact', 'country', 'zip', 'address', 'city', 'state']) {
               delete aiObj[key];
               metaJson = JSON.stringify(metaObj);
               if (new TextEncoder().encode(metaJson).length <= 1024) break;
