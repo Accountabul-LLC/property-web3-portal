@@ -1,37 +1,30 @@
 
 
-## Problem Analysis
+## Fix: Testnet Minting Routes to Xaman Instead of Auto-Sign
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+### Root Cause
 
-## Approach
+The wallet `rUDCiHjDCAfL3Ne3L9gXmpZgL8B2uDkFVP` is stored in the database with `provider: 'xaman'`, not `testnet_faucet`. There are **zero** faucet wallets in the database. So when the mint wizard checks `activeWallet?.provider === 'testnet_faucet'`, it's always false, and every testnet mint falls through to the Xaman QR signing path — which doesn't work because this is a website-only testnet flow with no external Xaman app involved.
 
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
+### Solution
 
-### Plan
+Add a **network-wallet mismatch guard** to the mint wizard's review step. When the user selects testnet but their active wallet is NOT a faucet wallet (no server-side secret), show a clear warning with a button to generate a testnet faucet wallet directly from the mint page — reusing the same faucet generation logic already in `WalletSelector.tsx`.
 
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
+### Changes
 
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
+#### 1. `src/components/mint/MintWizard.tsx` — Add testnet wallet guard
 
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+On the **review step**, when `network === 'testnet' && !isTestnetFaucetWallet`:
+- Replace the submit button with a warning card explaining: "Your current wallet was connected via Xaman and can't auto-sign testnet transactions. Generate a testnet wallet to continue."
+- Add a "Generate Testnet Wallet" button that calls the `xrpl-testnet-faucet` edge function and uses `addWallet()` from context to save it with `provider: 'testnet_faucet'` + the secret
+- After generation, the wallet auto-switches to the new faucet wallet, and the review step updates to show "Auto-sign (testnet)" with the submit button enabled
 
-### Technical Details
+Also add the same guard on **step 1** (type/network selection): when user picks testnet, show an inline hint if their active wallet isn't a faucet wallet — something like "Tip: You'll need a testnet wallet to auto-sign. You can generate one on the next step."
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+#### 2. No backend changes needed
+
+The faucet edge function and `xrpl-submit-signed` already support this flow. The `addWallet` context method already accepts `provider` and `walletSecret` params. The only gap is the UI not surfacing the generate-faucet action when the wallet/network combo requires it.
+
+### Files to modify
+- `src/components/mint/MintWizard.tsx` — Add testnet wallet mismatch warning + inline faucet generation button
 
