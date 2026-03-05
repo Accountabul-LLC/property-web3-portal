@@ -171,11 +171,40 @@ Deno.serve(async (req) => {
         txJson.MaximumAmount = String(max_amount);
       }
 
-      // Build MPTokenMetadata from name + description
+      // Build XLS-24d structured MPTokenMetadata
       if (name || description) {
-        const metaObj: Record<string, string> = {};
-        if (name) metaObj.name = name;
+        const attributes: Array<{ trait_type: string; value: string | number }> = [];
+
+        // RWA property attributes from params
+        const { property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email } = params || {};
+        if (property_address) attributes.push({ trait_type: 'Property Address', value: property_address });
+        if (city) attributes.push({ trait_type: 'City', value: city });
+        if (state) attributes.push({ trait_type: 'State', value: state });
+        if (zip) attributes.push({ trait_type: 'ZIP', value: zip });
+        if (country) attributes.push({ trait_type: 'Country', value: country });
+        if (property_type) attributes.push({ trait_type: 'Property Type', value: property_type });
+        if (bedrooms) attributes.push({ trait_type: 'Bedrooms', value: Number(bedrooms) });
+        if (bathrooms) attributes.push({ trait_type: 'Bathrooms', value: Number(bathrooms) });
+        if (square_feet) attributes.push({ trait_type: 'Square Feet', value: Number(square_feet) });
+        if (year_built) attributes.push({ trait_type: 'Year Built', value: Number(year_built) });
+        if (estimated_value) attributes.push({ trait_type: 'Estimated Value (USD)', value: Number(estimated_value) });
+        if (owner_name) attributes.push({ trait_type: 'Owner', value: owner_name });
+        if (owner_email) attributes.push({ trait_type: 'Contact', value: owner_email });
+
+        const metaObj: Record<string, unknown> = {
+          schema: 'ipfs://QmNpi8rcXEkohca8iXu7zysKKSJYqCvBJn3xJwga8jXqWo',
+          nftType: 'art.v0',
+          name,
+        };
         if (description) metaObj.description = description;
+        if (params?.image_url) metaObj.image = params.image_url;
+
+        const collectionName = params?.collection_name || 'RWA Property Tokens';
+        const collectionFamily = params?.collection_family || 'Real Estate';
+        metaObj.collection = { name: collectionName, family: collectionFamily };
+
+        if (attributes.length > 0) metaObj.attributes = attributes;
+
         txJson.MPTokenMetadata = toHex(JSON.stringify(metaObj));
       }
 

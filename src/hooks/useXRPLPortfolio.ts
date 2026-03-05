@@ -41,6 +41,11 @@ export interface MPTIssuance {
   metadata_hex: string | null;
   name: string | null;
   description: string | null;
+  image: string | null;
+  nft_type: string | null;
+  collection: { name?: string; family?: string } | null;
+  attributes: Array<{ trait_type: string; value: string | number }> | null;
+  schema: string | null;
 }
 
 export interface MPTHolding {
