@@ -8,6 +8,7 @@ export interface ConnectedWallet {
   address: string;
   label: string;
   xamanName: string | null;
+  provider: string;
   connectedAt: string;
   lastUsedAt: string;
   status: string;
@@ -86,6 +87,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         address: w.wallet_address,
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
+        provider: w.provider || 'xaman',
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -178,6 +180,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       address: w.wallet_address,
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
+      provider: w.provider || 'xaman',
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,

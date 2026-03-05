@@ -28,7 +28,7 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, isConnected } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const { user } = useAuth();
 
   const [step, setStep] = useState<MintStep>('type');
@@ -58,6 +58,8 @@ const MintWizard: React.FC = () => {
     return iouParams.currency_code.length === 3 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
   };
 
+  const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
+
   const handleSubmit = useCallback(async () => {
     if (!activeAddress || !user) return;
     setLoading(true);
@@ -74,70 +76,99 @@ const MintWizard: React.FC = () => {
 
       const txJson = buildData.tx_json;
 
-      // 2. Send to Xaman for signing
-      const { data: signData, error: signError } = await supabase.functions.invoke('xaman-send-payment', {
-        body: { tx_json: txJson },
-      });
+      // Branch: testnet faucet wallet → auto-sign server-side
+      if (network === 'testnet' && isTestnetFaucetWallet) {
+        setMintStatus('pending');
 
-      if (signError) throw new Error(signError.message);
-      if (!signData?.success) throw new Error(signData?.error || 'Failed to create signing request');
+        const { data: submitData, error: submitError } = await supabase.functions.invoke('xrpl-submit-signed', {
+          body: { tx_json: txJson, wallet_address: activeAddress, network },
+        });
 
-      setMintStatus('pending');
-      setQrCode(signData.qr_code || null);
-      setPushed(signData.pushed || false);
+        if (submitError) throw new Error(submitError.message);
+        if (!submitData?.success) throw new Error(submitData?.error || 'Failed to submit transaction');
 
-      // 3. Save mint record
-      await supabase.from('token_mints' as any).insert({
-        user_id: user.id,
-        wallet_address: activeAddress,
-        token_type: tokenType,
-        network,
-        request_json: getParams(),
-        tx_json: txJson,
-        status: 'pending',
-        xaman_payload_uuid: signData.uuid,
-      });
+        // Save mint record as validated
+        await supabase.from('token_mints' as any).insert({
+          user_id: user.id,
+          wallet_address: activeAddress,
+          token_type: tokenType,
+          network,
+          request_json: getParams(),
+          tx_json: txJson,
+          status: 'validated',
+          tx_hash: submitData.tx_hash,
+        });
 
-      // 4. Poll for signing result
-      const uuid = signData.uuid;
-      const poll = setInterval(async () => {
-        try {
-          const { data: checkData } = await supabase.functions.invoke('xaman-check-payload', {
-            body: { uuid },
-          });
+        setMintStatus('validated');
+        setTxHash(submitData.tx_hash || null);
+        toast({ title: '✅ Token minted successfully!' });
 
-          if (checkData?.signed) {
-            clearInterval(poll);
-            setMintStatus('validated');
-            setTxHash(checkData.tx_hash || null);
+      } else {
+        // Mainnet / Xaman flow: send to Xaman for QR-code signing
+        const { data: signData, error: signError } = await supabase.functions.invoke('xaman-send-payment', {
+          body: { tx_json: txJson },
+        });
 
-            await supabase.from('token_mints' as any)
-              .update({ status: 'validated', tx_hash: checkData.tx_hash })
-              .eq('xaman_payload_uuid', uuid);
+        if (signError) throw new Error(signError.message);
+        if (!signData?.success) throw new Error(signData?.error || 'Failed to create signing request');
 
-            toast({ title: '✅ Token minted successfully!' });
-          } else if (checkData?.expired || checkData?.cancelled) {
-            clearInterval(poll);
-            setMintStatus('failed');
-            setMintError(checkData.cancelled ? 'Signing was cancelled.' : 'Signing request expired.');
+        setMintStatus('pending');
+        setQrCode(signData.qr_code || null);
+        setPushed(signData.pushed || false);
 
-            await supabase.from('token_mints' as any)
-              .update({ status: 'failed' })
-              .eq('xaman_payload_uuid', uuid);
+        // Save mint record
+        await supabase.from('token_mints' as any).insert({
+          user_id: user.id,
+          wallet_address: activeAddress,
+          token_type: tokenType,
+          network,
+          request_json: getParams(),
+          tx_json: txJson,
+          status: 'pending',
+          xaman_payload_uuid: signData.uuid,
+        });
+
+        // Poll for signing result
+        const uuid = signData.uuid;
+        const poll = setInterval(async () => {
+          try {
+            const { data: checkData } = await supabase.functions.invoke('xaman-check-payload', {
+              body: { uuid },
+            });
+
+            if (checkData?.signed) {
+              clearInterval(poll);
+              setMintStatus('validated');
+              setTxHash(checkData.tx_hash || null);
+
+              await supabase.from('token_mints' as any)
+                .update({ status: 'validated', tx_hash: checkData.tx_hash })
+                .eq('xaman_payload_uuid', uuid);
+
+              toast({ title: '✅ Token minted successfully!' });
+            } else if (checkData?.expired || checkData?.cancelled) {
+              clearInterval(poll);
+              setMintStatus('failed');
+              setMintError(checkData.cancelled ? 'Signing was cancelled.' : 'Signing request expired.');
+
+              await supabase.from('token_mints' as any)
+                .update({ status: 'failed' })
+                .eq('xaman_payload_uuid', uuid);
+            }
+          } catch {
+            // continue polling
           }
-        } catch {
-          // continue polling
-        }
-      }, 3000);
+        }, 3000);
 
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(poll);
-        if (mintStatus === 'pending') {
-          setMintStatus('failed');
-          setMintError('Signing timed out.');
-        }
-      }, 300_000);
+        // Timeout after 5 minutes
+        setTimeout(() => {
+          clearInterval(poll);
+          if (mintStatus === 'pending') {
+            setMintStatus('failed');
+            setMintError('Signing timed out.');
+          }
+        }, 300_000);
+      }
 
     } catch (err: any) {
       setMintStatus('failed');
@@ -145,7 +176,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeAddress, user, tokenType, network, nftParams, mptParams, iouParams]);
+  }, [activeAddress, activeWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
 
   const handleReset = () => {
     setStep('type');
