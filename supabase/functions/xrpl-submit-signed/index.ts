@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { Wallet, encode, decode } from 'https://esm.sh/xrpl@4.1.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -46,28 +47,42 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    // Use the XRPL sign RPC method
-    const signRes = await fetch(TESTNET_RPC, {
+    // Sign locally using xrpl.js Wallet
+    const wallet = Wallet.fromSeed(secret);
+    console.log('Signing with wallet:', wallet.address);
+
+    // We need to get the account sequence from the ledger
+    const accountInfoRes = await fetch(TESTNET_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        method: 'sign',
-        params: [{
-          secret,
-          tx_json,
-        }],
+        method: 'account_info',
+        params: [{ account: wallet_address, ledger_index: 'current' }],
       }),
     });
+    const accountInfo = await accountInfoRes.json();
 
-    const signData = await signRes.json();
-    console.log('Sign response:', JSON.stringify(signData));
-
-    if (signData.result?.status !== 'success') {
-      throw new Error(signData.result?.error_message || 'Failed to sign transaction');
+    if (accountInfo.result?.error) {
+      throw new Error(`Account error: ${accountInfo.result.error_message || accountInfo.result.error}`);
     }
 
-    const signedBlob = signData.result.tx_blob;
-    const txHash = signData.result.tx_json?.hash;
+    const sequence = accountInfo.result?.account_data?.Sequence;
+    if (sequence === undefined) {
+      throw new Error('Could not determine account sequence');
+    }
+
+    // Add Sequence to tx_json if not present
+    const completeTx = {
+      ...tx_json,
+      Sequence: tx_json.Sequence ?? sequence,
+      SigningPubKey: wallet.publicKey,
+    };
+
+    console.log('Complete tx:', JSON.stringify(completeTx));
+
+    // Sign the transaction
+    const signed = wallet.sign(completeTx as any);
+    console.log('Signed tx hash:', signed.hash);
 
     // Submit the signed transaction
     const submitRes = await fetch(TESTNET_RPC, {
@@ -75,7 +90,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         method: 'submit',
-        params: [{ tx_blob: signedBlob }],
+        params: [{ tx_blob: signed.tx_blob }],
       }),
     });
 
@@ -90,7 +105,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       success: true,
-      tx_hash: submitData.result?.tx_json?.hash || txHash,
+      tx_hash: signed.hash,
       engine_result: engineResult,
       engine_result_message: submitData.result?.engine_result_message,
     }), {
