@@ -1,37 +1,38 @@
 
 
-## Problem Analysis
+## Plan: Real-Time XRPL Account Subscription for Instant Balance Updates
 
-The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
+### Problem
+After sending a payment, the portfolio takes up to 30 seconds (the polling interval) to reflect the updated balance. The user wants immediate feedback when a transaction is confirmed on the XRPL ledger.
 
-## Approach
-
-Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
-
-### Plan
-
-1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
-   - `account_info` -- XRP balance
-   - `account_lines` -- trustlines/token holdings  
-   - `account_tx` -- recent transactions
-   - Returns formatted holdings and transactions
-
-2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
-   - XRP balance
-   - Token holdings (trustlines with balances)
-   - Recent transactions (parsed from `account_tx`)
-
-3. **Update `PortfolioSection` component** to:
-   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
-   - Display XRP balance as a summary card
-   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
-   - Show recent on-chain transactions with type, amount, date, and tx hash
-   - Keep the existing database-backed property token holdings as a separate section
+### Approach
+Subscribe to the XRPL ledger's native WebSocket `subscribe` command for the active account. When the ledger reports a transaction affecting the account, immediately invalidate the React Query cache to trigger a refetch. This gives near-instant balance updates without relying on polling alone.
 
 ### Technical Details
 
-- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
-- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
-- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
-- **No database changes needed** -- this reads directly from the XRPL ledger
+**1. Create a new hook: `src/hooks/useXRPLSubscription.ts`**
+- Opens a WebSocket connection to `wss://xrplcluster.com` (the WebSocket counterpart of the existing RPC node).
+- Sends an XRPL `subscribe` command for the active wallet's account using `accounts_proposed` or `accounts` stream.
+- On receiving a `transaction` event for the account, calls `queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', walletAddress] })` to trigger an immediate refetch.
+- Handles reconnection with exponential backoff if the WebSocket closes unexpectedly.
+- Cleans up (unsubscribe + close) when the wallet address changes or the component unmounts.
+- Subscribes only when a wallet address is provided.
+
+**2. Integrate in `src/components/PortfolioSection.tsx`**
+- Call the new `useXRPLSubscription(displayAddress)` hook alongside the existing `useXRPLPortfolio` hook.
+- No UI changes needed; the existing React Query data flow will automatically re-render with fresh data once the cache is invalidated.
+
+**3. Trigger immediate refresh after SendModal success**
+- In `SendModal.tsx`, when a transaction succeeds (step transitions to `'success'`), also invalidate the portfolio query immediately so the balance updates even before the WebSocket event arrives.
+
+**4. Reduce polling interval (optional cleanup)**
+- With the WebSocket subscription handling real-time updates, the 30-second polling in `useXRPLPortfolio` can be increased to 60 seconds as a safety fallback, reducing unnecessary network requests.
+
+### File Changes Summary
+| File | Change |
+|------|--------|
+| `src/hooks/useXRPLSubscription.ts` | New hook — XRPL WebSocket subscription with auto-reconnect |
+| `src/components/PortfolioSection.tsx` | Add `useXRPLSubscription(displayAddress)` call |
+| `src/components/SendModal.tsx` | Invalidate portfolio query on successful send |
+| `src/hooks/useXRPLPortfolio.ts` | Increase polling fallback from 30s to 60s |
 
