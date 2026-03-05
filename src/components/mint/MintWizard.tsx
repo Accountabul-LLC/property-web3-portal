@@ -420,38 +420,15 @@ const MintWizard: React.FC = () => {
               )}
             </div>
 
-            {networkMismatch ? (
-              <div className="space-y-3">
-                <Alert className="border-amber-500/30 bg-amber-500/5">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Network mismatch</AlertTitle>
-                  <AlertDescription className="text-xs text-muted-foreground">
-                    Your wallet is on <strong>{walletNetwork}</strong> but you're minting on <strong>{network}</strong>. Switch wallets or change the network to proceed.
-                  </AlertDescription>
-                </Alert>
-                <div className="flex justify-between">
-                  <Button variant="ghost" onClick={() => setStep('form')}>
-                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                  </Button>
-                  {network === 'testnet' && (
-                    <Button onClick={handleGenerateFaucetWallet} disabled={generatingFaucet} variant="hero">
-                      {generatingFaucet ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wallet className="w-4 h-4 mr-1" />}
-                      Generate Testnet Wallet
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="flex justify-between">
-                <Button variant="ghost" onClick={() => setStep('form')}>
-                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
-                <Button onClick={handleSubmit} disabled={loading} variant="hero">
-                  {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                  {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
-                </Button>
-              </div>
-            )}
+            <div className="flex justify-between">
+              <Button variant="ghost" onClick={() => setStep('form')}>
+                <ArrowLeft className="w-4 h-4 mr-1" /> Back
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading} variant="hero">
+                {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
+              </Button>
+            </div>
           </>
         )}
       </CardContent>
