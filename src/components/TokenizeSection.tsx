@@ -106,6 +106,17 @@ const TokenizeSection = () => {
               </div>
             </div>
 
+            <div>
+              <Label htmlFor="unit">Unit / Apt # (optional)</Label>
+              <Input
+                id="unit"
+                value={formData.unit}
+                onChange={(e) => handleInputChange('unit', e.target.value)}
+                placeholder="Apt 4B, Unit 12, Suite 100..."
+                className="mt-2"
+              />
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="city">City *</Label>

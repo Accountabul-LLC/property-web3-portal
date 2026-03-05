@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 export interface TokenizeFormData {
   propertyAddress: string;
+  unit: string;
   city: string;
   state: string;
   zip: string;
@@ -24,6 +25,7 @@ export interface TokenizeFormData {
 
 const initialFormData: TokenizeFormData = {
   propertyAddress: '',
+  unit: '',
   city: '',
   state: '',
   zip: '',
@@ -59,8 +61,8 @@ export function useTokenizeForm() {
   const buildRow = (status: 'draft' | 'submitted') => ({
     owner_user_id: user?.id,
     title: formData.propertyAddress || 'Untitled Property',
-    address: formData.propertyAddress,
-    address_display: [formData.propertyAddress, formData.city, formData.state, formData.zip, formData.country].filter(Boolean).join(', '),
+    address: formData.unit ? `${formData.propertyAddress}, ${formData.unit}` : formData.propertyAddress,
+    address_display: [formData.propertyAddress, formData.unit, formData.city, formData.state, formData.zip, formData.country].filter(Boolean).join(', '),
     city: formData.city || null,
     state: formData.state || null,
     zip: formData.zip || null,
