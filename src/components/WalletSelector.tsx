@@ -60,7 +60,13 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
           }`}
         >
           <Wallet className={compact ? 'w-3.5 h-3.5 text-primary' : 'w-4 h-4 text-primary'} />
-          <span className="font-medium text-primary">
+          <span
+            className="font-medium text-primary hover:underline"
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate('/portfolio');
+            }}
+          >
             {activeWallet.label || activeWallet.xamanName || shortenAddress(activeAddress!)}
           </span>
           {wallets.length > 1 && (
