@@ -242,7 +242,7 @@ serve(async (req) => {
       xrplRequest(node, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
       xrplRequest(node, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]),
       xrplRequest(node, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]),
-      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken_issuance', ledger_index: 'validated' }]),
+      xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]),
       xrplRequest(node, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]),
     ]);
 
