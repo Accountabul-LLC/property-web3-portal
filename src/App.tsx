@@ -7,6 +7,7 @@ import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import Index from "./pages/Index";
 import Marketplace from "./pages/Marketplace";
 import Tokenize from "./pages/Tokenize";
+import Auth from "./pages/Auth";
 import Professionals from "./pages/Professionals";
 import AIAgents from "./pages/AIAgents";
 import Portfolio from "./pages/Portfolio";
@@ -24,6 +25,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/tokenize" element={<Tokenize />} />
             <Route path="/professionals" element={<Professionals />} />
