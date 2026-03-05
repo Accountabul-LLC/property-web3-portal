@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode } from 'lucide-react';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -28,7 +29,7 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet } = useActiveWallet();
   const { user } = useAuth();
 
   const [step, setStep] = useState<MintStep>('type');
@@ -45,7 +46,7 @@ const MintWizard: React.FC = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [pushed, setPushed] = useState(false);
   const [loading, setLoading] = useState(false);
-
+  const [generatingFaucet, setGeneratingFaucet] = useState(false);
   const getParams = () => {
     if (tokenType === 'nft') return nftParams;
     if (tokenType === 'mpt') return mptParams;
@@ -59,7 +60,31 @@ const MintWizard: React.FC = () => {
   };
 
   const isTestnetFaucetWallet = activeWallet?.provider === 'testnet_faucet';
+  const needsFaucetWallet = network === 'testnet' && !isTestnetFaucetWallet;
 
+  const handleGenerateFaucetWallet = useCallback(async () => {
+    if (!user) return;
+    setGeneratingFaucet(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('xrpl-testnet-faucet', {});
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Faucet failed');
+
+      await addWallet(
+        data.address,
+        'Testnet Faucet Wallet',
+        null,
+        'testnet_faucet',
+        data.secret
+      );
+
+      toast({ title: '✅ Testnet wallet created', description: `Funded with ${data.balance} XRP` });
+    } catch (err: any) {
+      toast({ title: 'Faucet error', description: err.message, variant: 'destructive' });
+    } finally {
+      setGeneratingFaucet(false);
+    }
+  }, [user, addWallet]);
   const handleSubmit = useCallback(async () => {
     if (!activeAddress || !user) return;
     setLoading(true);
@@ -288,6 +313,16 @@ const MintWizard: React.FC = () => {
               </p>
             )}
 
+            {needsFaucetWallet && (
+              <Alert className="border-amber-500/30 bg-amber-500/5">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Testnet wallet needed</AlertTitle>
+                <AlertDescription className="text-xs text-muted-foreground">
+                  Your current wallet is connected via Xaman and can't auto-sign testnet transactions. You'll be able to generate a testnet wallet in the review step.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="flex justify-end">
               <Button onClick={() => setStep('form')}>
                 Next <ArrowRight className="w-4 h-4 ml-1" />
@@ -379,15 +414,36 @@ const MintWizard: React.FC = () => {
               )}
             </div>
 
-            <div className="flex justify-between">
-              <Button variant="ghost" onClick={() => setStep('form')}>
-                <ArrowLeft className="w-4 h-4 mr-1" /> Back
-              </Button>
-              <Button onClick={handleSubmit} disabled={loading} variant="hero">
-                {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
-              </Button>
-            </div>
+            {needsFaucetWallet ? (
+              <div className="space-y-3">
+                <Alert className="border-amber-500/30 bg-amber-500/5">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <AlertTitle className="text-amber-700 dark:text-amber-400 text-sm">Can't auto-sign with this wallet</AlertTitle>
+                  <AlertDescription className="text-xs text-muted-foreground">
+                    Your current wallet was connected via Xaman and doesn't have a server-side secret for testnet auto-signing. Generate a testnet wallet to continue.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex justify-between">
+                  <Button variant="ghost" onClick={() => setStep('form')}>
+                    <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                  </Button>
+                  <Button onClick={handleGenerateFaucetWallet} disabled={generatingFaucet} variant="hero">
+                    {generatingFaucet ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Wallet className="w-4 h-4 mr-1" />}
+                    Generate Testnet Wallet
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex justify-between">
+                <Button variant="ghost" onClick={() => setStep('form')}>
+                  <ArrowLeft className="w-4 h-4 mr-1" /> Back
+                </Button>
+                <Button onClick={handleSubmit} disabled={loading} variant="hero">
+                  {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
+                  {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
+                </Button>
+              </div>
+            )}
           </>
         )}
       </CardContent>
