@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import ReceiveModal from '@/components/ReceiveModal';
@@ -162,38 +162,88 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 {xrplData.transactions.length === 0 ? (
                   <p className="text-muted-foreground text-center py-8">No transactions found</p>
                 ) : (
-                  <div className="space-y-4">
-                    {xrplData.transactions.map((tx) => (
-                      <div key={tx.hash} className="flex items-center space-x-3 py-3 border-b border-border last:border-b-0">
-                        <div className="flex-shrink-0">
-                          {tx.direction === 'received' ? (
-                            <ArrowDownLeft className="w-4 h-4 text-primary" />
-                          ) : (
-                            <ArrowUpRight className="w-4 h-4 text-destructive" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium truncate">{tx.type}</p>
-                            <Badge variant={tx.result === 'tesSUCCESS' ? 'default' : 'destructive'} className="text-[10px] px-1.5 py-0">
-                              {tx.result === 'tesSUCCESS' ? '✓' : '✗'}
-                            </Badge>
+                  <div className="space-y-1">
+                    {xrplData.transactions.map((tx) => {
+                      const txIcon = tx.is_swap ? (
+                        <Repeat className="w-4 h-4 text-accent-foreground" />
+                      ) : tx.type === 'TrustSet' || tx.type === 'AccountSet' ? (
+                        <Settings className="w-4 h-4 text-muted-foreground" />
+                      ) : tx.direction === 'received' ? (
+                        <ArrowDownLeft className="w-4 h-4 text-primary" />
+                      ) : (
+                        <ArrowUpRight className="w-4 h-4 text-destructive" />
+                      );
+
+                      const txLabel = tx.is_swap
+                        ? 'Swap'
+                        : tx.type === 'OfferCreate'
+                        ? 'DEX Order'
+                        : tx.type;
+
+                      // Show swap details
+                      let amountLine = '';
+                      if (tx.is_swap && tx.taker_gets && tx.taker_pays) {
+                        const getCur = tx.taker_gets.currency.length > 3
+                          ? decodeCurrency(tx.taker_gets.currency)
+                          : tx.taker_gets.currency;
+                        const payCur = tx.taker_pays.currency.length > 3
+                          ? decodeCurrency(tx.taker_pays.currency)
+                          : tx.taker_pays.currency;
+                        amountLine = `${tx.taker_gets.value.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${getCur} → ${tx.taker_pays.value.toLocaleString(undefined, { maximumFractionDigits: 4 })} ${payCur}`;
+                      } else if (tx.delivered_amount !== null && tx.delivered_amount !== undefined) {
+                        amountLine = `${formatXRP(tx.delivered_amount)} ${tx.delivered_currency || tx.currency}`;
+                      } else if (tx.amount > 0) {
+                        amountLine = `${formatXRP(tx.amount)} ${tx.currency}`;
+                      }
+
+                      const counterparty = tx.direction === 'received' ? tx.sender : tx.destination;
+
+                      return (
+                        <div key={tx.hash} className="flex items-start space-x-3 py-3 border-b border-border last:border-b-0">
+                          <div className="flex-shrink-0 mt-0.5">{txIcon}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm font-medium">{txLabel}</p>
+                              <Badge
+                                variant={tx.result === 'tesSUCCESS' ? 'default' : 'destructive'}
+                                className="text-[10px] px-1.5 py-0"
+                              >
+                                {tx.result === 'tesSUCCESS' ? '✓' : '✗'}
+                              </Badge>
+                            </div>
+                            {amountLine && (
+                              <p className="text-sm font-medium mt-0.5">
+                                {tx.direction === 'received' && !tx.is_swap && <span className="text-primary">+</span>}
+                                {tx.direction === 'sent' && !tx.is_swap && <span className="text-destructive">-</span>}
+                                {amountLine}
+                              </p>
+                            )}
+                            {counterparty && (
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {tx.direction === 'received' ? 'From' : 'To'}: {shortenAddress(counterparty)}
+                              </p>
+                            )}
+                            {tx.memos && tx.memos.length > 0 && (
+                              <p className="text-xs text-muted-foreground mt-0.5 italic truncate">
+                                "{tx.memos[0]}"
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {tx.date ? new Date(tx.date).toLocaleString() : '—'}
+                              {tx.fee > 0 && ` • Fee: ${tx.fee} XRP`}
+                            </p>
                           </div>
-                          <p className="text-xs text-muted-foreground">
-                            {tx.amount > 0 ? `${formatXRP(tx.amount)} ${tx.currency}` : '—'}
-                            {tx.date ? ` • ${new Date(tx.date).toLocaleDateString()}` : ''}
-                          </p>
+                          <a
+                            href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors mt-0.5"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
                         </div>
-                        <a
-                          href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
-                        >
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </Card>
