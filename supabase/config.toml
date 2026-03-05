@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.xrpl-build-mint]
 verify_jwt = false
+
+[functions.xrpl-testnet-faucet]
+verify_jwt = false

@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Wallet, ChevronDown, Plus, X, Check, Pencil } from 'lucide-react';
+import { Wallet, ChevronDown, Plus, X, Check, Pencil, FlaskConical, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useActiveWallet, type ConnectedWallet } from '@/contexts/ActiveWalletContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 interface WalletSelectorProps {
   compact?: boolean;
@@ -14,7 +16,7 @@ interface WalletSelectorProps {
 const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   const {
     wallets, activeWallet, activeAddress,
-    setActiveWallet, removeWallet, renameWallet,
+    setActiveWallet, removeWallet, renameWallet, addWallet,
     openConnectModal, disconnectAll,
   } = useActiveWallet();
 
@@ -22,6 +24,32 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<string | null>(null);
   const [editLabel, setEditLabel] = useState('');
+  const [generatingTestnet, setGeneratingTestnet] = useState(false);
+
+  const handleGenerateTestnet = async () => {
+    setGeneratingTestnet(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('xrpl-testnet-faucet');
+      if (error) throw new Error(error.message);
+      if (!data?.success) throw new Error(data?.error || 'Faucet failed');
+
+      const address = data.address;
+      const balance = data.balance || 0;
+
+      // Add it as a wallet via the context
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null);
+
+      toast({
+        title: '🧪 Testnet Wallet Created',
+        description: `Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`,
+      });
+      setIsOpen(false);
+    } catch (err: any) {
+      toast({ title: 'Failed to generate testnet wallet', description: err.message, variant: 'destructive' });
+    } finally {
+      setGeneratingTestnet(false);
+    }
+  };
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
@@ -153,6 +181,15 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
             >
               <Plus className="w-4 h-4" />
               <span>Add Wallet</span>
+            </button>
+
+            <button
+              onClick={handleGenerateTestnet}
+              disabled={generatingTestnet}
+              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              {generatingTestnet ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+              <span>{generatingTestnet ? 'Generating...' : 'Generate Testnet Wallet'}</span>
             </button>
 
             {wallets.length > 0 && (
