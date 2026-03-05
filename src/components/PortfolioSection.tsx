@@ -199,11 +199,17 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                       const counterparty = tx.direction === 'received' ? tx.sender : tx.destination;
 
                       return (
-                        <div key={tx.hash} className="flex items-start space-x-3 py-3 border-b border-border last:border-b-0">
+                        <a
+                          key={tx.hash}
+                          href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group"
+                        >
                           <div className="flex-shrink-0 mt-0.5">{txIcon}</div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium">{txLabel}</p>
+                              <p className="text-sm font-medium group-hover:text-secondary transition-colors">{txLabel}</p>
                               <Badge
                                 variant={tx.result === 'tesSUCCESS' ? 'default' : 'destructive'}
                                 className="text-[10px] px-1.5 py-0"
@@ -233,15 +239,10 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                               {tx.fee > 0 && ` • Fee: ${tx.fee} XRP`}
                             </p>
                           </div>
-                          <a
-                            href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors mt-0.5"
-                          >
+                          <div className="flex-shrink-0 text-muted-foreground group-hover:text-secondary transition-colors mt-0.5">
                             <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
-                        </div>
+                          </div>
+                        </a>
                       );
                     })}
                   </div>
