@@ -122,15 +122,11 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
         </div>
 
         <div>
-          <Label htmlFor="mpt-image">Image URL</Label>
-          <Input
-            id="mpt-image"
-            placeholder="https://… or ipfs://…"
+          <Label>Token Image</Label>
+          <TokenImageUpload
             value={params.image_url}
-            onChange={e => set('image_url', e.target.value)}
-            className="mt-1"
+            onChange={(url) => set('image_url', url)}
           />
-          <p className="text-xs text-muted-foreground mt-1">IPFS or HTTPS link to a property photo / thumbnail</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
