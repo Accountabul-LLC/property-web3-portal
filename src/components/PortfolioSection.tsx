@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock } from 'lucide-react';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
@@ -52,7 +52,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const { data: xrplData, isLoading, error } = useXRPLPortfolio(displayAddress);
+  const { data: xrplData, isLoading, error, dataUpdatedAt, refetch, isFetching } = useXRPLPortfolio(displayAddress);
   useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
@@ -64,6 +64,69 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   );
   const tokenMetaMap = tokenMetaData?.tokenMap;
   const xrpUsdPrice = tokenMetaData?.xrpUsd ?? 0;
+
+  // Compute total wallet USD value
+  const portfolioValuation = useMemo(() => {
+    if (!xrplData) return null;
+
+    const xrpSubtotal = xrpUsdPrice > 0 ? (xrplData.xrp_balance ?? 0) * xrpUsdPrice : 0;
+    let tokenSubtotal = 0;
+    let pricedCount = 0;
+    let unpricedCount = 0;
+
+    const assetValues: Array<{ key: string; subtotalUsd: number | null; priceUsd: number | null; priceSource: string }> = [];
+
+    // XRP
+    assetValues.push({
+      key: 'XRP_NATIVE',
+      subtotalUsd: xrpUsdPrice > 0 ? xrpSubtotal : null,
+      priceUsd: xrpUsdPrice > 0 ? xrpUsdPrice : null,
+      priceSource: xrpUsdPrice > 0 ? 'market' : 'unavailable',
+    });
+    if (xrpUsdPrice > 0) pricedCount++; else unpricedCount++;
+
+    for (const token of xrplData.token_holdings) {
+      const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
+      if (meta?.price && meta.price > 0) {
+        const sub = Number(token.balance) * meta.price;
+        tokenSubtotal += sub;
+        pricedCount++;
+        assetValues.push({
+          key: `${token.currency}:${token.issuer}`,
+          subtotalUsd: sub,
+          priceUsd: meta.price,
+          priceSource: 'market',
+        });
+      } else {
+        unpricedCount++;
+        assetValues.push({
+          key: `${token.currency}:${token.issuer}`,
+          subtotalUsd: null,
+          priceUsd: null,
+          priceSource: 'unavailable',
+        });
+      }
+    }
+
+    return {
+      totalUsd: xrpSubtotal + tokenSubtotal,
+      xrpSubtotal,
+      tokenSubtotal,
+      pricedCount,
+      unpricedCount,
+      assetValues,
+    };
+  }, [xrplData, xrpUsdPrice, tokenMetaMap]);
+
+  // "Updated X ago" helper
+  const updatedAgo = useMemo(() => {
+    if (!dataUpdatedAt) return null;
+    const diff = Math.round((Date.now() - dataUpdatedAt) / 1000);
+    if (diff < 10) return 'just now';
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
+    return `${Math.round(diff / 3600)}h ago`;
+  }, [dataUpdatedAt, isFetching]); // re-evaluate on refetch
 
   const formatXRP = (amount: number | undefined | null) => (amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
