@@ -238,16 +238,14 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <ShieldCheck className="w-6 h-6 text-primary" />
+                  <DollarSign className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Spendable XRP</p>
-                  <p className="text-2xl font-bold">{formatXRP(xrplData.spendable_xrp)}</p>
-                  {xrpUsdPrice > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      ≈ ${((xrplData.spendable_xrp ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
-                    </p>
-                  )}
+                  <p className="text-sm text-muted-foreground">Net Worth</p>
+                  <p className="text-2xl font-bold">
+                    {portfolioValuation ? `$${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">USD estimated</p>
                 </div>
               </div>
             </Card>
