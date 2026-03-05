@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,10 +50,16 @@ interface PortfolioSectionProps {
 }
 
 const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
+  const queryClient = useQueryClient();
   const { activeAddress, activeWallet, isConnected } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const { data: xrplData, isLoading, error, dataUpdatedAt, refetch, isFetching } = useXRPLPortfolio(displayAddress);
+  const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress);
+
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress] });
+    queryClient.invalidateQueries({ queryKey: ['token_meta'] });
+  };
   useXRPLSubscription(displayAddress);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
@@ -222,7 +229,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => refetch()}
+                  onClick={handleRefresh}
                   disabled={isFetching}
                   className="gap-2"
                 >
