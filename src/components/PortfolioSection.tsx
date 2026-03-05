@@ -316,18 +316,24 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Coins className="w-3.5 h-3.5 text-muted-foreground" />
+                                <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)} <span className="text-xs font-normal text-muted-foreground">XRP</span></p>
+                              </div>
                               {xrpUsdPrice > 0 ? (
-                                <>
-                                  <p className="text-sm font-semibold text-primary">
-                                    ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </p>
+                                <div className="mt-1 border-t border-border/50 pt-1">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <DollarSign className="w-3 h-3 text-primary" />
+                                    <p className="text-sm font-semibold text-primary">
+                                      {((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                                    </p>
+                                  </div>
                                   <p className="text-[10px] text-muted-foreground">
                                     @ ${xrpUsdPrice.toFixed(4)}/XRP
                                   </p>
-                                </>
+                                </div>
                               ) : (
-                                <p className="text-xs text-muted-foreground">No USD price</p>
+                                <p className="text-xs text-muted-foreground mt-1">No USD price</p>
                               )}
                             </div>
                             {isXrpExpanded ? (
@@ -430,18 +436,24 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                           </div>
                           <div className="flex items-center gap-3">
                             <div className="text-right">
-                              <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })}</p>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Coins className="w-3.5 h-3.5 text-muted-foreground" />
+                                <p className="text-lg font-bold">{Number(token.balance).toLocaleString(undefined, { maximumFractionDigits: 6 })} <span className="text-xs font-normal text-muted-foreground">{decodeCurrency(token.currency)}</span></p>
+                              </div>
                               {meta?.price ? (
-                                <>
-                                  <p className="text-sm font-semibold text-primary">
-                                    ${(Number(token.balance) * meta.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                  </p>
+                                <div className="mt-1 border-t border-border/50 pt-1">
+                                  <div className="flex items-center justify-end gap-1">
+                                    <DollarSign className="w-3 h-3 text-primary" />
+                                    <p className="text-sm font-semibold text-primary">
+                                      {(Number(token.balance) * meta.price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} USD
+                                    </p>
+                                  </div>
                                   <p className="text-[10px] text-muted-foreground">
                                     @ ${meta.price < 0.01 ? meta.price.toExponential(2) : meta.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}/{decodeCurrency(token.currency)}
                                   </p>
-                                </>
+                                </div>
                               ) : (
-                                <p className="text-xs text-muted-foreground">No USD price</p>
+                                <p className="text-xs text-muted-foreground mt-1">No USD price</p>
                               )}
                             </div>
                             {isExpanded ? (
