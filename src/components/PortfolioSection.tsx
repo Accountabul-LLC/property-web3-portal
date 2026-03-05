@@ -89,6 +89,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [expandedToken, setExpandedToken] = useState<string | null>(null);
+  const [mptSortMode, setMptSortMode] = useState<'newest' | 'alpha' | 'supply'>('newest');
+  const [mptSearchQuery, setMptSearchQuery] = useState('');
 
   // Fetch enriched metadata for all token holdings
   const { data: tokenMetaData } = useTokenMeta(
@@ -767,7 +769,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                       );
                     })}
                   </>
-                )}
+                  );
+                })()}
 
                 {/* MPT Holdings — tokens this wallet holds (not issued) */}
                 {xrplData.mpt_holdings && xrplData.mpt_holdings.length > 0 && (
