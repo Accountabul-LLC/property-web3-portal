@@ -123,22 +123,28 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
       ) : xrplData ? (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
                 <TokenAvatar currency="XRP" size={12} />
                 <div>
                   <p className="text-sm text-muted-foreground">XRP Balance</p>
-                  <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)} XRP</p>
-                  <div className="flex items-center gap-3 mt-1">
-                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                      <ShieldCheck className="w-3 h-3" />
-                      Reserve: {formatXRP(xrplData.reserve_xrp)} XRP
-                    </span>
-                    <span className="text-xs text-primary font-medium">
-                      Spendable: {formatXRP(xrplData.spendable_xrp)} XRP
-                    </span>
-                  </div>
+                  <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)}</p>
+                  <p className="text-xs text-muted-foreground">XRP</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                  <ShieldCheck className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">XRP Reserve</p>
+                  <p className="text-2xl font-bold">{formatXRP(xrplData.reserve_xrp)}</p>
+                  <p className="text-xs text-primary font-medium">
+                    Spendable: {formatXRP(xrplData.spendable_xrp)} XRP
+                  </p>
                 </div>
               </div>
             </Card>
