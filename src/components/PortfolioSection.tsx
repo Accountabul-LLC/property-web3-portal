@@ -751,6 +751,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     })}
                   </>
                 )}
+              </div>
             </div>
 
             {/* Recent Transactions */}
