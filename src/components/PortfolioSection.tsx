@@ -9,6 +9,37 @@ import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 
+/** Renders a token logo from xrpscan CDN with fallback to Coins icon */
+const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currency?: string; size?: number }) => {
+  const [failed, setFailed] = useState(false);
+  const sizeClass = size === 12 ? 'w-12 h-12' : 'w-10 h-10';
+  const iconSize = size === 12 ? 'w-6 h-6' : 'w-5 h-5';
+
+  // XRP has a well-known icon URL
+  const isXRP = !issuer || currency === 'XRP';
+  const imgUrl = isXRP
+    ? 'https://cdn.xrpscan.com/avatar/XRP'
+    : `https://cdn.xrpscan.com/avatar/${issuer}`;
+
+  if (failed) {
+    return (
+      <div className={`${sizeClass} bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0`}>
+        <Coins className={`${iconSize} text-primary`} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={imgUrl}
+      alt={currency || 'Token'}
+      className={`${sizeClass} rounded-full flex-shrink-0 object-cover bg-muted`}
+      onError={() => setFailed(true)}
+      loading="lazy"
+    />
+  );
+};
+
 interface PortfolioSectionProps {
   overrideAddress?: string | null;
   isReadOnly?: boolean;
@@ -93,9 +124,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
             <Card className="p-6 bg-gradient-card hover:shadow-card transition-all duration-300">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-primary rounded-lg flex items-center justify-center">
-                  <Coins className="w-6 h-6 text-primary-foreground" />
-                </div>
+                <TokenAvatar currency="XRP" size={12} />
                 <div>
                   <p className="text-sm text-muted-foreground">XRP Balance</p>
                   <p className="text-2xl font-bold">{formatXRP(xrplData.xrp_balance)} XRP</p>
@@ -153,9 +182,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     <Card key={`${token.currency}-${token.issuer}-${idx}`} className="p-5 hover:shadow-card transition-all duration-300">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                            <Coins className="w-5 h-5 text-primary" />
-                          </div>
+                          <TokenAvatar issuer={token.issuer} currency={token.currency} />
                           <div>
                             <p className="font-semibold text-lg">{decodeCurrency(token.currency)}</p>
                             <p className="text-xs text-muted-foreground font-mono">{shortenAddress(token.issuer)}</p>
