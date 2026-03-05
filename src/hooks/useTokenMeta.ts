@@ -14,6 +14,10 @@ export interface TokenMeta {
   market_cap: number | null;
   holders: number | null;
   supply: number | null;
+  trustlines: number | null;
+  volume_24h: number | null;
+  trades_24h: number | null;
+  xrp_price: number | null;
 }
 
 export interface TokenMetaResult {
@@ -27,6 +31,11 @@ interface TokenQuery {
   issuer: string;
 }
 
+export interface TokenMetaData {
+  tokenMap: Map<string, TokenMeta>;
+  xrpUsd: number;
+}
+
 export function useTokenMeta(tokens: TokenQuery[] | undefined) {
   // Create a stable key from sorted token identifiers
   const key = tokens
@@ -36,8 +45,8 @@ export function useTokenMeta(tokens: TokenQuery[] | undefined) {
 
   return useQuery({
     queryKey: ['token_meta', key],
-    queryFn: async (): Promise<Map<string, TokenMeta>> => {
-      if (!tokens || tokens.length === 0) return new Map();
+    queryFn: async (): Promise<TokenMetaData> => {
+      if (!tokens || tokens.length === 0) return { tokenMap: new Map(), xrpUsd: 0 };
 
       const { data, error } = await supabase.functions.invoke('xrpl-token-meta', {
         body: { tokens },
@@ -51,10 +60,10 @@ export function useTokenMeta(tokens: TokenQuery[] | undefined) {
           map.set(`${item.currency}:${item.issuer}`, item.meta);
         }
       }
-      return map;
+      return { tokenMap: map, xrpUsd: data.xrp_usd || 0 };
     },
     enabled: !!tokens && tokens.length > 0,
-    staleTime: 5 * 60_000, // 5 min
-    gcTime: 30 * 60_000, // 30 min cache
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
   });
 }

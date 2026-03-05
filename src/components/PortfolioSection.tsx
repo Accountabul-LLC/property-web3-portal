@@ -59,9 +59,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const [expandedToken, setExpandedToken] = useState<string | null>(null);
 
   // Fetch enriched metadata for all token holdings
-  const { data: tokenMetaMap } = useTokenMeta(
+  const { data: tokenMetaData } = useTokenMeta(
     xrplData?.token_holdings.map((t) => ({ currency: t.currency, issuer: t.issuer }))
   );
+  const tokenMetaMap = tokenMetaData?.tokenMap;
+  const xrpUsdPrice = tokenMetaData?.xrpUsd ?? 0;
 
   const formatXRP = (amount: number | undefined | null) => (amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -186,7 +188,13 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold">{formatXRP(xrplData.xrp_balance)}</p>
-                      <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                      {xrpUsdPrice > 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          ≈ ${((xrplData.xrp_balance ?? 0) * xrpUsdPrice).toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                        </p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">Spendable: {formatXRP(xrplData.spendable_xrp)}</p>
+                      )}
                     </div>
                   </div>
                 </Card>
