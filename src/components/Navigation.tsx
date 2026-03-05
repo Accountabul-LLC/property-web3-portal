@@ -44,7 +44,7 @@ const Navigation = () => {
 
   return (
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
-      <div className="max-w-7xl mx-auto px-10 h-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-full">
         <div className="flex items-center justify-between h-full">
           {/* Mobile menu button + Logo & Brand */}
           <div className="flex items-center flex-shrink-0">
