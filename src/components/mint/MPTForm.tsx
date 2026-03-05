@@ -73,10 +73,14 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
           <Label htmlFor="mpt-max">Maximum Supply</Label>
           <Input
             id="mpt-max"
-            type="number"
-            placeholder="e.g. 1000000"
-            value={params.max_amount}
-            onChange={e => onChange({ ...params, max_amount: e.target.value })}
+            type="text"
+            inputMode="numeric"
+            placeholder="e.g. 1,000,000"
+            value={params.max_amount ? Number(params.max_amount).toLocaleString('en-US') : ''}
+            onChange={e => {
+              const raw = e.target.value.replace(/[^0-9]/g, '');
+              onChange({ ...params, max_amount: raw });
+            }}
             className="mt-1"
           />
           <p className="text-xs text-muted-foreground mt-1">Leave empty for unlimited</p>
