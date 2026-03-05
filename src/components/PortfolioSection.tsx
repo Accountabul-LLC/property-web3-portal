@@ -600,7 +600,9 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     if (!mptSearchQuery) return true;
                     const q = mptSearchQuery.toLowerCase();
                     return (mpt.name || '').toLowerCase().includes(q) ||
+                           (mpt.ticker || '').toLowerCase().includes(q) ||
                            (mpt.description || '').toLowerCase().includes(q) ||
+                           (mpt.issuer_name || '').toLowerCase().includes(q) ||
                            (mpt.collection?.name || '').toLowerCase().includes(q) ||
                            (mpt.mpt_issuance_id || '').toLowerCase().includes(q);
                   });
