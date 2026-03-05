@@ -24,10 +24,9 @@ export interface MPTParams {
     can_transfer: boolean;
     can_clawback: boolean;
   };
-  // XLS-24d metadata
+  // XLS-89 compressed metadata
+  ticker: string;
   image_url: string;
-  collection_name: string;
-  collection_family: string;
   // RWA metadata
   property_address: string;
   city: string;
@@ -210,27 +209,17 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <Label htmlFor="mpt-collection">Collection Name</Label>
-            <Input
-              id="mpt-collection"
-              placeholder="RWA Property Tokens"
-              value={params.collection_name}
-              onChange={e => set('collection_name', e.target.value)}
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="mpt-family">Collection Family</Label>
-            <Input
-              id="mpt-family"
-              placeholder="Real Estate"
-              value={params.collection_family}
-              onChange={e => set('collection_family', e.target.value)}
-              className="mt-1"
-            />
-          </div>
+        <div>
+          <Label htmlFor="mpt-ticker">Ticker Symbol</Label>
+          <Input
+            id="mpt-ticker"
+            placeholder="e.g. OAK"
+            maxLength={5}
+            value={params.ticker}
+            onChange={e => set('ticker', e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase())}
+            className="mt-1 uppercase"
+          />
+          <p className="text-xs text-muted-foreground mt-1">3–5 uppercase letters, auto-generated from name if blank</p>
         </div>
 
         <div>
@@ -341,7 +330,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
         </div>
         <p className="text-xs text-muted-foreground flex items-start gap-1.5">
           <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
-          Owner info is stored on-chain in the token metadata. Use a business name if preferred.
+          Owner info is stored on-chain using compressed XLS-89 metadata (≤1024 bytes). Property details are encoded as compact key-value pairs.
         </p>
       </Card>
 

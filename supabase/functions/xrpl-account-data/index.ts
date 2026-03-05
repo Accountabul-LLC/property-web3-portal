@@ -81,6 +81,20 @@ function decodeHexString(hex: string): string {
   }
 }
 
+// Reverse map for property type short codes
+const PT_REVERSE: Record<string, string> = {
+  sfh: 'Single Family', mf: 'Multi-Family', condo: 'Condo / Apartment',
+  th: 'Townhouse', comm: 'Commercial', ind: 'Industrial',
+  land: 'Land / Lot', mix: 'Mixed-Use', other: 'Other',
+};
+
+// Compact key labels for display
+const AI_KEY_LABELS: Record<string, string> = {
+  adr: 'Address', ct: 'City', st: 'State', zip: 'ZIP', cc: 'Country',
+  pt: 'Type', b: 'Beds', ba: 'Baths', sf: 'SqFt', yb: 'Built',
+  val: 'Value', cur: 'Currency', asof: 'As Of', em: 'Contact',
+};
+
 function parseMPTIssuances(objects: any[]) {
   return objects
     .filter((obj: any) => obj.LedgerEntryType === 'MPTokenIssuance')
@@ -97,6 +111,65 @@ function parseMPTIssuances(objects: any[]) {
         }
       }
 
+      // Detect format: compressed (XLS-89) has 'n' key, legacy (XLS-24d) has 'name' key
+      const isCompressed = 'n' in metadata || 't' in metadata;
+
+      let name: string | null = null;
+      let description: string | null = null;
+      let image: string | null = null;
+      let ticker: string | null = null;
+      let asset_class: string | null = null;
+      let asset_subclass: string | null = null;
+      let issuer_name: string | null = null;
+      let uris: string[] | null = null;
+      let nft_type: string | null = null;
+      let collection: { name?: string; family?: string } | null = null;
+      let attributes: Array<{ trait_type: string; value: string | number }> | null = null;
+
+      if (isCompressed) {
+        // XLS-89 compressed format
+        ticker = metadata.t || null;
+        name = metadata.n || null;
+        description = metadata.d || null;
+        image = metadata.i || null;
+        asset_class = metadata.ac || null;
+        asset_subclass = metadata.as || null;
+        issuer_name = metadata.in || null;
+        uris = Array.isArray(metadata.us) ? metadata.us : null;
+
+        // Reconstruct collection for backward compat
+        if (asset_class || asset_subclass) {
+          collection = {
+            name: asset_class === 'rwa' ? 'RWA Token' : (asset_class || undefined),
+            family: asset_subclass ? (PT_REVERSE[asset_subclass] || asset_subclass) : undefined,
+          };
+        }
+
+        // Reconstruct attributes from ai (additional_info)
+        if (metadata.ai && typeof metadata.ai === 'object') {
+          const attrs: Array<{ trait_type: string; value: string | number }> = [];
+          for (const [key, val] of Object.entries(metadata.ai)) {
+            if (val !== null && val !== undefined && key !== 'cur' && key !== 'asof') {
+              const label = AI_KEY_LABELS[key] || key;
+              // Expand property type short code
+              const displayVal = key === 'pt' && typeof val === 'string' && PT_REVERSE[val]
+                ? PT_REVERSE[val]
+                : val;
+              attrs.push({ trait_type: label, value: displayVal as string | number });
+            }
+          }
+          if (attrs.length > 0) attributes = attrs;
+        }
+      } else {
+        // Legacy XLS-24d format
+        name = metadata.name || null;
+        description = metadata.description || null;
+        image = metadata.image || null;
+        nft_type = metadata.nftType || null;
+        collection = metadata.collection || null;
+        attributes = Array.isArray(metadata.attributes) ? metadata.attributes : null;
+      }
+
       return {
         mpt_issuance_id: obj.MPTokenIssuanceID || obj.mpt_issuance_id || null,
         issuer: obj.Issuer || obj.Account || null,
@@ -106,13 +179,19 @@ function parseMPTIssuances(objects: any[]) {
         transfer_fee: obj.TransferFee ?? 0,
         flags: obj.Flags ?? 0,
         metadata_hex: obj.MPTokenMetadata || null,
-        name: metadata.name || null,
-        description: metadata.description || null,
-        image: metadata.image || null,
-        nft_type: metadata.nftType || null,
-        collection: metadata.collection || null,
-        attributes: Array.isArray(metadata.attributes) ? metadata.attributes : null,
+        name,
+        description,
+        image,
+        nft_type,
+        collection,
+        attributes,
         schema: metadata.schema || null,
+        // New compressed fields
+        ticker,
+        asset_class,
+        asset_subclass,
+        issuer_name,
+        uris,
       };
     });
 }

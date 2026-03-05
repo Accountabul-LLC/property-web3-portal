@@ -600,7 +600,9 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                     if (!mptSearchQuery) return true;
                     const q = mptSearchQuery.toLowerCase();
                     return (mpt.name || '').toLowerCase().includes(q) ||
+                           (mpt.ticker || '').toLowerCase().includes(q) ||
                            (mpt.description || '').toLowerCase().includes(q) ||
+                           (mpt.issuer_name || '').toLowerCase().includes(q) ||
                            (mpt.collection?.name || '').toLowerCase().includes(q) ||
                            (mpt.mpt_issuance_id || '').toLowerCase().includes(q);
                   });
@@ -668,10 +670,13 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <p className="font-semibold text-lg">{mpt.name || 'MPT Token'}</p>
+                                    {mpt.ticker && (
+                                      <Badge className="text-[10px] px-1.5 py-0 bg-primary/15 text-primary border-primary/30">{mpt.ticker}</Badge>
+                                    )}
                                     <Badge variant="outline" className="text-[10px] px-1.5 py-0">Issuer</Badge>
                                   </div>
                                   <p className="text-xs text-muted-foreground">
-                                    Multi-Purpose Token
+                                    {mpt.issuer_name ? `${mpt.issuer_name} · ` : ''}Multi-Purpose Token
                                     {mpt.description && ` · ${mpt.description.slice(0, 40)}${mpt.description.length > 40 ? '…' : ''}`}
                                   </p>
                                 </div>
@@ -696,8 +701,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 <p className="text-sm text-muted-foreground">{mpt.description}</p>
                               )}
 
-                              {/* Collection & Image */}
-                              {(mpt.collection || mpt.image) && (
+                              {/* Image & Issuer Info */}
+                              {(mpt.image || mpt.issuer_name || mpt.asset_class) && (
                                 <div className="flex items-start gap-4">
                                   {mpt.image && (
                                     <img
@@ -707,29 +712,52 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                                     />
                                   )}
-                                  {mpt.collection && (
-                                    <div>
-                                      {mpt.collection.name && (
-                                        <p className="text-xs text-muted-foreground">Collection: <span className="text-foreground font-medium">{mpt.collection.name}</span></p>
-                                      )}
-                                      {mpt.collection.family && (
-                                        <p className="text-xs text-muted-foreground">Family: <span className="text-foreground font-medium">{mpt.collection.family}</span></p>
-                                      )}
-                                    </div>
-                                  )}
+                                  <div className="space-y-1">
+                                    {mpt.issuer_name && (
+                                      <p className="text-xs text-muted-foreground">Issuer: <span className="text-foreground font-medium">{mpt.issuer_name}</span></p>
+                                    )}
+                                    {mpt.collection && mpt.collection.name && (
+                                      <p className="text-xs text-muted-foreground">Class: <span className="text-foreground font-medium">{mpt.collection.name}</span></p>
+                                    )}
+                                    {mpt.collection && mpt.collection.family && (
+                                      <p className="text-xs text-muted-foreground">Type: <span className="text-foreground font-medium">{mpt.collection.family}</span></p>
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
-                              {/* XLS-24d Attributes */}
+                              {/* Attributes */}
                               {mpt.attributes && mpt.attributes.length > 0 && (
                                 <div>
-                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Attributes</p>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Property Details</p>
                                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     {mpt.attributes.map((attr, attrIdx) => (
                                       <div key={attrIdx} className="bg-muted/50 rounded-lg p-2.5">
                                         <p className="text-[10px] uppercase text-muted-foreground font-medium">{attr.trait_type}</p>
                                         <p className="text-sm font-semibold truncate">{typeof attr.value === 'number' ? attr.value.toLocaleString() : attr.value}</p>
                                       </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Verification URIs */}
+                              {mpt.uris && mpt.uris.length > 0 && (
+                                <div>
+                                  <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Verification Links</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {mpt.uris.map((uri, uriIdx) => (
+                                      <a
+                                        key={uriIdx}
+                                        href={uri}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2.5 py-1.5 rounded-md"
+                                      >
+                                        <ExternalLink className="w-3 h-3" />
+                                        {uri.replace(/^https?:\/\//, '').slice(0, 30)}{uri.length > 30 ? '…' : ''}
+                                      </a>
                                     ))}
                                   </div>
                                 </div>

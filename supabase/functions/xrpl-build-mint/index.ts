@@ -171,82 +171,75 @@ Deno.serve(async (req) => {
         txJson.MaximumAmount = String(max_amount);
       }
 
-      // Build XLS-24d structured MPTokenMetadata (max 1024 bytes)
+      // Build compressed XLS-89 MPTokenMetadata (max 1024 bytes)
       if (name || description) {
-        const attributes: Array<{ trait_type: string; value: string | number }> = [];
+        const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url } = params || {};
 
-        // RWA property attributes from params
-        const { property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email } = params || {};
-        if (property_address) attributes.push({ trait_type: 'Address', value: property_address });
-        if (city) attributes.push({ trait_type: 'City', value: city });
-        if (state) attributes.push({ trait_type: 'State', value: state });
-        if (zip) attributes.push({ trait_type: 'ZIP', value: zip });
-        if (country) attributes.push({ trait_type: 'Country', value: country });
-        if (property_type) attributes.push({ trait_type: 'Type', value: property_type });
-        if (bedrooms) attributes.push({ trait_type: 'Beds', value: Number(bedrooms) });
-        if (bathrooms) attributes.push({ trait_type: 'Baths', value: Number(bathrooms) });
-        if (square_feet) attributes.push({ trait_type: 'SqFt', value: Number(square_feet) });
-        if (year_built) attributes.push({ trait_type: 'Built', value: Number(year_built) });
-        if (estimated_value) attributes.push({ trait_type: 'Value', value: Number(estimated_value) });
-        if (owner_name) attributes.push({ trait_type: 'Owner', value: owner_name });
-        if (owner_email) attributes.push({ trait_type: 'Contact', value: owner_email });
-
-        const metaObj: Record<string, unknown> = {
-          schema: 'ipfs://QmNpi8rcXEkohca8iXu7zysKKSJYqCvBJn3xJwga8jXqWo',
-          nftType: 'art.v0',
-          name,
+        // Property type short code map
+        const ptMap: Record<string, string> = {
+          'Single Family': 'sfh', 'Multi-Family': 'mf', 'Condo / Apartment': 'condo',
+          'Townhouse': 'th', 'Commercial': 'comm', 'Industrial': 'ind',
+          'Land / Lot': 'land', 'Mixed-Use': 'mix', 'Other': 'other',
         };
-        if (description) metaObj.description = description;
-        if (params?.image_url) metaObj.image = params.image_url;
 
-        const collectionName = params?.collection_name || 'RWA Property Tokens';
-        const collectionFamily = params?.collection_family || 'Real Estate';
-        metaObj.collection = { name: collectionName, family: collectionFamily };
+        // Auto-generate ticker from name if not provided
+        const autoTicker = ticker || (name ? name.replace(/[^A-Za-z]/g, '').substring(0, 5).toUpperCase() : undefined);
 
-        if (attributes.length > 0) metaObj.attributes = attributes;
+        const metaObj: Record<string, unknown> = {};
+        if (autoTicker) metaObj.t = autoTicker;
+        if (name) metaObj.n = name;
+        if (description) metaObj.d = description;
+        if (image_url) metaObj.i = image_url;
+        metaObj.ac = 'rwa';
+        if (property_type && ptMap[property_type]) metaObj.as = ptMap[property_type];
+        else if (property_type) metaObj.as = property_type.toLowerCase().replace(/\s+/g, '_');
+        if (owner_name) metaObj.in = owner_name;
 
-        // Enforce XRPL 1024-byte limit for MPTokenMetadata
+        // Build additional_info with compact keys
+        const ai: Record<string, unknown> = {};
+        if (property_address) ai.adr = property_address;
+        if (city) ai.ct = city;
+        if (state) ai.st = state;
+        if (zip) ai.zip = zip;
+        if (country) ai.cc = country;
+        if (property_type) ai.pt = ptMap[property_type] || property_type;
+        if (bedrooms) ai.b = Number(bedrooms);
+        if (bathrooms) ai.ba = Number(bathrooms);
+        if (square_feet) ai.sf = Number(square_feet);
+        if (year_built) ai.yb = Number(year_built);
+        if (estimated_value) ai.val = Number(estimated_value);
+        ai.cur = 'USD';
+        ai.asof = new Date().toISOString().split('T')[0];
+        if (owner_email) ai.em = owner_email;
+
+        if (Object.keys(ai).length > 2) metaObj.ai = ai; // >2 because cur+asof always present
+
+        // Enforce XRPL 1024-byte limit
         let metaJson = JSON.stringify(metaObj);
-        const metaBytes = new TextEncoder().encode(metaJson).length;
+        let metaBytes = new TextEncoder().encode(metaJson).length;
         if (metaBytes > 1024) {
-          // Progressively trim: remove attributes from end, then description, then collection
           console.warn(`Metadata ${metaBytes} bytes, trimming to fit 1024 limit`);
-          
-          // Try removing attributes one by one from end
-          while (attributes.length > 0 && new TextEncoder().encode(JSON.stringify({ ...metaObj, attributes })).length > 1024) {
-            attributes.pop();
+          // Truncate description first
+          if (metaObj.d) {
+            metaObj.d = (metaObj.d as string).substring(0, 60) + '…';
+            metaJson = JSON.stringify(metaObj);
+            metaBytes = new TextEncoder().encode(metaJson).length;
           }
-          if (attributes.length > 0) {
-            metaObj.attributes = attributes;
-          } else {
-            delete metaObj.attributes;
+          // Remove image if still too big
+          if (metaBytes > 1024) {
+            delete metaObj.i;
+            metaJson = JSON.stringify(metaObj);
+            metaBytes = new TextEncoder().encode(metaJson).length;
           }
-
-          // If still too big, truncate description
-          metaJson = JSON.stringify(metaObj);
-          if (new TextEncoder().encode(metaJson).length > 1024 && metaObj.description) {
-            const desc = metaObj.description as string;
-            metaObj.description = desc.substring(0, 80) + '...';
+          // Remove ai fields progressively
+          if (metaBytes > 1024 && metaObj.ai) {
+            const aiObj = metaObj.ai as Record<string, unknown>;
+            for (const key of ['em', 'cc', 'zip', 'adr', 'ct', 'st']) {
+              delete aiObj[key];
+              metaJson = JSON.stringify(metaObj);
+              if (new TextEncoder().encode(metaJson).length <= 1024) break;
+            }
           }
-
-          // If still too big, remove collection
-          metaJson = JSON.stringify(metaObj);
-          if (new TextEncoder().encode(metaJson).length > 1024) {
-            delete metaObj.collection;
-          }
-
-          // If still too big, remove image
-          metaJson = JSON.stringify(metaObj);
-          if (new TextEncoder().encode(metaJson).length > 1024) {
-            delete metaObj.image;
-          }
-
-          // Final: remove schema if absolutely necessary
-          metaJson = JSON.stringify(metaObj);
-          if (new TextEncoder().encode(metaJson).length > 1024) {
-            delete metaObj.schema;
-          }
-
           metaJson = JSON.stringify(metaObj);
           console.log(`Trimmed metadata to ${new TextEncoder().encode(metaJson).length} bytes`);
         }
