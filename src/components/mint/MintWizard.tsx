@@ -29,7 +29,7 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet } = useActiveWallet();
   const { user } = useAuth();
 
   const [step, setStep] = useState<MintStep>('type');
