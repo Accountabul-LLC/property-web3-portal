@@ -640,7 +640,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                       return (
                         <a
                           key={tx.hash}
-                          href={`https://livenet.xrpl.org/transactions/${tx.hash}`}
+                          href={`https://${isTestnet ? 'testnet' : 'livenet'}.xrpl.org/transactions/${tx.hash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group"
