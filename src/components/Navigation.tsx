@@ -49,7 +49,7 @@ const Navigation = () => {
           <div className="flex items-center flex-shrink-0">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="xl:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
+              className="lg:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -69,7 +69,7 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation — centered */}
-          <div className="hidden xl:flex items-center justify-center flex-1 min-w-0">
+          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0">
             <div className="flex items-center gap-5">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -92,7 +92,7 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Action Buttons */}
-          <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
+          <div className="hidden lg:flex items-center space-x-3 flex-shrink-0">
             <ThemeToggle />
             {isConnected ? (
               <WalletSelector />
@@ -138,7 +138,7 @@ const Navigation = () => {
           </div>
 
           {/* Mobile wallet info */}
-          <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
+          <div className="lg:hidden flex items-center space-x-2 flex-shrink-0">
             <ThemeToggle />
             {isConnected ? (
               <WalletSelector compact />
