@@ -1,35 +1,37 @@
 
 
-## Add "Generate Test Data" Button to MPT Form (Testnet Only)
+## Problem Analysis
 
-### What
-Add a prominent button at the top of the MPT form that fills all fields with randomized but realistic property data. Only visible when the selected wallet is on testnet.
+The Portfolio section currently fetches holdings and transactions from the `portfolio_holdings` and `portfolio_transactions` database tables, which are empty. The user wants to see actual XRPL wallet data (token holdings and recent transactions) pulled from the connected wallet's on-chain activity.
 
-### Changes
+## Approach
 
-**1. Pass `network` prop to MPTForm (`MintWizard.tsx`)**
+Since the XRPL has public APIs to query account data, we'll create a new Edge Function that fetches live data from the XRPL for a given wallet address, then display it in the portfolio section. No database seeding needed -- we query the ledger directly.
 
-Update the MPTForm usage at line 346 to pass the current network:
-```tsx
-{tokenType === 'mpt' && <MPTForm params={mptParams} onChange={setMptParams} network={network} />}
-```
+### Plan
 
-**2. Add random data generator and button (`MPTForm.tsx`)**
+1. **Create `xrpl-account-data` Edge Function** that accepts a wallet address and queries the XRPL public API (`https://xrplcluster.com` or `https://s1.ripple.com:51234`) for:
+   - `account_info` -- XRP balance
+   - `account_lines` -- trustlines/token holdings  
+   - `account_tx` -- recent transactions
+   - Returns formatted holdings and transactions
 
-- Add `network` to `MPTFormProps`
-- Create a `generateTestData()` function with arrays of randomized property names, addresses, cities, states, owner names, tickers, descriptions, property types, and value ranges
-- Each call picks random entries from these arrays and randomizes numeric fields (beds 1-6, baths 1-4, sqft 800-5000, year 1950-2024, value $100K-$5M, supply 100-1M, scale 0-2, fee 0-5000)
-- Randomly toggle permission flags
-- Use a stock house image URL from Unsplash (with a few random options)
-- Show a "Generate Test Data" button with a `FlaskConical` icon at the top of the form, only when `network === 'testnet'`
-- Button calls `onChange(generatedParams)` to fill all fields at once
-- Styled with a testnet-colored badge/alert to make it clear this is for testing
+2. **Create `useXRPLPortfolio` hook** that calls the edge function with the connected wallet address and returns:
+   - XRP balance
+   - Token holdings (trustlines with balances)
+   - Recent transactions (parsed from `account_tx`)
 
-### Data Pool Examples
-- Names: "Sunset Ridge Estate Token", "Harbor View Loft Token", "Mountain Crest Villa Token", etc.
-- Addresses: "742 Evergreen Terrace", "1600 Pennsylvania Ave", "221B Baker Street", etc.
-- Cities/States: Miami/FL, Austin/TX, Denver/CO, Portland/OR, etc.
-- Owners: "Alice Johnson", "Bob Martinez", "Charlie Kim", etc.
-- Tickers: "SNST", "HRBR", "MTCR", "PALM", etc.
-- Images: 3-4 Unsplash house photo URLs
+3. **Update `PortfolioSection` component** to:
+   - Use the new `useXRPLPortfolio` hook instead of (or alongside) the database-backed hooks
+   - Display XRP balance as a summary card
+   - Show token holdings (trustlines) in the holdings list with currency, issuer, and balance
+   - Show recent on-chain transactions with type, amount, date, and tx hash
+   - Keep the existing database-backed property token holdings as a separate section
+
+### Technical Details
+
+- **XRPL Public API**: Uses JSON-RPC at `https://xrplcluster.com` (no API key needed)
+- **Edge Function**: Proxies XRPL requests to avoid CORS issues from the browser
+- **Data mapping**: `account_lines` response maps to token holdings; `account_tx` maps to transaction history
+- **No database changes needed** -- this reads directly from the XRPL ledger
 
