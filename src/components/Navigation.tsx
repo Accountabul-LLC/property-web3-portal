@@ -156,10 +156,10 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Backdrop overlay */}
+      {/* Backdrop overlay — covers entire screen behind menu */}
       {isMobileMenuOpen && (
         <div
-          className="xl:hidden fixed inset-0 top-[72px] z-40 bg-black/20"
+          className="xl:hidden fixed inset-0 z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -167,7 +167,7 @@ const Navigation = () => {
       {/* Mobile Navigation */}
       {isMobileMenuOpen && (
         <div
-          className="xl:hidden border-t border-border bg-card/95 backdrop-blur-md relative z-50"
+          className="xl:hidden border-t border-border bg-card/95 backdrop-blur-md absolute left-0 right-0 top-[72px] z-50"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="px-2 pt-2 pb-3 space-y-1">
