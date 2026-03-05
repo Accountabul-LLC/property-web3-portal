@@ -37,7 +37,6 @@ const FLAG_OPTIONS: { key: keyof MPTParams['flags']; label: string; desc: string
 const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
   const setFlag = (key: keyof MPTParams['flags'], value: boolean) => {
     const newFlags = { ...params.flags, [key]: value };
-    // If can_transfer is disabled, reset transfer_fee
     const newFee = key === 'can_transfer' && !value ? 0 : params.transfer_fee;
     onChange({ ...params, flags: newFlags, transfer_fee: newFee });
   };
@@ -97,26 +96,42 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange }) => {
             className="mt-1"
           />
           <p className="text-xs text-muted-foreground mt-1">Decimal places (0 = whole tokens, 2 = like USD)</p>
-          {params.asset_scale > 0 && (
-            <div className="mt-2 rounded-md bg-muted/50 p-2.5 text-xs space-y-1">
-              <p className="text-muted-foreground font-medium">Divisibility Preview</p>
-              <p className="font-mono">
-                1 token = <span className="text-foreground font-semibold">1.{'0'.repeat(params.asset_scale)}</span>
-              </p>
-              <p className="font-mono">
-                Smallest unit = <span className="text-foreground font-semibold">0.{'0'.repeat(params.asset_scale - 1)}1</span>
-              </p>
-              {params.max_amount && (
-                <p className="font-mono">
-                  Max supply = <span className="text-foreground font-semibold">
-                    {Number(params.max_amount).toLocaleString('en-US', { minimumFractionDigits: params.asset_scale, maximumFractionDigits: params.asset_scale })}
-                  </span>
-                </p>
-              )}
-            </div>
-          )}
         </div>
       </div>
+
+      {params.asset_scale > 0 && (
+        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-xs space-y-3">
+          <div className="flex items-center gap-1.5">
+            <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            <p className="text-primary font-semibold text-[11px] uppercase tracking-wider">Divisibility Preview</p>
+          </div>
+          <div className="grid gap-2 pl-3 border-l-2 border-primary/20">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">1 token</span>
+              <span className="font-mono text-foreground font-semibold tracking-wide">
+                {'1.' + '0'.repeat(params.asset_scale)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Smallest unit</span>
+              <span className="font-mono text-foreground font-semibold tracking-wide">
+                {'0.' + '0'.repeat(params.asset_scale - 1) + '1'}
+              </span>
+            </div>
+            {params.max_amount && (
+              <div className="flex items-center justify-between">
+                <span className="text-muted-foreground">Max supply</span>
+                <span className="font-mono text-foreground font-semibold tracking-wide">
+                  {Number(params.max_amount).toLocaleString('en-US', {
+                    minimumFractionDigits: params.asset_scale,
+                    maximumFractionDigits: params.asset_scale,
+                  })}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {params.flags.can_transfer && (
         <div>
