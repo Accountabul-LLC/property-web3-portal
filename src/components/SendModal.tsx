@@ -46,7 +46,7 @@ interface BuildResult {
   issuer?: string;
 }
 
-const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldings = [] }: SendModalProps) => {
+const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldings = [], network = 'mainnet' }: SendModalProps) => {
   const [step, setStep] = useState<Step>('select-asset');
   const [selectedAsset, setSelectedAsset] = useState<SelectedAsset | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,6 +120,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             amount_xrp: amount,
             destination_tag: showTag && destinationTag ? destinationTag : undefined,
             memo: memo.trim() || undefined,
+            network,
           },
         });
         if (error) throw new Error(error.message || 'Failed to build payment');
@@ -134,6 +135,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             amount: amount,
             destination_tag: showTag && destinationTag ? destinationTag : undefined,
             memo: memo.trim() || undefined,
+            network,
           },
         });
         if (error) throw new Error(error.message || 'Failed to build payment');
