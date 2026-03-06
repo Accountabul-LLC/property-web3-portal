@@ -14,7 +14,7 @@ const DEFAULT_PARAMS: DebateParams = {
 
 const AIPanel = () => {
   const [params, setParams] = useState<DebateParams>(DEFAULT_PARAMS);
-  const { turns, running, error, start, stop, saveSession, reset } = useDebateSession();
+  const { turns, running, error, agents, start, stop, saveSession, reset } = useDebateSession();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const handleStart = () => {
@@ -27,15 +27,24 @@ const AIPanel = () => {
     toast.success('Conversation saved');
   };
 
-  // Compute round number for display: Claude turn 1 = round 1, GPT turn 1 = round 1, etc.
   const getRound = (turnIndex: number) => Math.floor(turnIndex / 2) + 1;
+
+  const getAgentMeta = (speaker: string) => {
+    if (!agents) return undefined;
+    return speaker === agents.a.id ? agents.a : agents.b;
+  };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-8 px-4">
       <div>
         <h2 className="text-2xl font-bold mb-1">AI Panel</h2>
         <p className="text-muted-foreground text-sm">
-          Claude and ChatGPT discuss your question in turns, in the context of this RWA platform.
+          Two AI agents discuss your question in turns, powered by Lovable AI Gateway.
+          {agents && (
+            <span className="block mt-1">
+              Agents: <strong>{agents.a.label}</strong> vs <strong>{agents.b.label}</strong>
+            </span>
+          )}
         </p>
       </div>
 
@@ -56,7 +65,12 @@ const AIPanel = () => {
       {turns.length > 0 && (
         <div className="space-y-4">
           {turns.map((turn, i) => (
-            <DebateTurn key={`${turn.speaker}-${turn.turn}`} turn={turn} roundNumber={getRound(i)} />
+            <DebateTurn
+              key={`${turn.speaker}-${turn.turn}`}
+              turn={turn}
+              roundNumber={getRound(i)}
+              agentMeta={getAgentMeta(turn.speaker)}
+            />
           ))}
           <div ref={bottomRef} />
         </div>

@@ -53,8 +53,8 @@ const AdminKyc = () => {
   const { data: cases, isLoading } = useQuery({
     queryKey: ['admin-kyc-cases'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('kyc_cases')
+      const { data, error } = await (supabase
+        .from('kyc_cases') as any)
         .select(`
           id, user_id, status, submitted_at, reviewed_at, rejection_reason,
           kyc_form_data (
@@ -66,7 +66,7 @@ const AdminKyc = () => {
         .in('status', ['submitted', 'under_review'])
         .order('submitted_at', { ascending: true })
       if (error) throw error
-      return data as KycCase[]
+      return (data || []) as unknown as KycCase[]
     },
     enabled: !!user,
     staleTime: 15_000,

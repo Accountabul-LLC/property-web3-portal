@@ -26,8 +26,8 @@ export function useKycStatus(): KycStatusResult {
     queryKey: ['kyc-status', user?.id],
     queryFn: async () => {
       if (!user) return null
-      const { data, error } = await supabase
-        .from('kyc_cases')
+      const { data, error } = await (supabase
+        .from('kyc_cases') as any)
         .select('id, status, rejection_reason')
         .eq('user_id', user.id)
         .maybeSingle()
@@ -44,7 +44,7 @@ export function useKycStatus(): KycStatusResult {
     },
   })
 
-  const status: KycStatus = data?.status ?? 'not_started'
+  const status: KycStatus = (data?.status as KycStatus) ?? 'not_started'
 
   return {
     status,
