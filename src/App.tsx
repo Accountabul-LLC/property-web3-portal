@@ -45,6 +45,7 @@ const App = () => (
               <Route path="/mint" element={<KycGate><Mint /></KycGate>} />
               <Route path="/kyc" element={<Kyc />} />
               <Route path="/kyc/status" element={<KycStatus />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/admin/kyc" element={<AdminKyc />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
