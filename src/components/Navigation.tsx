@@ -2,12 +2,15 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
 import { useAuth } from '@/hooks/useAuth';
+import { useKycStatus } from '@/hooks/useKycStatus';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
@@ -21,6 +24,22 @@ const Navigation = () => {
     closeConnectModal,
     onWalletConnected,
   } = useActiveWallet();
+  const { isApproved: kycApproved } = useKycStatus();
+
+  // Check if user has admin or compliance_officer role
+  const { data: isAdminOrCompliance } = useQuery({
+    queryKey: ['user-is-admin', user?.id],
+    queryFn: async () => {
+      if (!user) return false;
+      const [{ data: isAdmin }, { data: isCompliance }] = await Promise.all([
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' }),
+      ]);
+      return !!(isAdmin || isCompliance);
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
 
   React.useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -54,13 +73,13 @@ const Navigation = () => {
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-            <button 
+            <button
               onClick={() => navigate('/')}
               className="flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
             >
-              <img 
-                src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png" 
-                alt="Accountabul Logo" 
+              <img
+                src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png"
+                alt="Accountabul Logo"
                 className="w-8 h-8"
               />
               <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -95,12 +114,36 @@ const Navigation = () => {
           {/* Desktop Action Buttons */}
           <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
             <ThemeToggle />
+            {user && !kycApproved && (
+              <button
+                onClick={() => navigate('/kyc')}
+                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+                title="Complete identity verification"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                </span>
+                Verify Identity
+              </button>
+            )}
+            {user && isAdminOrCompliance && (
+              <button
+                onClick={() => navigate('/admin/kyc')}
+                className={`flex items-center space-x-1.5 px-1.5 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
+                  currentPath === '/admin/kyc' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <ClipboardList className="w-3.5 h-3.5" />
+                <span>KYC Queue</span>
+              </button>
+            )}
             {user && (
               isConnected ? (
                 <WalletSelector />
               ) : (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={openConnectModal}
                   className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
                 >
@@ -148,8 +191,8 @@ const Navigation = () => {
               isConnected ? (
                 <WalletSelector compact />
               ) : (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={openConnectModal}
                   className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
@@ -227,10 +270,32 @@ const Navigation = () => {
                 </button>
               );
             })}
+            {user && !kycApproved && (
+              <button
+                onClick={() => { navigate('/kyc'); setIsMobileMenuOpen(false); }}
+                className="flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Verify Identity</span>
+              </button>
+            )}
+            {user && isAdminOrCompliance && (
+              <button
+                onClick={() => { navigate('/admin/kyc'); setIsMobileMenuOpen(false); }}
+                className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  currentPath === '/admin/kyc'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>KYC Queue</span>
+              </button>
+            )}
             <div className="pt-2 space-y-2">
               {user && !isConnected && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={openConnectModal}
                   className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
                 >
@@ -275,7 +340,7 @@ const Navigation = () => {
       )}
 
       {/* Wallet Connect Modal */}
-      <WalletConnectModal 
+      <WalletConnectModal
         isOpen={isConnectModalOpen}
         onClose={closeConnectModal}
         onWalletConnected={onWalletConnected}

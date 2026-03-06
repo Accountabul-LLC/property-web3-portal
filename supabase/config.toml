@@ -1,4 +1,4 @@
-project_id = "gveavwqyrwqvafsnhnqc"
+project_id = "bmxcjxtjujhwreduwtvz"
 
 [functions.places-autocomplete]
 verify_jwt = false
@@ -25,4 +25,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xrpl-submit-signed]
+verify_jwt = false
+
+[functions.ai-debate]
 verify_jwt = false

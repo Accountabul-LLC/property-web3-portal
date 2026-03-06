@@ -1,8 +1,8 @@
 
 -- Core tables for the application
 
--- Wallet profiles
-CREATE TABLE public.wallet_profiles (
+-- Wallet profiles (IF NOT EXISTS — created by earlier migration)
+CREATE TABLE IF NOT EXISTS public.wallet_profiles (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   wallet_address text UNIQUE NOT NULL,
   display_name text,
@@ -11,8 +11,8 @@ CREATE TABLE public.wallet_profiles (
   last_login timestamptz DEFAULT now()
 );
 
--- Xaman payloads
-CREATE TABLE public.xaman_payloads (
+-- Xaman payloads (IF NOT EXISTS — created by earlier migration)
+CREATE TABLE IF NOT EXISTS public.xaman_payloads (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   uuid text UNIQUE NOT NULL,
   wallet_address text,
