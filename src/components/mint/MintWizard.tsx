@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet } from 'lucide-react';
+import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useApprovedProperties, type ApprovedProperty } from '@/hooks/useApprovedProperties';
 import { toast } from 'sonner';
 import NFTForm, { type NFTParams } from './NFTForm';
 import MPTForm, { type MPTParams } from './MPTForm';
@@ -31,10 +32,12 @@ const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' }
 const MintWizard: React.FC = () => {
   const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet } = useActiveWallet();
   const { user } = useAuth();
+  const { data: approvedProperties = [] } = useApprovedProperties();
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(activeAddress);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
   // Derive the selected wallet object and network from it
   const selectedWallet = wallets.find(w => w.address === selectedWalletAddress) || activeWallet;
@@ -127,7 +130,15 @@ const MintWizard: React.FC = () => {
           tx_json: txJson,
           status: 'validated',
           tx_hash: submitData.tx_hash,
+          property_id: selectedPropertyId,
         });
+
+        // Activate linked property
+        if (selectedPropertyId) {
+          await supabase.from('properties' as any)
+            .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+            .eq('id', selectedPropertyId);
+        }
 
         setMintStatus('validated');
         setTxHash(submitData.tx_hash || null);
@@ -156,6 +167,7 @@ const MintWizard: React.FC = () => {
           tx_json: txJson,
           status: 'pending',
           xaman_payload_uuid: signData.uuid,
+          property_id: selectedPropertyId,
         });
 
         // Poll for signing result
@@ -174,6 +186,13 @@ const MintWizard: React.FC = () => {
               await supabase.from('token_mints' as any)
                 .update({ status: 'validated', tx_hash: checkData.tx_hash })
                 .eq('xaman_payload_uuid', uuid);
+
+              // Activate linked property
+              if (selectedPropertyId) {
+                await supabase.from('properties' as any)
+                  .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+                  .eq('id', selectedPropertyId);
+              }
 
               toast.success('✅ Token minted successfully!');
             } else if (checkData?.expired || checkData?.cancelled) {
@@ -206,7 +225,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
+  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet, selectedPropertyId]);
 
   const handleReset = () => {
     setStep('type');
@@ -218,6 +237,7 @@ const MintWizard: React.FC = () => {
     setNftParams(defaultNFT);
     setMptParams(defaultMPT);
     setIouParams(defaultIOU);
+    setSelectedPropertyId(null);
   };
 
   if (!user) {
@@ -341,6 +361,59 @@ const MintWizard: React.FC = () => {
         {step === 'form' && (
           <>
             <Badge variant="outline" className="mb-2">{TOKEN_INFO[tokenType].label}</Badge>
+
+            {/* Property selector for MPT */}
+            {tokenType === 'mpt' && approvedProperties.length > 0 && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  Link to Approved Property
+                </div>
+                <Select
+                  value={selectedPropertyId || 'none'}
+                  onValueChange={(v) => {
+                    const propId = v === 'none' ? null : v;
+                    setSelectedPropertyId(propId);
+                    if (propId) {
+                      const prop = approvedProperties.find(p => p.id === propId);
+                      if (prop) {
+                        setMptParams(prev => ({
+                          ...prev,
+                          name: `${prop.title} Token`,
+                          description: prop.description || prev.description,
+                          property_address: prop.address || '',
+                          city: prop.city || '',
+                          state: prop.state || '',
+                          zip: prop.zip || '',
+                          property_type: prop.property_type || '',
+                          bedrooms: prop.bedrooms ? String(prop.bedrooms) : '',
+                          bathrooms: prop.bathrooms ? String(prop.bathrooms) : '',
+                          square_feet: prop.square_feet ? String(prop.square_feet) : '',
+                          year_built: prop.year_built ? String(prop.year_built) : '',
+                          estimated_value: prop.estimated_value ? String(prop.estimated_value) : '',
+                          image_url: prop.images?.[0] || prev.image_url,
+                        }));
+                      }
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a property (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No property (standalone token)</SelectItem>
+                    {approvedProperties.map(p => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.title} — {p.city}, {p.state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Linking will pre-fill metadata and list the property on the marketplace after minting.
+                </p>
+              </div>
+            )}
 
             {tokenType === 'nft' && <NFTForm params={nftParams} onChange={setNftParams} />}
             {tokenType === 'mpt' && <MPTForm params={mptParams} onChange={setMptParams} network={network} />}

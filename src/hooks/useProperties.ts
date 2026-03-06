@@ -36,6 +36,7 @@ export function useProperties() {
       const { data, error } = await supabase
         .from('properties' as any)
         .select('*')
+        .in('status', ['approved', 'active'])
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data || []) as unknown as Property[];

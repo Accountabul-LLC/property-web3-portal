@@ -17,7 +17,7 @@ const PropertyListingsSection = () => {
   const { data: properties = [], isLoading } = useProperties();
 
   const propertyTypes = ['Condo', 'Single Family', 'Multi Family', 'Commercial'];
-  const statusOptions = ['Active', 'Pending', 'Sold Out'];
+  const statusOptions = ['approved', 'active'];
 
   const filteredProperties = properties.filter(property => {
     const matchesSearch = property.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -31,14 +31,20 @@ const PropertyListingsSection = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'bg-success text-success-foreground';
-      case 'Pending':
+      case 'approved':
         return 'bg-warning text-warning-foreground';
-      case 'Sold Out':
-        return 'bg-muted text-muted-foreground';
       default:
         return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'active': return 'Listed';
+      case 'approved': return 'Approved';
+      default: return status;
     }
   };
 
@@ -136,7 +142,7 @@ const PropertyListingsSection = () => {
                       <Badge 
                         className={`absolute top-3 right-3 ${getStatusColor(property.status)}`}
                       >
-                        {property.status}
+                        {getStatusLabel(property.status)}
                       </Badge>
                     </div>
                     
@@ -198,13 +204,10 @@ const PropertyListingsSection = () => {
 
                         <Button 
                           className="w-full" 
-                          variant={property.status === 'Active' ? 'default' : 'secondary'}
-                          disabled={property.status === 'Sold Out'}
-                          asChild={property.status !== 'Sold Out'}
+                          variant={property.status === 'active' ? 'default' : 'secondary'}
+                          asChild
                         >
-                          {property.status === 'Sold Out' ? 'Sold Out' : (
-                            <a href={`/property/${property.id}`}>View Details</a>
-                          )}
+                          <a href={`/property/${property.id}`}>View Details</a>
                         </Button>
                       </div>
                     </CardContent>

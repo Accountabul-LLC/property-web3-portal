@@ -1,42 +1,20 @@
+## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
+### Changes Applied
 
-## Plan: Connect Minting to Marketplace Listings
+1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
 
-### Current State
-- **Tokenize page** (`/tokenize`): Submits property data to `properties` table with status `submitted` for admin review
-- **Mint page** (`/mint`): Mints XRPL tokens (NFT/MPT/IOU) via `token_mints` table — but has **no link** to `properties`
-- **Marketplace** (`/marketplace`): Reads from `properties` where `status = 'approved'` (RLS enforced)
-- **Gap**: `token_mints` has no `property_id` column. After minting, there's no way to mark a property as "tokenized and marketplace-ready"
+2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
 
-### What Changes
+3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
 
-**1. Database: Link token_mints to properties**
-- Add `property_id` (nullable uuid) to `token_mints` table
-- Add new property status value `active` (meaning: approved + tokens minted + listed on marketplace)
-- Update the marketplace RLS to also show `status = 'active'` properties
+4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
 
-**2. Post-Mint: Update property status to "active"**
-- After a successful mint in `MintWizard`, if the mint is linked to a property, update that property's status from `approved` → `active`
-- This makes it appear in the marketplace automatically
+### New Files
+- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
 
-**3. MintWizard: Add optional property selector**
-- When minting an MPT, show a dropdown of the user's `approved` properties (from tokenization pipeline)
-- Pre-fill MPT metadata (address, beds, baths, etc.) from the selected property
-- Store the `property_id` on the `token_mints` record
-
-**4. Marketplace query update**
-- `useProperties` hook: change the query to fetch properties with `status IN ('approved', 'active')` — or just `active` if only fully-minted properties should show
-- `PropertyListingsSection`: update status badge/filter options to reflect the new lifecycle
-
-### Flow Summary
+### Flow
 ```text
 Owner submits property → admin approves → owner mints MPT (linked to property)
-    → property status becomes "active" → appears in marketplace
+    → property status becomes "active" → appears in marketplace as "Listed"
 ```
-
-### Files to Change
-- **Migration**: Add `property_id` to `token_mints`, update `properties` RLS to include `active` status
-- `src/components/mint/MintWizard.tsx` — property selector + post-mint status update
-- `src/hooks/useProperties.ts` — adjust query for marketplace-visible statuses
-- `src/components/PropertyListingsSection.tsx` — update filter/status options
-
