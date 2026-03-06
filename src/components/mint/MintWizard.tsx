@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet } from 'lucide-react';
+import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
+import { useApprovedProperties, type ApprovedProperty } from '@/hooks/useApprovedProperties';
 import { toast } from 'sonner';
 import NFTForm, { type NFTParams } from './NFTForm';
 import MPTForm, { type MPTParams } from './MPTForm';
@@ -31,10 +32,12 @@ const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' }
 const MintWizard: React.FC = () => {
   const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet } = useActiveWallet();
   const { user } = useAuth();
+  const { data: approvedProperties = [] } = useApprovedProperties();
 
   const [step, setStep] = useState<MintStep>('type');
   const [tokenType, setTokenType] = useState<TokenType>('nft');
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(activeAddress);
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
   // Derive the selected wallet object and network from it
   const selectedWallet = wallets.find(w => w.address === selectedWalletAddress) || activeWallet;
