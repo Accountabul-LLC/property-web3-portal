@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type DebateSpeaker = 'claude' | 'gpt' | 'user';
+export type DebateSpeaker = 'claude' | 'gpt' | 'gemini' | 'user';
 export type DebateMode = 'debate' | 'collaborate' | 'compare';
 
 export interface DebateTurnData {
@@ -12,7 +12,7 @@ export interface DebateTurnData {
 }
 
 export interface HistoryItem {
-  speaker: 'claude' | 'gpt' | 'user';
+  speaker: 'claude' | 'gpt' | 'gemini' | 'user';
   text: string;
 }
 
@@ -48,8 +48,8 @@ export function useDebateSession() {
     const controller = new AbortController();
     abortRef.current = controller;
 
-    const turnOffset = (round - 1) * 2;
-    const roundReplies: { claude?: string; gpt?: string } = {};
+    const turnOffset = (round - 1) * 3;
+    const roundReplies: { claude?: string; gpt?: string; gemini?: string } = {};
 
     try {
       const res = await fetch(
@@ -93,6 +93,7 @@ export function useDebateSession() {
             if (event.type === 'turn_end') {
               if (event.speaker === 'claude') roundReplies.claude = event.full_text as string;
               if (event.speaker === 'gpt') roundReplies.gpt = event.full_text as string;
+              if (event.speaker === 'gemini') roundReplies.gemini = event.full_text as string;
             }
 
             if (event.type === 'done') {
@@ -101,6 +102,9 @@ export function useDebateSession() {
               }
               if (roundReplies.gpt) {
                 historyRef.current = [...historyRef.current, { speaker: 'gpt', text: roundReplies.gpt }];
+              }
+              if (roundReplies.gemini) {
+                historyRef.current = [...historyRef.current, { speaker: 'gemini', text: roundReplies.gemini }];
               }
               setSessionId(event.conversation_id as string);
               if (round < params.rounds) {
