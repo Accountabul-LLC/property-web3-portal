@@ -98,7 +98,7 @@ function TreeItem({
   );
 }
 
-export default function CodeBrowser() {
+export default function CodeBrowser({ embedded = false }: { embedded?: boolean }) {
   const { getTree, getFile, treeLoading, fileLoading, error } = useGitHubAgent();
   const [files, setFiles] = useState<TreeFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
@@ -126,7 +126,7 @@ export default function CodeBrowser() {
   }
 
   return (
-    <div className="h-[calc(100vh-12rem)] border rounded-lg overflow-hidden bg-background">
+    <div className={cn("border rounded-lg overflow-hidden bg-background", embedded ? "h-full" : "h-[calc(100vh-12rem)]")}>
       {error && (
         <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm">{error}</div>
       )}
