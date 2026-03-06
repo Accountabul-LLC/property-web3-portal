@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { importPKCS8, SignJWT } from "https://deno.land/x/jose@v5.2.2/index.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,46 +8,63 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// GitHub App JWT generation using Web Crypto API (no external deps)
-async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
-  const now = Math.floor(Date.now() / 1000);
-  const header = { alg: "RS256", typ: "JWT" };
-  const payload = { iat: now - 60, exp: now + 600, iss: appId };
+// Convert PKCS#1 PEM to PKCS#8 PEM (GitHub App keys are PKCS#1)
+function ensurePkcs8Pem(pem: string): string {
+  if (pem.includes("BEGIN PRIVATE KEY")) return pem; // already PKCS#8
 
-  const b64url = (data: Uint8Array) =>
-    btoa(String.fromCharCode(...data))
-      .replace(/\+/g, "-")
-      .replace(/\//g, "_")
-      .replace(/=+$/, "");
-
-  const enc = new TextEncoder();
-  const headerB64 = b64url(enc.encode(JSON.stringify(header)));
-  const payloadB64 = b64url(enc.encode(JSON.stringify(payload)));
-  const signingInput = `${headerB64}.${payloadB64}`;
-
-  // Import PEM private key
-  const pemBody = privateKeyPem
+  // Strip PKCS#1 headers, decode, wrap in PKCS#8 ASN.1 envelope
+  const b64 = pem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/, "")
     .replace(/-----END RSA PRIVATE KEY-----/, "")
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
     .replace(/\s/g, "");
 
-  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  const pkcs1 = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
 
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    binaryKey,
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
+  const algorithmId = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+    0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
+  ]);
 
-  const signature = new Uint8Array(
-    await crypto.subtle.sign("RSASSA-PKCS1-v1_5", cryptoKey, enc.encode(signingInput))
-  );
+  function derLen(n: number): Uint8Array {
+    if (n < 0x80) return new Uint8Array([n]);
+    if (n < 0x100) return new Uint8Array([0x81, n]);
+    return new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
+  }
 
-  return `${signingInput}.${b64url(signature)}`;
+  // Build OCTET STRING { pkcs1 }
+  const octetLenBytes = derLen(pkcs1.length);
+  const octetStr = new Uint8Array(1 + octetLenBytes.length + pkcs1.length);
+  octetStr[0] = 0x04;
+  octetStr.set(octetLenBytes, 1);
+  octetStr.set(pkcs1, 1 + octetLenBytes.length);
+
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+  const innerLen = version.length + algorithmId.length + octetStr.length;
+  const seqLenBytes = derLen(innerLen);
+
+  const pkcs8 = new Uint8Array(1 + seqLenBytes.length + innerLen);
+  pkcs8[0] = 0x30;
+  pkcs8.set(seqLenBytes, 1);
+  let off = 1 + seqLenBytes.length;
+  pkcs8.set(version, off); off += version.length;
+  pkcs8.set(algorithmId, off); off += algorithmId.length;
+  pkcs8.set(octetStr, off);
+
+  // Base64 encode with line wrapping
+  const b64Out = btoa(String.fromCharCode(...pkcs8));
+  const lines = b64Out.match(/.{1,64}/g) || [];
+  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+}
+
+async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
+  const pkcs8Pem = ensurePkcs8Pem(privateKeyPem);
+  const privateKey = await importPKCS8(pkcs8Pem, "RS256");
+
+  return await new SignJWT({ iss: appId })
+    .setProtectedHeader({ alg: "RS256", typ: "JWT" })
+    .setIssuedAt(Math.floor(Date.now() / 1000) - 60)
+    .setExpirationTime("10m")
+    .sign(privateKey);
 }
 
 async function getInstallationToken(appId: string, privateKey: string, installationId: string): Promise<string> {
