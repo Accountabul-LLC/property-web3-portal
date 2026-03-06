@@ -97,6 +97,7 @@ export type Database = {
       }
       kyc_cases: {
         Row: {
+          approved_at: string | null
           created_at: string
           id: string
           rejection_reason: string | null
@@ -108,6 +109,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
           created_at?: string
           id?: string
           rejection_reason?: string | null
@@ -119,6 +121,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          approved_at?: string | null
           created_at?: string
           id?: string
           rejection_reason?: string | null
@@ -232,6 +235,50 @@ export type Database = {
             foreignKeyName: "kyc_form_data_kyc_case_id_fkey"
             columns: ["kyc_case_id"]
             isOneToOne: true
+            referencedRelation: "kyc_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kyc_status_history: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          kyc_case_id: string
+          metadata: Json | null
+          reason: string | null
+          to_status: string
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          kyc_case_id: string
+          metadata?: Json | null
+          reason?: string | null
+          to_status: string
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          kyc_case_id?: string
+          metadata?: Json | null
+          reason?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_status_history_kyc_case_id_fkey"
+            columns: ["kyc_case_id"]
+            isOneToOne: false
             referencedRelation: "kyc_cases"
             referencedColumns: ["id"]
           },
