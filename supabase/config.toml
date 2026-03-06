@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.ai-debate]
 verify_jwt = false
+
+[functions.github-agent]
+verify_jwt = false
