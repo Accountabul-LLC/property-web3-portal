@@ -187,6 +187,13 @@ const MintWizard: React.FC = () => {
                 .update({ status: 'validated', tx_hash: checkData.tx_hash })
                 .eq('xaman_payload_uuid', uuid);
 
+              // Activate linked property
+              if (selectedPropertyId) {
+                await supabase.from('properties' as any)
+                  .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+                  .eq('id', selectedPropertyId);
+              }
+
               toast.success('✅ Token minted successfully!');
             } else if (checkData?.expired || checkData?.cancelled) {
               clearInterval(poll);
