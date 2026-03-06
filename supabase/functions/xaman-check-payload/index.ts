@@ -94,8 +94,10 @@ Deno.serve(async (req) => {
       status = 'signed';
       wallet_address = xamanData.response.account;
       const userToken = xamanData.response?.user_token || null;
+      // Extract tx hash: Xaman returns it as `txid` for payment payloads
+      const txHash = xamanData.response?.txid || xamanData.response?.hash || null;
       
-      console.log('Wallet signed in:', wallet_address, 'user_token present:', !!userToken);
+      console.log('Wallet signed in:', wallet_address, 'txid:', txHash, 'user_token present:', !!userToken);
 
       account_name = await resolveAccountName(wallet_address);
       console.log('Resolved account name:', account_name);
@@ -188,6 +190,9 @@ Deno.serve(async (req) => {
         .eq('uuid', uuid);
     }
 
+    // Build response — include tx_hash for payment payloads
+    const txHashFromSigning = xamanData.response?.txid || xamanData.response?.hash || null;
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -195,6 +200,7 @@ Deno.serve(async (req) => {
         signed: xamanData.meta?.signed || false,
         wallet_address,
         account_name,
+        tx_hash: txHashFromSigning,
         expired: xamanData.meta?.expired || false,
         cancelled: xamanData.meta?.cancelled || false
       }),

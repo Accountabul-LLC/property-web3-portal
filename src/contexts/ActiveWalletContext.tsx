@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 import { toast } from 'sonner';
 
 export interface ConnectedWallet {
@@ -258,6 +259,17 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
     toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);
   }, [addWallet]);
+
+  // 30-minute inactivity timeout: clears auth session + wallet context
+  const handleInactivityTimeout = useCallback(() => {
+    setWallets([]);
+    setActiveAddressState(null);
+    saveActiveAddress(null);
+    prevActiveRef.current = null;
+    toast.info('Session expired due to inactivity. Please sign in again.');
+  }, []);
+
+  useInactivityTimeout(handleInactivityTimeout);
 
   return (
     <ActiveWalletContext.Provider value={{
