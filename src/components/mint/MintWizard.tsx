@@ -167,6 +167,7 @@ const MintWizard: React.FC = () => {
           tx_json: txJson,
           status: 'pending',
           xaman_payload_uuid: signData.uuid,
+          property_id: selectedPropertyId,
         });
 
         // Poll for signing result
