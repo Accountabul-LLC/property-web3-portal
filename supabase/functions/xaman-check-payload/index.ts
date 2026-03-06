@@ -190,6 +190,9 @@ Deno.serve(async (req) => {
         .eq('uuid', uuid);
     }
 
+    // Build response — include tx_hash for payment payloads
+    const txHashFromSigning = xamanData.response?.txid || xamanData.response?.hash || null;
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -197,6 +200,7 @@ Deno.serve(async (req) => {
         signed: xamanData.meta?.signed || false,
         wallet_address,
         account_name,
+        tx_hash: txHashFromSigning,
         expired: xamanData.meta?.expired || false,
         cancelled: xamanData.meta?.cancelled || false
       }),
