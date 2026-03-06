@@ -22,6 +22,15 @@ const AI_SPEAKER_CONFIG = {
     avatar: 'bg-emerald-500 text-white',
     initial: 'G',
   },
+  gemini: {
+    label: 'Gemini',
+    subtitle: 'gemini-3-flash-preview',
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    border: 'border-blue-200 dark:border-blue-800',
+    badge: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+    avatar: 'bg-blue-500 text-white',
+    initial: 'G✦',
+  },
 } as const;
 
 interface Props {

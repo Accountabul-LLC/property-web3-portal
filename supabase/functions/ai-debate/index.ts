@@ -8,7 +8,7 @@ const corsHeaders = {
 // Fallback context used only if CODEBASE_CONTEXT secret is not set
 const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-world asset) tokenization platform built on the XRP Ledger (XRPL). The platform tokenizes real estate as MPT, NFT, and IOU tokens. Users authenticate via Supabase Auth and connect XRPL wallets via Xaman.`
 
-type Speaker = 'claude' | 'gpt' | 'user'
+type Speaker = 'claude' | 'gpt' | 'gemini' | 'user'
 type Mode = 'debate' | 'collaborate' | 'compare'
 
 interface HistoryItem {
@@ -35,35 +35,25 @@ function modeInstruction(mode: Mode, other: string): string {
   }
 }
 
-function buildSystem(speaker: 'claude' | 'gpt', mode: Mode, codebaseContext: string): string {
-  const other = speaker === 'claude' ? 'ChatGPT (GPT-4o)' : 'Claude (claude-sonnet-4-6)'
-  return `${codebaseContext}\n\nBe direct, substantive, and intellectually honest.\n\n${modeInstruction(mode, other)}`
+function buildSystem(speaker: 'claude' | 'gpt' | 'gemini', mode: Mode, codebaseContext: string): string {
+  const others: Record<string, string> = {
+    claude: 'ChatGPT (GPT-4o) and Gemini (gemini-3-flash-preview)',
+    gpt: 'Claude (claude-sonnet-4-6) and Gemini (gemini-3-flash-preview)',
+    gemini: 'Claude (claude-sonnet-4-6) and ChatGPT (GPT-4o)',
+  }
+  return `${codebaseContext}\n\nBe direct, substantive, and intellectually honest.\n\n${modeInstruction(mode, others[speaker])}`
 }
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
-function buildClaudeHistory(topic: string, history: HistoryItem[], mode: Mode): Msg[] {
+function buildSpeakerHistory(self: Speaker, topic: string, history: HistoryItem[], mode: Mode): Msg[] {
   const msgs: Msg[] = [{ role: 'user', content: topic }]
   for (const item of history) {
-    if (item.speaker === 'claude') {
+    if (item.speaker === self) {
       msgs.push({ role: 'assistant', content: item.text })
     } else if (item.speaker === 'user') {
       msgs.push({ role: 'user', content: `[Human facilitator]: ${item.text}` })
-    } else if (item.speaker === 'gpt' && mode !== 'compare') {
-      msgs.push({ role: 'user', content: item.text })
-    }
-  }
-  return msgs
-}
-
-function buildGPTHistory(topic: string, history: HistoryItem[], mode: Mode): Msg[] {
-  const msgs: Msg[] = [{ role: 'user', content: topic }]
-  for (const item of history) {
-    if (item.speaker === 'gpt') {
-      msgs.push({ role: 'assistant', content: item.text })
-    } else if (item.speaker === 'user') {
-      msgs.push({ role: 'user', content: `[Human facilitator]: ${item.text}` })
-    } else if (item.speaker === 'claude' && mode !== 'compare') {
+    } else if (mode !== 'compare') {
       msgs.push({ role: 'user', content: item.text })
     }
   }
@@ -140,9 +130,11 @@ Deno.serve(async (req) => {
 
   const claudeKey = Deno.env.get('ANTHROPIC_API_KEY')!
   const openaiKey = Deno.env.get('OPENAI_API_KEY')!
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY')!
 
-  const claudeMessages = buildClaudeHistory(topic, history, mode)
-  const gptMessages = buildGPTHistory(topic, history, mode)
+  const claudeMessages = buildSpeakerHistory('claude', topic, history, mode)
+  const gptMessages = buildSpeakerHistory('gpt', topic, history, mode)
+  const geminiMessages = buildSpeakerHistory('gemini', topic, history, mode)
 
   const encoder = new TextEncoder()
 
@@ -268,6 +260,68 @@ Deno.serve(async (req) => {
         return fullText
       }
 
+      async function streamGemini(claudeReply: string, gptReply: string): Promise<string> {
+        write({ type: 'turn_start', speaker: 'gemini', turn: 3 })
+
+        const messages = [
+          { role: 'system', content: buildSystem('gemini', mode, codebaseContext) },
+          ...geminiMessages,
+          ...(mode !== 'compare' ? [
+            { role: 'user', content: `[Claude's response]:\n${claudeReply}` },
+            { role: 'user', content: `[GPT's response]:\n${gptReply}` },
+          ] : []),
+        ]
+
+        const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${lovableKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-3-flash-preview',
+            stream: true,
+            messages,
+          }),
+        })
+
+        if (!res.ok) {
+          const msg = await res.text()
+          write({ type: 'error', message: `Gemini error (${res.status}): ${msg}` })
+          return ''
+        }
+
+        let fullText = ''
+        const reader = res.body!.getReader()
+        const dec = new TextDecoder()
+        let buf = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          buf += dec.decode(value, { stream: true })
+          const lines = buf.split('\n')
+          buf = lines.pop() ?? ''
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue
+            const data = line.slice(6).trim()
+            if (data === '[DONE]') continue
+            try {
+              const parsed = JSON.parse(data)
+              const text: string | undefined = parsed.choices?.[0]?.delta?.content
+              if (text) {
+                fullText += text
+                write({ type: 'chunk', speaker: 'gemini', text })
+              }
+            } catch { /* skip */ }
+          }
+        }
+
+        write({ type: 'turn_end', speaker: 'gemini', turn: 3, full_text: fullText })
+        return fullText
+      }
+
       try {
         const claudeReply = await streamClaude()
         if (!claudeReply) {
@@ -276,17 +330,17 @@ Deno.serve(async (req) => {
         }
 
         const gptReply = await streamGPT(claudeReply)
+        const geminiReply = await streamGemini(claudeReply, gptReply)
 
         write({
           type: 'done',
           round,
           turn_offset: turnOffset,
-          total_turns: 2,
+          total_turns: 3,
           conversation_id: crypto.randomUUID(),
         })
 
-        // suppress unused var warning
-        void gptReply
+        void geminiReply
       } catch (e: unknown) {
         write({ type: 'error', message: e instanceof Error ? e.message : 'Unknown error' })
       } finally {
