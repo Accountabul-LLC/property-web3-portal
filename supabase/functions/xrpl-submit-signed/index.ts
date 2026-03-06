@@ -48,6 +48,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // --- Auth: verify JWT and extract user ---
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Missing authorization' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUser = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+      { global: { headers: { Authorization: authHeader } } },
+    );
+
+    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(
+      authHeader.replace('Bearer ', ''),
+    );
+    if (claimsError || !claimsData?.claims?.sub) {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid authentication' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const userId = claimsData.claims.sub;
+
     const { tx_json, wallet_address, network } = await req.json();
 
     if (network !== 'testnet') {
@@ -66,10 +90,12 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
 
+    // Ownership check: wallet must belong to the authenticated user
     const { data: walletRow, error: walletError } = await supabaseAdmin
       .from('user_wallets')
       .select('wallet_secret, provider')
       .eq('wallet_address', wallet_address)
+      .eq('user_id', userId)
       .eq('status', 'active')
       .single();
 
