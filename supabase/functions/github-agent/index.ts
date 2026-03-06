@@ -9,8 +9,24 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Normalize PEM: fix literal \n, extra whitespace, missing headers
+function normalizePem(raw: string): string {
+  // Replace literal escaped newlines with real newlines
+  let pem = raw.replace(/\\n/g, "\n").trim();
+  // If it's just base64 with no headers, wrap it
+  if (!pem.includes("-----BEGIN")) {
+    // Guess PKCS#1 (GitHub default)
+    const clean = pem.replace(/\s/g, "");
+    const lines = clean.match(/.{1,64}/g) || [];
+    pem = `-----BEGIN RSA PRIVATE KEY-----\n${lines.join("\n")}\n-----END RSA PRIVATE KEY-----`;
+  }
+  return pem;
+}
+
 // Convert PKCS#1 PEM to PKCS#8 PEM (GitHub App keys are PKCS#1)
-function ensurePkcs8Pem(pem: string): string {
+function ensurePkcs8Pem(rawPem: string): string {
+  const pem = normalizePem(rawPem);
+  
   if (pem.includes("BEGIN PRIVATE KEY")) return pem; // already PKCS#8
 
   // Strip PKCS#1 headers, decode, wrap in PKCS#8 ASN.1 envelope
