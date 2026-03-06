@@ -73,7 +73,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     const fetchWallets = async () => {
       setWalletsLoading(true);
       const { data, error } = await supabase
-        .from('user_wallets')
+        .from('user_wallets_safe')
         .select('*')
         .eq('status', 'active')
         .order('last_seen_at', { ascending: false });
@@ -174,7 +174,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
     // Refresh wallet list
     const { data: allWallets } = await supabase
-      .from('user_wallets')
+      .from('user_wallets_safe')
       .select('*')
       .eq('status', 'active')
       .order('last_seen_at', { ascending: false });
