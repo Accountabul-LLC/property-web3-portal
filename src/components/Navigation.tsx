@@ -128,13 +128,13 @@ const Navigation = () => {
             )}
             {user && isAdminOrCompliance && (
               <button
-                onClick={() => navigate('/admin/kyc')}
+                onClick={() => navigate('/admin')}
                 className={`flex items-center space-x-1.5 px-1.5 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
-                  currentPath === '/admin/kyc' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                  currentPath.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
-                <span>KYC Queue</span>
+                <span>Admin</span>
               </button>
             )}
             {user && (
@@ -280,15 +280,15 @@ const Navigation = () => {
             )}
             {user && isAdminOrCompliance && (
               <button
-                onClick={() => { navigate('/admin/kyc'); setIsMobileMenuOpen(false); }}
+                onClick={() => { navigate('/admin'); setIsMobileMenuOpen(false); }}
                 className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                  currentPath === '/admin/kyc'
+                  currentPath.startsWith('/admin')
                     ? 'bg-primary text-primary-foreground'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                 }`}
               >
                 <ClipboardList className="w-4 h-4" />
-                <span>KYC Queue</span>
+                <span>Admin</span>
               </button>
             )}
             <div className="pt-2 space-y-2">
