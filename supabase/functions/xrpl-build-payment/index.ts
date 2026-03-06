@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,30 +5,57 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const XRPL_NODE = 'https://xrplcluster.com';
+const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
+const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
-async function xrplRequest(method: string, params: Record<string, unknown>[]) {
-  const res = await fetch(XRPL_NODE, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
-  return res.json();
+async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
+  let lastError: Error | null = null;
+  for (const node of nodes) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        const res = await fetch(node, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, params }),
+        });
+        if (res.status === 429 || res.status === 503) {
+          lastError = new Error(`${node} returned ${res.status}`);
+          console.warn(`${node} returned ${res.status}, attempt ${attempt + 1}`);
+          if (attempt < MAX_RETRIES) continue;
+          break;
+        }
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          lastError = new Error(`Non-JSON from ${node}: ${text.slice(0, 120)}`);
+          break;
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        break;
+      }
+    }
+  }
+  throw lastError || new Error('All XRPL nodes failed');
 }
 
 function isValidXRPLAddress(addr: string): boolean {
   return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr);
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { from_address, to_address, amount_xrp, destination_tag, memo } = await req.json();
+    const { from_address, to_address, amount_xrp, destination_tag, memo, network } = await req.json();
 
-    // Validate inputs
+    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
     const warnings: string[] = [];
 
     if (!from_address || !isValidXRPLAddress(from_address)) {
@@ -56,7 +82,6 @@ serve(async (req) => {
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Verify authenticated user
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Authentication required' }), {
@@ -76,7 +101,6 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
-    // Verify wallet belongs to this user
     const { data: walletLink } = await supabase
       .from('user_wallets')
       .select('id')
@@ -113,10 +137,10 @@ serve(async (req) => {
       });
     }
 
-    // Fetch account info and server state in parallel
+    // Fetch account info and server state in parallel (with failover nodes)
     const [accountInfoRes, serverInfoRes] = await Promise.all([
-      xrplRequest('account_info', [{ account: from_address, ledger_index: 'validated' }]),
-      xrplRequest('server_info', [{}]),
+      xrplRequest(nodes, 'account_info', [{ account: from_address, ledger_index: 'validated' }]),
+      xrplRequest(nodes, 'server_info', [{}]),
     ]);
 
     if (accountInfoRes.result?.error === 'actNotFound') {
@@ -134,8 +158,10 @@ serve(async (req) => {
 
     const balanceXrp = Number(accountData.Balance) / 1_000_000;
     const ownerCount = accountData.OwnerCount || 0;
-    const reserveBase = 10; // XRP base reserve
-    const reserveInc = 2;   // XRP per owner object
+
+    // Use current post-amendment reserves (1 XRP base, 0.2 XRP per owner object)
+    const reserveBase = 1;
+    const reserveInc = 0.2;
     const totalReserve = reserveBase + (ownerCount * reserveInc);
     const spendable = balanceXrp - totalReserve;
 
@@ -151,13 +177,9 @@ serve(async (req) => {
     const validatedLedger = serverInfoRes.result?.info?.validated_ledger?.seq || 0;
     const lastLedgerSequence = validatedLedger + 30;
 
-    // Fee - use base fee (12 drops default)
     const feeDrops = "12";
-
-    // Build drops amount
     const drops = String(Math.round(amount * 1_000_000));
 
-    // Build tx JSON
     const txJson: Record<string, unknown> = {
       TransactionType: "Payment",
       Account: from_address,
@@ -188,7 +210,6 @@ serve(async (req) => {
       }];
     }
 
-    // Balance warnings
     const remainingAfter = spendable - amount;
     if (remainingAfter < 1) {
       warnings.push('After this transaction, your spendable balance will be very low.');
