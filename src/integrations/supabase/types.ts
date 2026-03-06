@@ -826,7 +826,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_wallets_safe: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          id: string | null
+          label: string | null
+          last_seen_at: string | null
+          network: string | null
+          provider: string | null
+          revoked_at: string | null
+          status: string | null
+          user_id: string | null
+          wallet_address: string | null
+          xaman_account_name: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          last_seen_at?: string | null
+          network?: string | null
+          provider?: string | null
+          revoked_at?: string | null
+          status?: string | null
+          user_id?: string | null
+          wallet_address?: string | null
+          xaman_account_name?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string | null
+          label?: string | null
+          last_seen_at?: string | null
+          network?: string | null
+          provider?: string | null
+          revoked_at?: string | null
+          status?: string | null
+          user_id?: string | null
+          wallet_address?: string | null
+          xaman_account_name?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -836,6 +880,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      owns_wallet: { Args: { _wallet_address: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
