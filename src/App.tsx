@@ -18,6 +18,7 @@ import Mint from "./pages/Mint";
 import Kyc from "./pages/Kyc";
 import KycStatus from "./pages/KycStatus";
 import AdminKyc from "./pages/AdminKyc";
+import Admin from "./pages/Admin";
 import KycGate from "./components/KycGate";
 import NotFound from "./pages/NotFound";
 
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/mint" element={<KycGate><Mint /></KycGate>} />
               <Route path="/kyc" element={<Kyc />} />
               <Route path="/kyc/status" element={<KycStatus />} />
+              <Route path="/admin" element={<Admin />} />
               <Route path="/admin/kyc" element={<AdminKyc />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
