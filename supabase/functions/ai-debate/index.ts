@@ -106,8 +106,31 @@ Deno.serve(async (req) => {
     return new Response('Forbidden', { status: 403, headers: corsHeaders })
   }
 
-  // --- Load codebase context from secret ---
-  const codebaseContext = Deno.env.get('CODEBASE_CONTEXT') ?? FALLBACK_CONTEXT
+  // --- Load codebase context dynamically from GitHub ---
+  let codebaseContext = FALLBACK_CONTEXT
+  try {
+    const ghRes = await fetch(`${supabaseUrl}/functions/v1/github-agent`, {
+      method: 'POST',
+      headers: {
+        Authorization: authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'get_tree',
+        owner: 'Jibreelm',
+        repo: 'property-web3-portal',
+      }),
+    })
+    if (ghRes.ok) {
+      const treeData = await ghRes.json()
+      const filePaths = (treeData.files || [])
+        .map((f: { path: string; size: number }) => `- ${f.path} (${f.size}b)`)
+        .join('\n')
+      codebaseContext = `${FALLBACK_CONTEXT}\n\n## Repository File Tree (Jibreelm/property-web3-portal)\nYou have access to the following files in the codebase:\n${filePaths}\n\nWhen discussing code changes, reference specific file paths from this tree.`
+    }
+  } catch (e) {
+    console.warn('Failed to fetch repo tree for context, using fallback:', e)
+  }
 
   // --- Parse body ---
   const { topic, mode, history = [], round = 1, turnOffset = 0 }: RequestBody = await req.json()
