@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -10,13 +10,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { Mail, Lock, ArrowRight, User, Building2 } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User, Building2, ShieldCheck } from 'lucide-react';
 
 const Auth = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
-  
+
+  const isAdminTab = searchParams.get('tab') === 'admin';
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,12 +28,34 @@ const Auth = () => {
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users
   useEffect(() => {
     if (!authLoading && user) {
-      navigate('/dashboard');
+      if (isAdminTab) {
+        // Check admin role before redirecting
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }).then(({ data }) => {
+          if (data) {
+            navigate('/admin');
+          } else {
+            toast.error('Your account does not have admin access.');
+            navigate('/dashboard');
+          }
+        });
+      } else {
+        navigate('/dashboard');
+      }
     }
-  }, [user, authLoading, navigate]);
+  }, [user, authLoading, navigate, isAdminTab]);
+
+  const handleTabChange = (value: string) => {
+    if (value === 'admin') {
+      navigate('/auth?tab=admin', { replace: true });
+      setMode('login');
+    } else {
+      navigate('/auth', { replace: true });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -46,8 +71,23 @@ const Auth = () => {
       } else if (mode === 'login') {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        toast.success('Welcome back!');
-        navigate('/dashboard');
+
+        if (isAdminTab) {
+          const { data: { user: loggedInUser } } = await supabase.auth.getUser();
+          if (loggedInUser) {
+            const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: loggedInUser.id, _role: 'admin' });
+            if (!isAdmin) {
+              toast.error('Your account does not have admin access.');
+              navigate('/dashboard');
+              return;
+            }
+          }
+          toast.success('Welcome, Admin!');
+          navigate('/admin');
+        } else {
+          toast.success('Welcome back!');
+          navigate('/dashboard');
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -56,7 +96,6 @@ const Auth = () => {
         });
         if (error) throw error;
 
-        // Update profile with additional info (trigger auto-creates the row)
         if (data.user) {
           await supabase
             .from('profiles' as any)
@@ -82,12 +121,31 @@ const Auth = () => {
       <Navigation />
       <div className="flex items-center justify-center px-4 py-24">
         <Card className="w-full max-w-md p-8 shadow-card">
+          {/* Tab switcher */}
+          <Tabs value={isAdminTab ? 'admin' : 'user'} onValueChange={handleTabChange} className="mb-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="user">User</TabsTrigger>
+              <TabsTrigger value="admin" className="flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Admin
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
+              {isAdminTab
+                ? 'Admin Sign In'
+                : mode === 'login'
+                ? 'Sign In'
+                : mode === 'signup'
+                ? 'Create Account'
+                : 'Reset Password'}
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
-              {mode === 'login'
+              {isAdminTab
+                ? 'Sign in with your admin credentials'
+                : mode === 'login'
                 ? 'Access your tokenization dashboard'
                 : mode === 'signup'
                 ? 'Start tokenizing your real estate'
@@ -96,7 +154,7 @@ const Auth = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === 'signup' && (
+            {mode === 'signup' && !isAdminTab && (
               <>
                 <div>
                   <Label htmlFor="fullName">Full Name *</Label>
@@ -187,6 +245,8 @@ const Auth = () => {
             <Button type="submit" className="w-full" disabled={loading}>
               {loading
                 ? 'Please wait...'
+                : isAdminTab
+                ? 'Sign In as Admin'
                 : mode === 'login'
                 ? 'Sign In'
                 : mode === 'signup'
@@ -196,7 +256,7 @@ const Auth = () => {
             </Button>
           </form>
 
-          {mode !== 'forgot' && (
+          {mode !== 'forgot' && !isAdminTab && (
             <div className="mt-6">
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
@@ -229,8 +289,9 @@ const Auth = () => {
               </Button>
             </div>
           )}
+
           <div className="text-center mt-6 space-y-2">
-            {mode === 'login' && (
+            {mode === 'login' && !isAdminTab && (
               <>
                 <button
                   type="button"
@@ -247,6 +308,15 @@ const Auth = () => {
                   Don't have an account? Sign up
                 </button>
               </>
+            )}
+            {mode === 'login' && isAdminTab && (
+              <button
+                type="button"
+                onClick={() => setMode('forgot')}
+                className="text-sm text-muted-foreground hover:underline block w-full"
+              >
+                Forgot password?
+              </button>
             )}
             {mode === 'signup' && (
               <button
