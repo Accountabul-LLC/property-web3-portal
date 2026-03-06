@@ -256,7 +256,7 @@ const Auth = () => {
             </Button>
           </form>
 
-          {mode !== 'forgot' && !isAdminTab && (
+          {mode !== 'forgot' && (
             <div className="mt-6">
               <div className="relative mb-4">
                 <div className="absolute inset-0 flex items-center">
