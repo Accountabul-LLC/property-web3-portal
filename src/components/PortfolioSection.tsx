@@ -750,19 +750,28 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
                                 <div>
                                   <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Verification Links</p>
                                   <div className="flex flex-wrap gap-2">
-                                    {mpt.uris.map((uri, uriIdx) => (
-                                      <a
-                                        key={uriIdx}
-                                        href={uri}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        onClick={(e) => e.stopPropagation()}
-                                        className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2.5 py-1.5 rounded-md"
-                                      >
-                                        <ExternalLink className="w-3 h-3" />
-                                        {uri.replace(/^https?:\/\//, '').slice(0, 30)}{uri.length > 30 ? '…' : ''}
-                                      </a>
-                                    ))}
+                                    {mpt.uris.map((uri: any, uriIdx: number) => {
+                                      // Support both XLS-89 object format {u, c, t} and plain string URIs
+                                      const href = typeof uri === 'string' ? uri : uri?.u || '';
+                                      const label = typeof uri === 'string'
+                                        ? uri.replace(/^https?:\/\//, '').slice(0, 30)
+                                        : (uri?.t || href.replace(/^https?:\/\//, '').slice(0, 30));
+                                      const fullUrl = href.startsWith('http') ? href : `https://${href}`;
+                                      if (!href) return null;
+                                      return (
+                                        <a
+                                          key={uriIdx}
+                                          href={fullUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:text-primary/80 transition-colors bg-primary/5 px-2.5 py-1.5 rounded-md"
+                                        >
+                                          <ExternalLink className="w-3 h-3" />
+                                          {label}{typeof label === 'string' && label.length > 30 ? '…' : ''}
+                                        </a>
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               )}
