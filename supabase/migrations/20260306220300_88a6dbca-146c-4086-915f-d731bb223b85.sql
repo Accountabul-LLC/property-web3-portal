@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX idx_agent_memory_user_key ON public.agent_memory(user_id, key);
