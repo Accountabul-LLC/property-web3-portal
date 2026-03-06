@@ -225,7 +225,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet]);
+  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet, selectedPropertyId]);
 
   const handleReset = () => {
     setStep('type');
@@ -237,6 +237,7 @@ const MintWizard: React.FC = () => {
     setNftParams(defaultNFT);
     setMptParams(defaultMPT);
     setIouParams(defaultIOU);
+    setSelectedPropertyId(null);
   };
 
   if (!user) {
