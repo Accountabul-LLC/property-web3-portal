@@ -53,7 +53,15 @@ const DebateTurn = ({ turn, roundNumber }: Props) => {
     );
   }
 
-  const cfg = AI_SPEAKER_CONFIG[turn.speaker];
+  const cfg = AI_SPEAKER_CONFIG[turn.speaker as keyof typeof AI_SPEAKER_CONFIG] ?? {
+    label: turn.speaker,
+    subtitle: '',
+    bg: 'bg-muted/30',
+    border: 'border-border',
+    badge: 'bg-muted text-muted-foreground',
+    avatar: 'bg-muted-foreground text-background',
+    initial: (turn.speaker?.[0] ?? '?').toUpperCase(),
+  };
 
   return (
     <div className={cn('rounded-lg border p-5 space-y-3 group', cfg.bg, cfg.border)}>
