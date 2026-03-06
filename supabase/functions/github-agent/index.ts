@@ -7,7 +7,44 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// GitHub App JWT generation using Web Crypto API (no external deps)
+// PKCS#1 to PKCS#8 wrapper for RSA keys (GitHub App keys are PKCS#1)
+function pkcs1ToPkcs8(pkcs1Bytes: Uint8Array): Uint8Array {
+  // PKCS#8 wraps PKCS#1 in: SEQUENCE { version INTEGER(0), algorithm AlgorithmIdentifier, OCTET STRING { pkcs1 } }
+  const algorithmIdentifier = new Uint8Array([
+    0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
+    0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
+  ]);
+
+  function derLength(len: number): Uint8Array {
+    if (len < 0x80) return new Uint8Array([len]);
+    if (len < 0x100) return new Uint8Array([0x81, len]);
+    return new Uint8Array([0x82, (len >> 8) & 0xff, len & 0xff]);
+  }
+
+  // OCTET STRING wrapping pkcs1
+  const octetLen = derLength(pkcs1Bytes.length);
+  const octetString = new Uint8Array(1 + octetLen.length + pkcs1Bytes.length);
+  octetString[0] = 0x04;
+  octetString.set(octetLen, 1);
+  octetString.set(pkcs1Bytes, 1 + octetLen.length);
+
+  // version INTEGER 0
+  const version = new Uint8Array([0x02, 0x01, 0x00]);
+
+  // inner content
+  const innerLen = version.length + algorithmIdentifier.length + octetString.length;
+  const seqLen = derLength(innerLen);
+  const result = new Uint8Array(1 + seqLen.length + innerLen);
+  result[0] = 0x30;
+  result.set(seqLen, 1);
+  let offset = 1 + seqLen.length;
+  result.set(version, offset); offset += version.length;
+  result.set(algorithmIdentifier, offset); offset += algorithmIdentifier.length;
+  result.set(octetString, offset);
+  return result;
+}
+
+// GitHub App JWT generation using Web Crypto API
 async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
   const header = { alg: "RS256", typ: "JWT" };
@@ -24,7 +61,6 @@ async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<st
   const payloadB64 = b64url(enc.encode(JSON.stringify(payload)));
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Import PEM private key — handle both PKCS#1 and PKCS#8 formats
   const isPkcs1 = privateKeyPem.includes("BEGIN RSA PRIVATE KEY");
   const pemBody = privateKeyPem
     .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/, "")
@@ -32,29 +68,8 @@ async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<st
     .replace(/\s/g, "");
 
   let keyBytes = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
-
-  // GitHub App keys are PKCS#1 — wrap in PKCS#8 envelope for Web Crypto
   if (isPkcs1) {
-    const pkcs8Header = new Uint8Array([
-      0x30, 0x82, 0x00, 0x00, // SEQUENCE (length placeholder)
-      0x02, 0x01, 0x00,       // INTEGER 0 (version)
-      0x30, 0x0d,             // SEQUENCE
-      0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // OID rsaEncryption
-      0x05, 0x00,             // NULL
-      0x04, 0x82, 0x00, 0x00, // OCTET STRING (length placeholder)
-    ]);
-    const totalLen = pkcs8Header.length - 4 + keyBytes.length;
-    const octetLen = keyBytes.length;
-    const wrapped = new Uint8Array(4 + totalLen);
-    wrapped.set(pkcs8Header);
-    wrapped.set(keyBytes, pkcs8Header.length);
-    // Patch SEQUENCE length (bytes 2-3)
-    wrapped[2] = (totalLen >> 8) & 0xff;
-    wrapped[3] = totalLen & 0xff;
-    // Patch OCTET STRING length (bytes at header end - 2)
-    wrapped[pkcs8Header.length - 2] = (octetLen >> 8) & 0xff;
-    wrapped[pkcs8Header.length - 1] = octetLen & 0xff;
-    keyBytes = wrapped;
+    keyBytes = pkcs1ToPkcs8(keyBytes);
   }
 
   const cryptoKey = await crypto.subtle.importKey(
