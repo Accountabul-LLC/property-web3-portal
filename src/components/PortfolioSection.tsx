@@ -1025,6 +1025,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
             walletAddress={displayAddress}
             xrpBalance={xrplData?.xrp_balance}
             tokenHoldings={xrplData?.token_holdings}
+            network={network}
           />
         </>
       )}

@@ -23,6 +23,7 @@ interface SendModalProps {
   walletAddress: string;
   xrpBalance?: number;
   tokenHoldings?: XRPLTokenHolding[];
+  network?: 'mainnet' | 'testnet';
 }
 
 type SelectedAsset =
