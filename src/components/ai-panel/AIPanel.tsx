@@ -1,6 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { RotateCcw, Save } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { RotateCcw, Save, ArrowRight, SkipForward } from 'lucide-react';
 import { toast } from 'sonner';
 import DebateControls from './DebateControls';
 import DebateTurn from './DebateTurn';
@@ -14,12 +15,26 @@ const DEFAULT_PARAMS: DebateParams = {
 
 const AIPanel = () => {
   const [params, setParams] = useState<DebateParams>(DEFAULT_PARAMS);
-  const { turns, running, error, agents, start, stop, saveSession, reset } = useDebateSession();
+  const [userInput, setUserInput] = useState('');
+  const { turns, running, error, currentRound, awaitingUserInput, start, continueRound, stop, saveSession, reset } = useDebateSession();
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const handleStart = () => {
-    start(params);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+  // Auto-scroll as turns appear
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [turns.length, awaitingUserInput]);
+
+  const handleStart = () => start(params);
+
+  const handleContinue = () => {
+    const msg = userInput.trim();
+    setUserInput('');
+    continueRound(msg || undefined);
+  };
+
+  const handleSkip = () => {
+    setUserInput('');
+    continueRound();
   };
 
   const handleSave = async () => {
@@ -27,31 +42,34 @@ const AIPanel = () => {
     toast.success('Conversation saved');
   };
 
-  const getRound = (turnIndex: number) => Math.floor(turnIndex / 2) + 1;
-
-  const getAgentMeta = (speaker: string) => {
-    if (!agents) return undefined;
-    return speaker === agents.a.id ? agents.a : agents.b;
+  // Compute display round from turn index
+  const getRound = (turnIndex: number) => {
+    let round = 1;
+    let aiCount = 0;
+    for (let i = 0; i <= turnIndex; i++) {
+      if (turns[i]?.speaker !== 'user') {
+        aiCount++;
+        round = Math.ceil(aiCount / 2);
+      }
+    }
+    return round;
   };
+
+  const isDone = !running && !awaitingUserInput && turns.length > 0;
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 py-8 px-4">
       <div>
         <h2 className="text-2xl font-bold mb-1">AI Panel</h2>
         <p className="text-muted-foreground text-sm">
-          Two AI agents discuss your question in turns, powered by Lovable AI Gateway.
-          {agents && (
-            <span className="block mt-1">
-              Agents: <strong>{agents.a.label}</strong> vs <strong>{agents.b.label}</strong>
-            </span>
-          )}
+          Claude and ChatGPT discuss your question in turns. You can inject messages between rounds.
         </p>
       </div>
 
       <DebateControls
         params={params}
         onChange={setParams}
-        running={running}
+        running={running || awaitingUserInput}
         onStart={handleStart}
         onStop={stop}
       />
@@ -65,18 +83,49 @@ const AIPanel = () => {
       {turns.length > 0 && (
         <div className="space-y-4">
           {turns.map((turn, i) => (
-            <DebateTurn
-              key={`${turn.speaker}-${turn.turn}`}
-              turn={turn}
-              roundNumber={getRound(i)}
-              agentMeta={getAgentMeta(turn.speaker)}
-            />
+            <DebateTurn key={`${turn.speaker}-${turn.turn}-${i}`} turn={turn} roundNumber={getRound(i)} />
           ))}
+
+          {/* User injection input between rounds */}
+          {awaitingUserInput && (
+            <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                  Round {currentRound} complete — your turn
+                </p>
+                <span className="text-xs text-muted-foreground">
+                  {currentRound} / {params.rounds} rounds done
+                </span>
+              </div>
+              <Textarea
+                value={userInput}
+                onChange={e => setUserInput(e.target.value)}
+                placeholder="Add context, redirect the discussion, or ask a follow-up question…"
+                className="min-h-[80px] resize-none bg-white dark:bg-background"
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleContinue();
+                }}
+                autoFocus
+              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={handleContinue} className="gap-1.5">
+                  <ArrowRight className="w-3.5 h-3.5" />
+                  Send & Continue
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleSkip} className="gap-1.5">
+                  <SkipForward className="w-3.5 h-3.5" />
+                  Skip
+                </Button>
+                <span className="text-xs text-muted-foreground ml-1">⌘↵ to send</span>
+              </div>
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
       )}
 
-      {turns.length > 0 && !running && (
+      {isDone && (
         <div className="flex items-center gap-3 pt-2">
           <Button variant="outline" size="sm" onClick={handleSave} className="gap-2">
             <Save className="w-4 h-4" /> Save Conversation

@@ -1,20 +1,19 @@
 import { useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type DebateSpeaker = 'gemini' | 'gpt';
+export type DebateSpeaker = 'claude' | 'gpt' | 'user';
 export type DebateMode = 'debate' | 'collaborate' | 'compare';
-
-export interface AgentMeta {
-  id: DebateSpeaker;
-  label: string;
-  model: string;
-}
 
 export interface DebateTurnData {
   speaker: DebateSpeaker;
   turn: number;
   text: string;
   streaming: boolean;
+}
+
+export interface HistoryItem {
+  speaker: 'claude' | 'gpt' | 'user';
+  text: string;
 }
 
 export interface DebateParams {
@@ -28,15 +27,16 @@ export function useDebateSession() {
   const [running, setRunning] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [agents, setAgents] = useState<{ a: AgentMeta; b: AgentMeta } | null>(null);
+  const [currentRound, setCurrentRound] = useState(0);
+  const [awaitingUserInput, setAwaitingUserInput] = useState(false);
+
+  const historyRef = useRef<HistoryItem[]>([]);
+  const paramsRef = useRef<DebateParams | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  async function start(params: DebateParams) {
-    setTurns([]);
-    setSessionId(null);
-    setError(null);
-    setAgents(null);
+  async function runRound(params: DebateParams, history: HistoryItem[], round: number) {
     setRunning(true);
+    setAwaitingUserInput(false);
 
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -48,6 +48,9 @@ export function useDebateSession() {
     const controller = new AbortController();
     abortRef.current = controller;
 
+    const turnOffset = (round - 1) * 2;
+    const roundReplies: { claude?: string; gpt?: string } = {};
+
     try {
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-debate`,
@@ -57,7 +60,7 @@ export function useDebateSession() {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(params),
+          body: JSON.stringify({ topic: params.topic, mode: params.mode, history, round, turnOffset }),
           signal: controller.signal,
         }
       );
@@ -85,7 +88,27 @@ export function useDebateSession() {
           if (!line.trim()) continue;
           try {
             const event = JSON.parse(line);
-            handleEvent(event);
+
+            // Capture full texts to build history
+            if (event.type === 'turn_end') {
+              if (event.speaker === 'claude') roundReplies.claude = event.full_text as string;
+              if (event.speaker === 'gpt') roundReplies.gpt = event.full_text as string;
+            }
+
+            if (event.type === 'done') {
+              if (roundReplies.claude) {
+                historyRef.current = [...historyRef.current, { speaker: 'claude', text: roundReplies.claude }];
+              }
+              if (roundReplies.gpt) {
+                historyRef.current = [...historyRef.current, { speaker: 'gpt', text: roundReplies.gpt }];
+              }
+              setSessionId(event.conversation_id as string);
+              if (round < params.rounds) {
+                setAwaitingUserInput(true);
+              }
+            }
+
+            handleEvent(event, turnOffset);
           } catch {
             // skip malformed lines
           }
@@ -100,31 +123,22 @@ export function useDebateSession() {
     }
   }
 
-  function handleEvent(event: Record<string, unknown>) {
-    switch (event.type) {
-      case 'agents':
-        setAgents({
-          a: event.agent_a as AgentMeta,
-          b: event.agent_b as AgentMeta,
-        });
-        break;
+  function handleEvent(event: Record<string, unknown>, turnOffset: number) {
+    const absoluteTurn = (event.turn as number) + turnOffset;
 
+    switch (event.type) {
       case 'turn_start':
         setTurns(prev => [
           ...prev,
-          { speaker: event.speaker as DebateSpeaker, turn: event.turn as number, text: '', streaming: true },
+          { speaker: event.speaker as DebateSpeaker, turn: absoluteTurn, text: '', streaming: true },
         ]);
         break;
 
       case 'chunk':
         setTurns(prev => {
           const next = [...prev];
-          for (let i = next.length - 1; i >= 0; i--) {
-            if (next[i].speaker === event.speaker) {
-              next[i] = { ...next[i], text: next[i].text + (event.text as string) };
-              break;
-            }
-          }
+          const last = next.findLast(t => t.speaker === event.speaker && t.streaming);
+          if (last) last.text += event.text as string;
           return next;
         });
         break;
@@ -132,18 +146,10 @@ export function useDebateSession() {
       case 'turn_end':
         setTurns(prev => {
           const next = [...prev];
-          for (let i = next.length - 1; i >= 0; i--) {
-            if (next[i].speaker === event.speaker) {
-              next[i] = { ...next[i], streaming: false, text: event.full_text as string };
-              break;
-            }
-          }
+          const last = next.findLast(t => t.speaker === event.speaker && t.streaming);
+          if (last) { last.streaming = false; last.text = event.full_text as string; }
           return next;
         });
-        break;
-
-      case 'done':
-        setSessionId(event.conversation_id as string);
         break;
 
       case 'error':
@@ -152,9 +158,40 @@ export function useDebateSession() {
     }
   }
 
+  async function start(params: DebateParams) {
+    setTurns([]);
+    setSessionId(null);
+    setError(null);
+    setCurrentRound(1);
+    setAwaitingUserInput(false);
+    historyRef.current = [];
+    paramsRef.current = params;
+    await runRound(params, [], 1);
+  }
+
+  async function continueRound(userMessage?: string) {
+    const params = paramsRef.current;
+    if (!params) return;
+
+    const nextRound = currentRound + 1;
+    setCurrentRound(nextRound);
+
+    if (userMessage?.trim()) {
+      const msg = userMessage.trim();
+      historyRef.current = [...historyRef.current, { speaker: 'user', text: msg }];
+      setTurns(prev => [
+        ...prev,
+        { speaker: 'user', turn: nextRound, text: msg, streaming: false },
+      ]);
+    }
+
+    await runRound(params, historyRef.current, nextRound);
+  }
+
   function stop() {
     abortRef.current?.abort();
     setRunning(false);
+    setAwaitingUserInput(false);
   }
 
   async function saveSession(params: DebateParams) {
@@ -167,7 +204,7 @@ export function useDebateSession() {
       text: t.text,
     }));
 
-    await (supabase.from('ai_debate_sessions') as any).insert({
+    await supabase.from('ai_debate_sessions' as never).insert({
       user_id: user.id,
       topic: params.topic,
       mode: params.mode,
@@ -181,8 +218,23 @@ export function useDebateSession() {
     setTurns([]);
     setSessionId(null);
     setError(null);
-    setAgents(null);
+    setCurrentRound(0);
+    setAwaitingUserInput(false);
+    historyRef.current = [];
+    paramsRef.current = null;
   }
 
-  return { turns, running, sessionId, error, agents, start, stop, saveSession, reset };
+  return {
+    turns,
+    running,
+    sessionId,
+    error,
+    currentRound,
+    awaitingUserInput,
+    start,
+    continueRound,
+    stop,
+    saveSession,
+    reset,
+  };
 }
