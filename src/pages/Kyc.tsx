@@ -171,14 +171,14 @@ const Kyc = () => {
       if (uploadError) throw uploadError
 
       // Record metadata
-      await supabase.from('kyc_documents').upsert({
+      await (supabase.from('kyc_documents') as any).upsert({
         kyc_case_id: kycCaseId,
         doc_type: docType,
         storage_path: path,
         file_name: file.name,
         mime_type: file.type,
         file_size_bytes: file.size,
-      }, { onConflict: 'kyc_case_id,doc_type' } as any)
+      }, { onConflict: 'kyc_case_id,doc_type' })
 
       setUploadedDocs(prev => ({ ...prev, [docType]: path }))
       toast.success('Document uploaded')
