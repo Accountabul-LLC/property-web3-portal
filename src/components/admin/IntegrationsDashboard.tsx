@@ -1,0 +1,198 @@
+import { useEffect, useState, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useAIAgents, type AIAgent } from '@/hooks/useAIAgents';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import { Loader2, GitBranch, CheckCircle2, Clock } from 'lucide-react';
+import { toast } from 'sonner';
+import { format } from 'date-fns';
+
+interface AgentIntegration {
+  id: string;
+  agent_id: string;
+  integration_type: string;
+  enabled: boolean;
+  connected_at: string;
+  updated_at: string;
+}
+
+interface AuditEntry {
+  id: string;
+  agent_id: string | null;
+  integration_type: string;
+  action: string;
+  actor_id: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
+export default function IntegrationsDashboard() {
+  const { user } = useAuth();
+  const { data: agents, isLoading: agentsLoading } = useAIAgents();
+  const [integrations, setIntegrations] = useState<AgentIntegration[]>([]);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState<string | null>(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const [intRes, auditRes] = await Promise.all([
+      supabase.from('agent_integrations' as any).select('*'),
+      supabase.from('integration_audit_log' as any).select('*').order('created_at', { ascending: false }).limit(50),
+    ]);
+    setIntegrations((intRes.data || []) as unknown as AgentIntegration[]);
+    setAuditLog((auditRes.data || []) as unknown as AuditEntry[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleToggle = useCallback(async (agent: AIAgent, currentEnabled: boolean) => {
+    if (!user) return;
+    const newEnabled = !currentEnabled;
+    setToggling(agent.id);
+
+    try {
+      // Upsert integration
+      const { error: upsertErr } = await supabase.from('agent_integrations' as any).upsert(
+        { agent_id: agent.id, integration_type: 'github', enabled: newEnabled, updated_at: new Date().toISOString() },
+        { onConflict: 'agent_id,integration_type' }
+      );
+      if (upsertErr) throw upsertErr;
+
+      // Insert audit log
+      await supabase.from('integration_audit_log' as any).insert({
+        agent_id: agent.id,
+        integration_type: 'github',
+        action: newEnabled ? 'enabled' : 'disabled',
+        actor_id: user.id,
+        metadata: { agent_name: agent.name },
+      });
+
+      toast.success(`GitHub ${newEnabled ? 'enabled' : 'disabled'} for ${agent.name}`);
+      await fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update');
+    } finally {
+      setToggling(null);
+    }
+  }, [user, fetchData]);
+
+  const getIntegration = (agentId: string) =>
+    integrations.find((i) => i.agent_id === agentId && i.integration_type === 'github');
+
+  const agentNameById = (id: string | null) => {
+    if (!id) return 'System';
+    return agents?.find((a) => a.id === id)?.name || id.slice(0, 8);
+  };
+
+  if (loading || agentsLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-6 h-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto p-4">
+      {/* Connection Status Card */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <GitBranch className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">GitHub Integration</CardTitle>
+              <CardDescription>Jibreelm/property-web3-portal</CardDescription>
+            </div>
+            <Badge className="ml-auto bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            GitHub App is installed and active. Agents with GitHub enabled can browse code, create issues, and propose PRs.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Agent Toggles */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Agent Access</CardTitle>
+          <CardDescription>Toggle GitHub access per agent</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-1">
+          {agents && agents.length > 0 ? agents.map((agent) => {
+            const integration = getIntegration(agent.id);
+            const enabled = integration?.enabled ?? false;
+            const isToggling = toggling === agent.id;
+
+            return (
+              <div key={agent.id} className="flex items-center justify-between py-3 px-2 rounded-lg hover:bg-accent/30 transition-colors">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{agent.name}</p>
+                  <p className="text-xs text-muted-foreground truncate">{agent.type} · {agent.role}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {enabled && (
+                    <Badge variant="outline" className="text-xs">
+                      <GitBranch className="w-3 h-3 mr-1" /> GitHub
+                    </Badge>
+                  )}
+                  {isToggling ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  ) : (
+                    <Switch checked={enabled} onCheckedChange={() => handleToggle(agent, enabled)} />
+                  )}
+                </div>
+              </div>
+            );
+          }) : (
+            <p className="text-sm text-muted-foreground py-4 text-center">No agents found. Add agents first.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Audit Log */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Audit Log</CardTitle>
+          <CardDescription>Recent integration changes</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {auditLog.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">No activity yet.</p>
+          ) : (
+            <ScrollArea className="h-64">
+              <div className="space-y-2">
+                {auditLog.map((entry) => (
+                  <div key={entry.id} className="flex items-start gap-3 py-2 px-2 rounded-md hover:bg-accent/20 text-sm">
+                    <Clock className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-foreground">{agentNameById(entry.agent_id)}</span>
+                      <span className="text-muted-foreground"> — GitHub </span>
+                      <Badge variant={entry.action === 'enabled' || entry.action === 'connected' ? 'default' : 'secondary'} className="text-xs">
+                        {entry.action}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {format(new Date(entry.created_at), 'MMM d, HH:mm')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
