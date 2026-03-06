@@ -11,11 +11,8 @@ const corsHeaders = {
 
 // Normalize PEM: fix literal \n, extra whitespace, missing headers
 function normalizePem(raw: string): string {
-  // Replace literal escaped newlines with real newlines
   let pem = raw.replace(/\\n/g, "\n").trim();
-  // If it's just base64 with no headers, wrap it
   if (!pem.includes("-----BEGIN")) {
-    // Guess PKCS#1 (GitHub default)
     const clean = pem.replace(/\s/g, "");
     const lines = clean.match(/.{1,64}/g) || [];
     pem = `-----BEGIN RSA PRIVATE KEY-----\n${lines.join("\n")}\n-----END RSA PRIVATE KEY-----`;
@@ -23,57 +20,89 @@ function normalizePem(raw: string): string {
   return pem;
 }
 
+function uint8ToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function base64ToUint8(b64: string): Uint8Array {
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function derLength(n: number): Uint8Array {
+  if (n < 0x80) return new Uint8Array([n]);
+  if (n < 0x100) return new Uint8Array([0x81, n]);
+  if (n < 0x10000) return new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
+  return new Uint8Array([0x83, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff]);
+}
+
 // Convert PKCS#1 PEM to PKCS#8 PEM (GitHub App keys are PKCS#1)
 function ensurePkcs8Pem(rawPem: string): string {
   const pem = normalizePem(rawPem);
-  
+
   if (pem.includes("BEGIN PRIVATE KEY")) return pem; // already PKCS#8
 
-  // Strip PKCS#1 headers, decode, wrap in PKCS#8 ASN.1 envelope
+  console.log("Converting PKCS#1 to PKCS#8, PEM starts with:", pem.substring(0, 40));
+
   const b64 = pem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/, "")
     .replace(/-----END RSA PRIVATE KEY-----/, "")
     .replace(/\s/g, "");
 
-  const pkcs1 = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const pkcs1Bytes = base64ToUint8(b64);
+  console.log("PKCS#1 key length:", pkcs1Bytes.length, "first byte:", pkcs1Bytes[0]?.toString(16));
 
+  // RSA AlgorithmIdentifier OID
   const algorithmId = new Uint8Array([
     0x30, 0x0d, 0x06, 0x09, 0x2a, 0x86, 0x48, 0x86,
     0xf7, 0x0d, 0x01, 0x01, 0x01, 0x05, 0x00,
   ]);
 
-  function derLen(n: number): Uint8Array {
-    if (n < 0x80) return new Uint8Array([n]);
-    if (n < 0x100) return new Uint8Array([0x81, n]);
-    return new Uint8Array([0x82, (n >> 8) & 0xff, n & 0xff]);
-  }
+  // OCTET STRING wrapper for PKCS#1 data
+  const octetLenBytes = derLength(pkcs1Bytes.length);
+  const octetString = new Uint8Array(1 + octetLenBytes.length + pkcs1Bytes.length);
+  octetString[0] = 0x04;
+  octetString.set(octetLenBytes, 1);
+  octetString.set(pkcs1Bytes, 1 + octetLenBytes.length);
 
-  // Build OCTET STRING { pkcs1 }
-  const octetLenBytes = derLen(pkcs1.length);
-  const octetStr = new Uint8Array(1 + octetLenBytes.length + pkcs1.length);
-  octetStr[0] = 0x04;
-  octetStr.set(octetLenBytes, 1);
-  octetStr.set(pkcs1, 1 + octetLenBytes.length);
-
+  // Version INTEGER 0
   const version = new Uint8Array([0x02, 0x01, 0x00]);
-  const innerLen = version.length + algorithmId.length + octetStr.length;
-  const seqLenBytes = derLen(innerLen);
 
+  // Outer SEQUENCE
+  const innerLen = version.length + algorithmId.length + octetString.length;
+  const seqLenBytes = derLength(innerLen);
   const pkcs8 = new Uint8Array(1 + seqLenBytes.length + innerLen);
   pkcs8[0] = 0x30;
   pkcs8.set(seqLenBytes, 1);
   let off = 1 + seqLenBytes.length;
   pkcs8.set(version, off); off += version.length;
   pkcs8.set(algorithmId, off); off += algorithmId.length;
-  pkcs8.set(octetStr, off);
+  pkcs8.set(octetString, off);
 
-  // Base64 encode with line wrapping
-  const b64Out = btoa(String.fromCharCode(...pkcs8));
+  const b64Out = uint8ToBase64(pkcs8);
   const lines = b64Out.match(/.{1,64}/g) || [];
-  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+  const result = `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
+  console.log("PKCS#8 conversion done, output length:", result.length);
+  return result;
 }
 
 async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
+  // Debug: log raw key info
+  console.log("RAW KEY length:", privateKeyPem.length);
+  console.log("RAW KEY first 60 chars:", JSON.stringify(privateKeyPem.substring(0, 60)));
+  console.log("RAW KEY last 60 chars:", JSON.stringify(privateKeyPem.substring(privateKeyPem.length - 60)));
+  console.log("Contains BEGIN RSA:", privateKeyPem.includes("BEGIN RSA PRIVATE KEY"));
+  console.log("Contains BEGIN PRIVATE:", privateKeyPem.includes("BEGIN PRIVATE KEY"));
+  console.log("Contains literal backslash-n:", privateKeyPem.includes("\\n"));
+
   const pkcs8Pem = ensurePkcs8Pem(privateKeyPem);
   const privateKey = await importPKCS8(pkcs8Pem, "RS256");
 
