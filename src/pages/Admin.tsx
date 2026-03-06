@@ -17,7 +17,7 @@ const ADMIN_LINKS = [
   {
     title: 'AI Panel',
     description: 'Access the multi-model AI debate panel for research and analysis.',
-    href: '/ai-agents',
+    href: '/admin/ai-panel',
     icon: Brain,
   },
   {

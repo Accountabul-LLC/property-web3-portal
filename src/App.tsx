@@ -19,6 +19,7 @@ import Kyc from "./pages/Kyc";
 import KycStatus from "./pages/KycStatus";
 import AdminKyc from "./pages/AdminKyc";
 import Admin from "./pages/Admin";
+import AdminAIPanel from "./pages/AdminAIPanel";
 import KycGate from "./components/KycGate";
 import NotFound from "./pages/NotFound";
 
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/kyc/status" element={<KycStatus />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/admin/kyc" element={<AdminKyc />} />
+              <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
