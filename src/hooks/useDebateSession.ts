@@ -144,7 +144,7 @@ export function useDebateSession() {
       text: t.text,
     }));
 
-    await supabase.from('ai_debate_sessions' as never).insert({
+    await (supabase.from('ai_debate_sessions') as any).insert({
       user_id: user.id,
       topic: params.topic,
       mode: params.mode,

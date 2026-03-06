@@ -62,6 +62,181 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_debate_sessions: {
+        Row: {
+          context: string | null
+          created_at: string
+          id: string
+          mode: string
+          rounds: number
+          topic: string
+          transcript: Json
+          user_id: string
+        }
+        Insert: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          mode?: string
+          rounds?: number
+          topic: string
+          transcript?: Json
+          user_id: string
+        }
+        Update: {
+          context?: string | null
+          created_at?: string
+          id?: string
+          mode?: string
+          rounds?: number
+          topic?: string
+          transcript?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kyc_cases: {
+        Row: {
+          created_at: string
+          id: string
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewer_id: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      kyc_documents: {
+        Row: {
+          created_at: string
+          doc_type: string
+          file_name: string | null
+          file_size_bytes: number | null
+          id: string
+          kyc_case_id: string
+          mime_type: string | null
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          kyc_case_id: string
+          mime_type?: string | null
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: string
+          file_name?: string | null
+          file_size_bytes?: number | null
+          id?: string
+          kyc_case_id?: string
+          mime_type?: string | null
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_documents_kyc_case_id_fkey"
+            columns: ["kyc_case_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      kyc_form_data: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          city: string | null
+          country: string | null
+          country_of_residence: string | null
+          created_at: string
+          date_of_birth: string | null
+          id: string
+          kyc_case_id: string
+          legal_first_name: string | null
+          legal_last_name: string | null
+          nationality: string | null
+          postal_code: string | null
+          source_of_funds: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          country_of_residence?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          id?: string
+          kyc_case_id: string
+          legal_first_name?: string | null
+          legal_last_name?: string | null
+          nationality?: string | null
+          postal_code?: string | null
+          source_of_funds?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          city?: string | null
+          country?: string | null
+          country_of_residence?: string | null
+          created_at?: string
+          date_of_birth?: string | null
+          id?: string
+          kyc_case_id?: string
+          legal_first_name?: string | null
+          legal_last_name?: string | null
+          nationality?: string | null
+          postal_code?: string | null
+          source_of_funds?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kyc_form_data_kyc_case_id_fkey"
+            columns: ["kyc_case_id"]
+            isOneToOne: true
+            referencedRelation: "kyc_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           email: string
@@ -894,7 +1069,7 @@ export type Database = {
       owns_wallet: { Args: { _wallet_address: string }; Returns: boolean }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "compliance_officer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1022,7 +1197,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "compliance_officer"],
     },
   },
 } as const
