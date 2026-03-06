@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-const OWNER = 'Jibreelm';
+const OWNER = 'JibreelMuhammad';
 const REPO = 'property-web3-portal';
 
 export interface TreeFile {

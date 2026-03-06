@@ -170,15 +170,44 @@ serve(async (req) => {
     let result: unknown;
 
     switch (action) {
-      case "get_tree": {
-        // Get repo file tree
-        const branch = params.branch || "main";
-        const tree = await githubAPI(ghToken, `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+      case "list_repos": {
+        // List repos accessible to this installation
+        const repos = await githubAPI(ghToken, `/installation/repositories?per_page=100`);
         result = {
-          sha: tree.sha,
-          files: tree.tree
-            .filter((t: any) => t.type === "blob")
-            .map((t: any) => ({ path: t.path, size: t.size, sha: t.sha })),
+          total_count: repos.total_count,
+          repositories: repos.repositories?.map((r: any) => ({
+            full_name: r.full_name,
+            default_branch: r.default_branch,
+            private: r.private,
+          })) || [],
+        };
+        break;
+      }
+
+      case "get_tree": {
+        // Get repo file tree using Contents API (more permissive than Git Trees API)
+        const branch = params.branch || "main";
+        console.log(`Fetching tree for ${owner}/${repo} branch=${branch}`);
+        
+        // Recursively fetch directory contents
+        async function listContents(path: string): Promise<Array<{ path: string; size: number }>> {
+          const items = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${path}${branch ? `?ref=${branch}` : ''}`);
+          const files: Array<{ path: string; size: number }> = [];
+          for (const item of Array.isArray(items) ? items : [items]) {
+            if (item.type === 'file') {
+              files.push({ path: item.path, size: item.size });
+            } else if (item.type === 'dir' && !item.path.startsWith('node_modules') && !item.path.startsWith('.')) {
+              const subFiles = await listContents(item.path);
+              files.push(...subFiles);
+            }
+          }
+          return files;
+        }
+        
+        const files = await listContents('');
+        result = {
+          sha: 'contents-api',
+          files: files.map(f => ({ path: f.path, size: f.size, sha: '' })),
         };
         break;
       }
