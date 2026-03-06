@@ -5,15 +5,41 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const TESTNET_RPC = 'https://s.altnet.rippletest.net:51234';
+const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
-async function xrplRequest(method: string, params: Record<string, unknown>[]) {
-  const res = await fetch(TESTNET_RPC, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
-  return res.json();
+async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
+  let lastError: Error | null = null;
+  for (const node of nodes) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        const res = await fetch(node, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, params }),
+        });
+        if (res.status === 429 || res.status === 503) {
+          lastError = new Error(`${node} returned ${res.status}`);
+          console.warn(`${node} returned ${res.status}, attempt ${attempt + 1}`);
+          if (attempt < MAX_RETRIES) continue;
+          break;
+        }
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          lastError = new Error(`Non-JSON from ${node}: ${text.slice(0, 120)}`);
+          break;
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        break;
+      }
+    }
+  }
+  throw lastError || new Error('All XRPL nodes failed');
 }
 
 Deno.serve(async (req) => {
@@ -31,6 +57,8 @@ Deno.serve(async (req) => {
     if (!tx_json || !wallet_address) {
       throw new Error('Missing tx_json or wallet_address');
     }
+
+    const nodes = TESTNET_NODES;
 
     // Look up the wallet secret using service role
     const supabaseAdmin = createClient(
@@ -55,15 +83,13 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    // Import xrpl.js dynamically via npm: specifier (Deno native)
     const { Wallet } = await import('npm:xrpl@4.1.0');
     
-    // Derive wallet from seed
     const wallet = Wallet.fromSeed(secret);
     console.log('Derived wallet address:', wallet.address);
 
-    // Get account info for sequence
-    const accountInfo = await xrplRequest('account_info', [{ account: wallet_address, ledger_index: 'current' }]);
+    // Get account info for sequence with failover
+    const accountInfo = await xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'current' }]);
 
     if (accountInfo.result?.error) {
       throw new Error(`Account error: ${accountInfo.result.error_message || accountInfo.result.error}`);
@@ -74,7 +100,6 @@ Deno.serve(async (req) => {
       throw new Error('Could not determine account sequence');
     }
 
-    // Complete the transaction with sequence and signing pub key
     const completeTx = {
       ...tx_json,
       Sequence: tx_json.Sequence ?? sequence,
@@ -82,12 +107,11 @@ Deno.serve(async (req) => {
 
     console.log('Signing tx:', JSON.stringify(completeTx));
 
-    // Sign locally
     const signed = wallet.sign(completeTx);
     console.log('Signed, hash:', signed.hash, 'blob length:', signed.tx_blob.length);
 
-    // Submit
-    const submitData = await xrplRequest('submit', [{ tx_blob: signed.tx_blob }]);
+    // Submit with failover
+    const submitData = await xrplRequest(nodes, 'submit', [{ tx_blob: signed.tx_blob }]);
     console.log('Submit response:', JSON.stringify(submitData));
 
     const engineResult = submitData.result?.engine_result;

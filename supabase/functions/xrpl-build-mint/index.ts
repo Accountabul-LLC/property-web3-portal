@@ -5,19 +5,42 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-function getXRPLNode(network: string): string {
-  return network === 'testnet'
-    ? 'https://s.altnet.rippletest.net:51234'
-    : 'https://xrplcluster.com';
-}
+const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
+const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 1000;
 
-async function xrplRequest(node: string, method: string, params: Record<string, unknown>[]) {
-  const res = await fetch(node, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ method, params }),
-  });
-  return res.json();
+async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
+  let lastError: Error | null = null;
+  for (const node of nodes) {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        const res = await fetch(node, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, params }),
+        });
+        if (res.status === 429 || res.status === 503) {
+          lastError = new Error(`${node} returned ${res.status}`);
+          console.warn(`${node} returned ${res.status}, attempt ${attempt + 1}`);
+          if (attempt < MAX_RETRIES) continue;
+          break;
+        }
+        const text = await res.text();
+        try {
+          return JSON.parse(text);
+        } catch {
+          lastError = new Error(`Non-JSON from ${node}: ${text.slice(0, 120)}`);
+          break;
+        }
+      } catch (e) {
+        lastError = e instanceof Error ? e : new Error(String(e));
+        break;
+      }
+    }
+  }
+  throw lastError || new Error('All XRPL nodes failed');
 }
 
 function isValidXRPLAddress(addr: string): boolean {
@@ -39,7 +62,6 @@ Deno.serve(async (req) => {
   try {
     const { token_type, network, wallet_address, params } = await req.json();
 
-    // Validate basics
     if (!token_type || !['nft', 'mpt', 'iou'].includes(token_type)) {
       return new Response(JSON.stringify({ error: 'Invalid token_type. Must be nft, mpt, or iou.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -55,6 +77,8 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     // Auth + wallet ownership verification
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -95,11 +119,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get XRPL node and fetch account info
-    const node = getXRPLNode(network);
+    // Fetch account info with failover node pool
     const [accountInfoRes, serverInfoRes] = await Promise.all([
-      xrplRequest(node, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
-      xrplRequest(node, 'server_info', [{}]),
+      xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]),
+      xrplRequest(nodes, 'server_info', [{}]),
     ]);
 
     if (accountInfoRes.result?.error === 'actNotFound') {
@@ -122,7 +145,6 @@ Deno.serve(async (req) => {
     let txJson: Record<string, unknown>;
 
     if (token_type === 'nft') {
-      // NFTokenMint
       const { uri, flags } = params || {};
       if (!uri || typeof uri !== 'string') {
         return new Response(JSON.stringify({ error: 'URI is required for NFT minting.' }), {
@@ -130,11 +152,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Build NFT flags
       let nftFlags = 0;
-      if (flags?.transferable) nftFlags |= 0x00000008; // tfTransferable
-      if (flags?.burnable) nftFlags |= 0x00000001;     // tfBurnable
-      if (flags?.onlyXRP) nftFlags |= 0x00000002;      // tfOnlyXRP
+      if (flags?.transferable) nftFlags |= 0x00000008;
+      if (flags?.burnable) nftFlags |= 0x00000001;
+      if (flags?.onlyXRP) nftFlags |= 0x00000002;
 
       txJson = {
         TransactionType: 'NFTokenMint',
@@ -150,12 +171,12 @@ Deno.serve(async (req) => {
       const { name, description, max_amount, asset_scale, transfer_fee, flags } = params || {};
 
       let mptFlags = 0;
-      if (flags?.can_lock)      mptFlags |= 0x00000002;  // tfMPTCanLock
-      if (flags?.require_auth)  mptFlags |= 0x00000004;  // tfMPTRequireAuth
-      if (flags?.can_escrow)    mptFlags |= 0x00000008;  // tfMPTCanEscrow
-      if (flags?.can_trade)     mptFlags |= 0x00000010;  // tfMPTCanTrade
-      if (flags?.can_transfer)  mptFlags |= 0x00000020;  // tfMPTCanTransfer
-      if (flags?.can_clawback)  mptFlags |= 0x00000040;  // tfMPTCanClawback
+      if (flags?.can_lock)      mptFlags |= 0x00000002;
+      if (flags?.require_auth)  mptFlags |= 0x00000004;
+      if (flags?.can_escrow)    mptFlags |= 0x00000008;
+      if (flags?.can_trade)     mptFlags |= 0x00000010;
+      if (flags?.can_transfer)  mptFlags |= 0x00000020;
+      if (flags?.can_clawback)  mptFlags |= 0x00000040;
 
       txJson = {
         TransactionType: 'MPTokenIssuanceCreate',
@@ -175,27 +196,23 @@ Deno.serve(async (req) => {
       if (name || description) {
         const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = params || {};
 
-        // Property type short code map for asset_subclass
         const ptMap: Record<string, string> = {
           'Single Family': 'real_estate', 'Multi-Family': 'real_estate', 'Condo / Apartment': 'real_estate',
           'Townhouse': 'real_estate', 'Commercial': 'real_estate', 'Industrial': 'real_estate',
           'Land / Lot': 'real_estate', 'Mixed-Use': 'real_estate', 'Other': 'other',
         };
 
-        // Auto-generate ticker from name if not provided
         const autoTicker = ticker || (name ? name.replace(/[^A-Za-z]/g, '').substring(0, 5).toUpperCase() : undefined);
 
-        // XLS-89 required keys: t, n, i, ac, in
         const metaObj: Record<string, unknown> = {};
-        if (autoTicker) metaObj.t = autoTicker;       // ticker (required)
-        if (name) metaObj.n = name;                     // name (required)
-        if (description) metaObj.d = description;       // desc (optional)
-        if (image_url) metaObj.i = image_url;           // icon (required)
-        metaObj.ac = 'rwa';                             // asset_class (required)
-        metaObj.as = ptMap[property_type] || 'real_estate'; // asset_subclass
-        if (owner_name) metaObj.in = owner_name;        // issuer_name (required)
+        if (autoTicker) metaObj.t = autoTicker;
+        if (name) metaObj.n = name;
+        if (description) metaObj.d = description;
+        if (image_url) metaObj.i = image_url;
+        metaObj.ac = 'rwa';
+        metaObj.as = ptMap[property_type] || 'real_estate';
+        if (owner_name) metaObj.in = owner_name;
 
-        // URIs array (XLS-89 `us` field)
         if (uris && Array.isArray(uris) && uris.length > 0) {
           const validUris = uris.filter((u: any) => u.u && u.c && u.t);
           if (validUris.length > 0) {
@@ -203,7 +220,6 @@ Deno.serve(async (req) => {
           }
         }
 
-        // additional_info — freeform property details
         const ai: Record<string, unknown> = {};
         if (property_address) ai.address = property_address;
         if (city) ai.city = city;
@@ -225,25 +241,21 @@ Deno.serve(async (req) => {
         let metaBytes = new TextEncoder().encode(metaJson).length;
         if (metaBytes > 1024) {
           console.warn(`Metadata ${metaBytes} bytes, trimming to fit 1024 limit`);
-          // Truncate description first
           if (metaObj.d) {
             metaObj.d = (metaObj.d as string).substring(0, 60) + '…';
             metaJson = JSON.stringify(metaObj);
             metaBytes = new TextEncoder().encode(metaJson).length;
           }
-          // Remove URIs if still too big
           if (metaBytes > 1024) {
             delete metaObj.us;
             metaJson = JSON.stringify(metaObj);
             metaBytes = new TextEncoder().encode(metaJson).length;
           }
-          // Remove image if still too big
           if (metaBytes > 1024) {
             delete metaObj.i;
             metaJson = JSON.stringify(metaObj);
             metaBytes = new TextEncoder().encode(metaJson).length;
           }
-          // Trim ai fields progressively
           if (metaBytes > 1024 && metaObj.ai) {
             const aiObj = metaObj.ai as Record<string, unknown>;
             for (const key of ['contact', 'country', 'zip', 'address', 'city', 'state']) {
@@ -259,16 +271,15 @@ Deno.serve(async (req) => {
         txJson.MPTokenMetadata = toHex(metaJson);
       }
 
-      // TransferFee only valid when can_transfer is set
       if (flags?.can_transfer && transfer_fee && Number(transfer_fee) > 0) {
         txJson.TransferFee = Number(transfer_fee);
       }
 
     } else {
-      // IOU — TrustSet (step 1) or Payment (step 2)
+      // IOU — TrustSet or Payment
       const { currency_code, amount, destination, step } = params || {};
 
-      if (!currency_code || typeof currency_code !== 'string' || currency_code.length < 3 || currency_code.length > 3) {
+      if (!currency_code || typeof currency_code !== 'string' || currency_code.length !== 3) {
         return new Response(JSON.stringify({ error: 'Currency code must be exactly 3 characters.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -280,7 +291,6 @@ Deno.serve(async (req) => {
       }
 
       if (step === 'trustset') {
-        // Destination sets trust line TO the issuer (wallet_address)
         if (!destination || !isValidXRPLAddress(destination)) {
           return new Response(JSON.stringify({ error: 'Valid destination address required for TrustSet.' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -297,7 +307,6 @@ Deno.serve(async (req) => {
           Fee: feeDrops,
         };
       } else {
-        // Payment — issuer sends currency to destination
         if (!destination || !isValidXRPLAddress(destination)) {
           return new Response(JSON.stringify({ error: 'Valid destination address required.' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -317,7 +326,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Add common fields
     if (lastLedgerSequence > 0) {
       txJson.LastLedgerSequence = lastLedgerSequence;
     }

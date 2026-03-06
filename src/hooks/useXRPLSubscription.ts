@@ -1,32 +1,35 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-const WS_URL = 'wss://xrplcluster.com';
+const MAINNET_WS = ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com'];
+const TESTNET_WS = ['wss://s.altnet.rippletest.net:51233'];
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 
-export function useXRPLSubscription(walletAddress: string | null) {
+export function useXRPLSubscription(walletAddress: string | null, network: 'mainnet' | 'testnet' = 'mainnet') {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const addressRef = useRef(walletAddress);
+  const endpointIndex = useRef(0);
   addressRef.current = walletAddress;
 
   useEffect(() => {
     if (!walletAddress) return;
 
     let disposed = false;
+    const endpoints = network === 'testnet' ? TESTNET_WS : MAINNET_WS;
 
     const connect = () => {
       if (disposed) return;
 
-      const ws = new WebSocket(WS_URL);
+      const wsUrl = endpoints[endpointIndex.current % endpoints.length];
+      const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
       ws.onopen = () => {
         reconnectAttempt.current = 0;
-        // Subscribe to account transactions
         ws.send(JSON.stringify({
           command: 'subscribe',
           accounts: [addressRef.current],
@@ -36,7 +39,6 @@ export function useXRPLSubscription(walletAddress: string | null) {
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
-          // A validated transaction affecting our account
           if (msg.type === 'transaction' && msg.validated === true) {
             queryClient.invalidateQueries({
               queryKey: ['xrpl_portfolio', addressRef.current],
@@ -50,6 +52,8 @@ export function useXRPLSubscription(walletAddress: string | null) {
       ws.onclose = () => {
         wsRef.current = null;
         if (disposed) return;
+        // Cycle to next endpoint on failure
+        endpointIndex.current++;
         const delay = Math.min(
           RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt.current),
           RECONNECT_MAX_MS
@@ -79,5 +83,5 @@ export function useXRPLSubscription(walletAddress: string | null) {
         wsRef.current = null;
       }
     };
-  }, [walletAddress, queryClient]);
+  }, [walletAddress, network, queryClient]);
 }
