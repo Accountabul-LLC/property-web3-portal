@@ -5,7 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const RWA_CONTEXT = `You are an AI assistant for an internal RWA (real-world asset) tokenization platform built on the XRP Ledger (XRPL). The platform allows users to tokenize real estate as MPT (Multi-Purpose Tokens), NFTs, and IOU tokens representing fractional property ownership. Users authenticate via Supabase Auth (email/Google) and connect XRPL wallets via Xaman. Be direct, substantive, and intellectually honest.`
+// Fallback context used only if CODEBASE_CONTEXT secret is not set
+const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-world asset) tokenization platform built on the XRP Ledger (XRPL). The platform tokenizes real estate as MPT, NFT, and IOU tokens. Users authenticate via Supabase Auth and connect XRPL wallets via Xaman.`
 
 type Speaker = 'claude' | 'gpt'
 type Mode = 'debate' | 'collaborate' | 'compare'
@@ -27,9 +28,9 @@ function modeInstruction(mode: Mode, other: string): string {
   }
 }
 
-function buildSystem(speaker: Speaker, mode: Mode): string {
+function buildSystem(speaker: Speaker, mode: Mode, codebaseContext: string): string {
   const other = speaker === 'claude' ? 'ChatGPT (GPT-4o)' : 'Claude (claude-sonnet-4-6)'
-  return `${RWA_CONTEXT}\n\n${modeInstruction(mode, other)}`
+  return `${codebaseContext}\n\nBe direct, substantive, and intellectually honest.\n\n${modeInstruction(mode, other)}`
 }
 
 Deno.serve(async (req) => {
@@ -68,6 +69,9 @@ Deno.serve(async (req) => {
     return new Response('Forbidden', { status: 403, headers: corsHeaders })
   }
 
+  // --- Load codebase context from secret ---
+  const codebaseContext = Deno.env.get('CODEBASE_CONTEXT') ?? FALLBACK_CONTEXT
+
   // --- Parse body ---
   const { topic, mode, rounds }: RequestBody = await req.json()
   if (!topic?.trim()) {
@@ -105,7 +109,7 @@ Deno.serve(async (req) => {
             model: 'claude-sonnet-4-6',
             max_tokens: 1024,
             stream: true,
-            system: buildSystem('claude', mode),
+            system: buildSystem('claude', mode, codebaseContext),
             messages: claudeHistory,
           }),
         })
@@ -151,7 +155,7 @@ Deno.serve(async (req) => {
         write({ type: 'turn_start', speaker: 'gpt', turn })
 
         const messages = [
-          { role: 'system', content: buildSystem('gpt', mode) },
+          { role: 'system', content: buildSystem('gpt', mode, codebaseContext) },
           ...gptHistory,
         ]
 
@@ -207,21 +211,17 @@ Deno.serve(async (req) => {
 
       try {
         for (let round = 1; round <= safeRounds; round++) {
-          // Claude's turn
           const claudeReply = await streamClaude(round)
           if (!claudeReply) break
 
-          // Feed Claude's reply into both histories
           claudeHistory.push({ role: 'assistant', content: claudeReply })
           if (mode !== 'compare') {
             gptHistory.push({ role: 'user', content: claudeReply })
           }
 
-          // GPT's turn
           const gptReply = await streamGPT(round)
           if (!gptReply) break
 
-          // Feed GPT's reply into both histories
           gptHistory.push({ role: 'assistant', content: gptReply })
           if (mode !== 'compare') {
             claudeHistory.push({ role: 'user', content: gptReply })
