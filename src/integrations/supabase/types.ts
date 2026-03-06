@@ -543,6 +543,7 @@ export type Database = {
           created_at: string
           id: string
           network: string
+          property_id: string | null
           request_json: Json | null
           status: string
           token_type: string
@@ -557,6 +558,7 @@ export type Database = {
           created_at?: string
           id?: string
           network?: string
+          property_id?: string | null
           request_json?: Json | null
           status?: string
           token_type: string
@@ -571,6 +573,7 @@ export type Database = {
           created_at?: string
           id?: string
           network?: string
+          property_id?: string | null
           request_json?: Json | null
           status?: string
           token_type?: string
@@ -581,7 +584,15 @@ export type Database = {
           wallet_address?: string
           xaman_payload_uuid?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "token_mints_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       token_orders: {
         Row: {
