@@ -1,12 +1,15 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamAccess } from '@/hooks/useTeamAccess';
 import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import AIPanel from '@/components/ai-panel/AIPanel';
 import SessionSidebar, { type SavedSession } from '@/components/ai-panel/SessionSidebar';
-import { Loader2 } from 'lucide-react';
+import AIPanel from '@/components/ai-panel/AIPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Loader2, Bot, Code2, Settings2 } from 'lucide-react';
+
+const CodeBrowser = lazy(() => import('@/components/admin/CodeBrowser'));
+const IntegrationsDashboard = lazy(() => import('@/components/admin/IntegrationsDashboard'));
 
 const AdminAIPanel = () => {
   const navigate = useNavigate();
@@ -21,13 +24,8 @@ const AdminAIPanel = () => {
     if (!hasAccess) { navigate('/dashboard'); return; }
   }, [user, authLoading, hasAccess, accessLoading, navigate]);
 
-  const handleNew = useCallback(() => {
-    setSelectedSession(null);
-  }, []);
-
-  const handleSaved = useCallback(() => {
-    setRefreshKey(k => k + 1);
-  }, []);
+  const handleNew = useCallback(() => setSelectedSession(null), []);
+  const handleSaved = useCallback(() => setRefreshKey((k) => k + 1), []);
 
   if (authLoading || accessLoading) {
     return (
@@ -42,25 +40,47 @@ const AdminAIPanel = () => {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navigation />
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-72 flex-shrink-0 hidden md:block">
-          <SessionSidebar
-            activeSessionId={selectedSession?.id ?? null}
-            onSelect={setSelectedSession}
-            onNew={handleNew}
-            refreshKey={refreshKey}
-          />
+      <Tabs defaultValue="ai-panel" className="flex-1 flex flex-col overflow-hidden">
+        <div className="border-b px-4">
+          <TabsList className="bg-transparent h-12">
+            <TabsTrigger value="ai-panel" className="gap-2 data-[state=active]:bg-primary/10">
+              <Bot className="w-4 h-4" /> AI Panel
+            </TabsTrigger>
+            <TabsTrigger value="code-browser" className="gap-2 data-[state=active]:bg-primary/10">
+              <Code2 className="w-4 h-4" /> Code Browser
+            </TabsTrigger>
+            <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-primary/10">
+              <Settings2 className="w-4 h-4" /> Integrations
+            </TabsTrigger>
+          </TabsList>
         </div>
 
-        {/* Main panel */}
-        <div className="flex-1 overflow-y-auto">
-          <AIPanel
-            loadedSession={selectedSession}
-            onSaved={handleSaved}
-          />
-        </div>
-      </div>
+        <TabsContent value="ai-panel" className="flex-1 flex overflow-hidden mt-0">
+          <div className="w-72 flex-shrink-0 hidden md:block">
+            <SessionSidebar
+              activeSessionId={selectedSession?.id ?? null}
+              onSelect={setSelectedSession}
+              onNew={handleNew}
+              refreshKey={refreshKey}
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <AIPanel loadedSession={selectedSession} onSaved={handleSaved} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="code-browser" className="flex-1 overflow-hidden mt-0 p-4">
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+            <CodeBrowser />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="integrations" className="flex-1 overflow-y-auto mt-0">
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+            <IntegrationsDashboard />
+          </Suspense>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

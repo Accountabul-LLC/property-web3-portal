@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_integrations: {
+        Row: {
+          agent_id: string
+          config: Json | null
+          connected_at: string | null
+          enabled: boolean
+          id: string
+          integration_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          agent_id: string
+          config?: Json | null
+          connected_at?: string | null
+          enabled?: boolean
+          id?: string
+          integration_type?: string
+          updated_at?: string | null
+        }
+        Update: {
+          agent_id?: string
+          config?: Json | null
+          connected_at?: string | null
+          enabled?: boolean
+          id?: string
+          integration_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       agent_memory: {
         Row: {
           category: string
@@ -125,6 +155,36 @@ export type Database = {
           topic?: string
           transcript?: Json
           user_id?: string
+        }
+        Relationships: []
+      }
+      integration_audit_log: {
+        Row: {
+          action: string
+          actor_id: string
+          agent_id: string | null
+          created_at: string | null
+          id: string
+          integration_type: string
+          metadata: Json | null
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          agent_id?: string | null
+          created_at?: string | null
+          id?: string
+          integration_type: string
+          metadata?: Json | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          agent_id?: string | null
+          created_at?: string | null
+          id?: string
+          integration_type?: string
+          metadata?: Json | null
         }
         Relationships: []
       }
