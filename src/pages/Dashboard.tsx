@@ -13,7 +13,8 @@ import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera } from 'lucide-react';
+import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 // Phone formatting helper
@@ -40,6 +41,7 @@ const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet } = useActiveWallet();
+  const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -228,6 +230,21 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
+      {/* KYC status banner */}
+      {(kycStatus === 'submitted' || kycStatus === 'under_review') ? (
+        <div className="bg-blue-50 dark:bg-blue-950/30 border-b border-blue-200 dark:border-blue-800 px-4 py-2.5 flex items-center justify-center gap-3 text-sm text-blue-800 dark:text-blue-200">
+          <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+          <span>Your identity verification is under review. We'll notify you when it's complete.</span>
+        </div>
+      ) : !kycApproved ? (
+        <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-center gap-3 text-sm text-amber-800 dark:text-amber-200">
+          <ShieldAlert className="w-4 h-4 flex-shrink-0" />
+          <span>Complete identity verification to unlock minting and trading.</span>
+          <button onClick={() => navigate('/kyc')} className="font-medium underline underline-offset-2 hover:no-underline">
+            Start KYC →
+          </button>
+        </div>
+      ) : null}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
