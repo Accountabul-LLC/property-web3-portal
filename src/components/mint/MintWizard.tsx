@@ -130,7 +130,15 @@ const MintWizard: React.FC = () => {
           tx_json: txJson,
           status: 'validated',
           tx_hash: submitData.tx_hash,
+          property_id: selectedPropertyId,
         });
+
+        // Activate linked property
+        if (selectedPropertyId) {
+          await supabase.from('properties' as any)
+            .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+            .eq('id', selectedPropertyId);
+        }
 
         setMintStatus('validated');
         setTxHash(submitData.tx_hash || null);
