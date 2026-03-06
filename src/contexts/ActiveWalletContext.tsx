@@ -260,6 +260,17 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);
   }, [addWallet]);
 
+  // 30-minute inactivity timeout: clears auth session + wallet context
+  const handleInactivityTimeout = useCallback(() => {
+    setWallets([]);
+    setActiveAddressState(null);
+    saveActiveAddress(null);
+    prevActiveRef.current = null;
+    toast.info('Session expired due to inactivity. Please sign in again.');
+  }, []);
+
+  useInactivityTimeout(handleInactivityTimeout);
+
   return (
     <ActiveWalletContext.Provider value={{
       wallets,
