@@ -18,6 +18,7 @@ import Mint from "./pages/Mint";
 import Kyc from "./pages/Kyc";
 import KycStatus from "./pages/KycStatus";
 import AdminKyc from "./pages/AdminKyc";
+import Admin from "./pages/Admin";
 import KycGate from "./components/KycGate";
 import NotFound from "./pages/NotFound";
 
