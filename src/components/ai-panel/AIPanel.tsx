@@ -5,7 +5,9 @@ import { RotateCcw, Save, ArrowRight, SkipForward } from 'lucide-react';
 import { toast } from 'sonner';
 import DebateControls from './DebateControls';
 import DebateTurn from './DebateTurn';
-import { useDebateSession, type DebateParams } from '@/hooks/useDebateSession';
+import ActionableConclusions from './ActionableConclusions';
+import { useDebateSession, type DebateParams, type DebateTurnData } from '@/hooks/useDebateSession';
+import type { SavedSession } from './SessionSidebar';
 
 const DEFAULT_PARAMS: DebateParams = {
   topic: '',
@@ -13,18 +15,40 @@ const DEFAULT_PARAMS: DebateParams = {
   rounds: 3,
 };
 
-const AIPanel = () => {
+interface Props {
+  loadedSession?: SavedSession | null;
+  onSaved?: () => void;
+}
+
+const AIPanel = ({ loadedSession, onSaved }: Props) => {
   const [params, setParams] = useState<DebateParams>(DEFAULT_PARAMS);
   const [userInput, setUserInput] = useState('');
-  const { turns, running, error, currentRound, awaitingUserInput, start, continueRound, stop, saveSession, reset } = useDebateSession();
+  const { turns, running, error, currentRound, awaitingUserInput, start, continueRound, stop, saveSession, reset, loadTranscript } = useDebateSession();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [viewingHistory, setViewingHistory] = useState(false);
+
+  // Load a saved session when selected from sidebar
+  useEffect(() => {
+    if (loadedSession) {
+      setParams({ topic: loadedSession.topic, mode: loadedSession.mode as any, rounds: loadedSession.rounds });
+      loadTranscript(loadedSession.transcript as any[]);
+      setViewingHistory(true);
+    } else {
+      reset();
+      setParams(DEFAULT_PARAMS);
+      setViewingHistory(false);
+    }
+  }, [loadedSession?.id]);
 
   // Auto-scroll as turns appear
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns.length, awaitingUserInput]);
 
-  const handleStart = () => start(params);
+  const handleStart = () => {
+    setViewingHistory(false);
+    start(params);
+  };
 
   const handleContinue = () => {
     const msg = userInput.trim();
@@ -40,9 +64,9 @@ const AIPanel = () => {
   const handleSave = async () => {
     await saveSession(params);
     toast.success('Conversation saved');
+    onSaved?.();
   };
 
-  // Compute display round from turn index
   const getRound = (turnIndex: number) => {
     let round = 1;
     let aiCount = 0;
@@ -66,13 +90,15 @@ const AIPanel = () => {
         </p>
       </div>
 
-      <DebateControls
-        params={params}
-        onChange={setParams}
-        running={running || awaitingUserInput}
-        onStart={handleStart}
-        onStop={stop}
-      />
+      {!viewingHistory && (
+        <DebateControls
+          params={params}
+          onChange={setParams}
+          running={running || awaitingUserInput}
+          onStart={handleStart}
+          onStop={stop}
+        />
+      )}
 
       {error && (
         <div className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg p-4">
@@ -82,11 +108,16 @@ const AIPanel = () => {
 
       {turns.length > 0 && (
         <div className="space-y-4">
+          {viewingHistory && (
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 border">
+              Viewing saved session · <button onClick={() => { reset(); setViewingHistory(false); }} className="underline hover:text-foreground">Start new</button>
+            </div>
+          )}
+
           {turns.map((turn, i) => (
             <DebateTurn key={`${turn.speaker}-${turn.turn}-${i}`} turn={turn} roundNumber={getRound(i)} />
           ))}
 
-          {/* User injection input between rounds */}
           {awaitingUserInput && (
             <div className="rounded-lg border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/30 p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -125,15 +156,23 @@ const AIPanel = () => {
         </div>
       )}
 
-      {isDone && (
-        <div className="flex items-center gap-3 pt-2">
-          <Button variant="outline" size="sm" onClick={handleSave} className="gap-2">
-            <Save className="w-4 h-4" /> Save Conversation
-          </Button>
-          <Button variant="ghost" size="sm" onClick={reset} className="gap-2">
-            <RotateCcw className="w-4 h-4" /> Reset
-          </Button>
+      {isDone && !viewingHistory && (
+        <div className="space-y-4 pt-2">
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm" onClick={handleSave} className="gap-2">
+              <Save className="w-4 h-4" /> Save Conversation
+            </Button>
+            <Button variant="ghost" size="sm" onClick={reset} className="gap-2">
+              <RotateCcw className="w-4 h-4" /> Reset
+            </Button>
+          </div>
+
+          <ActionableConclusions topic={params.topic} turns={turns} />
         </div>
+      )}
+
+      {isDone && viewingHistory && (
+        <ActionableConclusions topic={params.topic} turns={turns} />
       )}
     </div>
   );

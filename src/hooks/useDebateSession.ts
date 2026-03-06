@@ -213,6 +213,17 @@ export function useDebateSession() {
     });
   }
 
+  function loadTranscript(transcript: Array<{ speaker: string; turn: number; text: string }>) {
+    stop();
+    setTurns(transcript.map(t => ({ ...t, speaker: t.speaker as DebateSpeaker, streaming: false })));
+    setSessionId(null);
+    setError(null);
+    setCurrentRound(0);
+    setAwaitingUserInput(false);
+    historyRef.current = [];
+    paramsRef.current = null;
+  }
+
   function reset() {
     stop();
     setTurns([]);
@@ -236,5 +247,6 @@ export function useDebateSession() {
     stop,
     saveSession,
     reset,
+    loadTranscript,
   };
 }
