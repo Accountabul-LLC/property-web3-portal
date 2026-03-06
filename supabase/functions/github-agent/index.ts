@@ -185,15 +185,29 @@ serve(async (req) => {
       }
 
       case "get_tree": {
-        // Get repo file tree
+        // Get repo file tree using Contents API (more permissive than Git Trees API)
         const branch = params.branch || "main";
         console.log(`Fetching tree for ${owner}/${repo} branch=${branch}`);
-        const tree = await githubAPI(ghToken, `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
+        
+        // Recursively fetch directory contents
+        async function listContents(path: string): Promise<Array<{ path: string; size: number }>> {
+          const items = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${path}${branch ? `?ref=${branch}` : ''}`);
+          const files: Array<{ path: string; size: number }> = [];
+          for (const item of Array.isArray(items) ? items : [items]) {
+            if (item.type === 'file') {
+              files.push({ path: item.path, size: item.size });
+            } else if (item.type === 'dir' && !item.path.startsWith('node_modules') && !item.path.startsWith('.')) {
+              const subFiles = await listContents(item.path);
+              files.push(...subFiles);
+            }
+          }
+          return files;
+        }
+        
+        const files = await listContents('');
         result = {
-          sha: tree.sha,
-          files: tree.tree
-            .filter((t: any) => t.type === "blob")
-            .map((t: any) => ({ path: t.path, size: t.size, sha: t.sha })),
+          sha: 'contents-api',
+          files: files.map(f => ({ path: f.path, size: f.size, sha: '' })),
         };
         break;
       }
