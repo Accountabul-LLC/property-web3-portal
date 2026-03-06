@@ -1,8 +1,14 @@
 import { useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-export type DebateSpeaker = 'claude' | 'gpt';
+export type DebateSpeaker = 'gemini' | 'gpt';
 export type DebateMode = 'debate' | 'collaborate' | 'compare';
+
+export interface AgentMeta {
+  id: DebateSpeaker;
+  label: string;
+  model: string;
+}
 
 export interface DebateTurnData {
   speaker: DebateSpeaker;
@@ -22,12 +28,14 @@ export function useDebateSession() {
   const [running, setRunning] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [agents, setAgents] = useState<{ a: AgentMeta; b: AgentMeta } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   async function start(params: DebateParams) {
     setTurns([]);
     setSessionId(null);
     setError(null);
+    setAgents(null);
     setRunning(true);
 
     const { data: { session } } = await supabase.auth.getSession();
@@ -94,6 +102,13 @@ export function useDebateSession() {
 
   function handleEvent(event: Record<string, unknown>) {
     switch (event.type) {
+      case 'agents':
+        setAgents({
+          a: event.agent_a as AgentMeta,
+          b: event.agent_b as AgentMeta,
+        });
+        break;
+
       case 'turn_start':
         setTurns(prev => [
           ...prev,
@@ -104,8 +119,12 @@ export function useDebateSession() {
       case 'chunk':
         setTurns(prev => {
           const next = [...prev];
-          const last = next.findLast(t => t.speaker === event.speaker);
-          if (last) last.text += event.text as string;
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].speaker === event.speaker) {
+              next[i] = { ...next[i], text: next[i].text + (event.text as string) };
+              break;
+            }
+          }
           return next;
         });
         break;
@@ -113,8 +132,12 @@ export function useDebateSession() {
       case 'turn_end':
         setTurns(prev => {
           const next = [...prev];
-          const last = next.findLast(t => t.speaker === event.speaker);
-          if (last) { last.streaming = false; last.text = event.full_text as string; }
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (next[i].speaker === event.speaker) {
+              next[i] = { ...next[i], streaming: false, text: event.full_text as string };
+              break;
+            }
+          }
           return next;
         });
         break;
@@ -158,7 +181,8 @@ export function useDebateSession() {
     setTurns([]);
     setSessionId(null);
     setError(null);
+    setAgents(null);
   }
 
-  return { turns, running, sessionId, error, start, stop, saveSession, reset };
+  return { turns, running, sessionId, error, agents, start, stop, saveSession, reset };
 }
