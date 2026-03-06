@@ -109,7 +109,7 @@ export default function IntegrationsDashboard() {
             </div>
             <div>
               <CardTitle className="text-lg">GitHub Integration</CardTitle>
-              <CardDescription>Jibreelm/property-web3-portal</CardDescription>
+              <CardDescription>JibreelMuhammad/property-web3-portal</CardDescription>
             </div>
             <Badge className="ml-auto bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
               <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected

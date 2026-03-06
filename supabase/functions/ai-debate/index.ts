@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         action: 'get_tree',
-        owner: 'Jibreelm',
+        owner: 'JibreelMuhammad',
         repo: 'property-web3-portal',
       }),
     })
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
       const filePaths = (treeData.files || [])
         .map((f: { path: string; size: number }) => `- ${f.path} (${f.size}b)`)
         .join('\n')
-      codebaseContext = `${FALLBACK_CONTEXT}\n\n## Repository File Tree (Jibreelm/property-web3-portal)\nYou have access to the following files in the codebase:\n${filePaths}\n\nWhen discussing code changes, reference specific file paths from this tree.`
+      codebaseContext = `${FALLBACK_CONTEXT}\n\n## Repository File Tree (JibreelMuhammad/property-web3-portal)\nYou have access to the following files in the codebase:\n${filePaths}\n\nWhen discussing code changes, reference specific file paths from this tree.`
     }
   } catch (e) {
     console.warn('Failed to fetch repo tree for context, using fallback:', e)
