@@ -204,12 +204,12 @@ export function useDebateSession() {
       text: t.text,
     }));
 
-    await supabase.from('ai_debate_sessions' as never).insert({
+    await supabase.from('ai_debate_sessions').insert({
       user_id: user.id,
       topic: params.topic,
       mode: params.mode,
       rounds: params.rounds,
-      transcript,
+      transcript: transcript as unknown as import('@/integrations/supabase/types').Json,
     });
   }
 
