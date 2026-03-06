@@ -24,19 +24,42 @@ async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<st
   const payloadB64 = b64url(enc.encode(JSON.stringify(payload)));
   const signingInput = `${headerB64}.${payloadB64}`;
 
-  // Import PEM private key
+  // Import PEM private key — handle both PKCS#1 and PKCS#8 formats
+  const isPkcs1 = privateKeyPem.includes("BEGIN RSA PRIVATE KEY");
   const pemBody = privateKeyPem
-    .replace(/-----BEGIN RSA PRIVATE KEY-----/, "")
-    .replace(/-----END RSA PRIVATE KEY-----/, "")
-    .replace(/-----BEGIN PRIVATE KEY-----/, "")
-    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/-----BEGIN (?:RSA )?PRIVATE KEY-----/, "")
+    .replace(/-----END (?:RSA )?PRIVATE KEY-----/, "")
     .replace(/\s/g, "");
 
-  const binaryKey = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+  let keyBytes = Uint8Array.from(atob(pemBody), (c) => c.charCodeAt(0));
+
+  // GitHub App keys are PKCS#1 — wrap in PKCS#8 envelope for Web Crypto
+  if (isPkcs1) {
+    const pkcs8Header = new Uint8Array([
+      0x30, 0x82, 0x00, 0x00, // SEQUENCE (length placeholder)
+      0x02, 0x01, 0x00,       // INTEGER 0 (version)
+      0x30, 0x0d,             // SEQUENCE
+      0x06, 0x09, 0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x01, 0x01, // OID rsaEncryption
+      0x05, 0x00,             // NULL
+      0x04, 0x82, 0x00, 0x00, // OCTET STRING (length placeholder)
+    ]);
+    const totalLen = pkcs8Header.length - 4 + keyBytes.length;
+    const octetLen = keyBytes.length;
+    const wrapped = new Uint8Array(4 + totalLen);
+    wrapped.set(pkcs8Header);
+    wrapped.set(keyBytes, pkcs8Header.length);
+    // Patch SEQUENCE length (bytes 2-3)
+    wrapped[2] = (totalLen >> 8) & 0xff;
+    wrapped[3] = totalLen & 0xff;
+    // Patch OCTET STRING length (bytes at header end - 2)
+    wrapped[pkcs8Header.length - 2] = (octetLen >> 8) & 0xff;
+    wrapped[pkcs8Header.length - 1] = octetLen & 0xff;
+    keyBytes = wrapped;
+  }
 
   const cryptoKey = await crypto.subtle.importKey(
     "pkcs8",
-    binaryKey,
+    keyBytes,
     { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
     false,
     ["sign"]
