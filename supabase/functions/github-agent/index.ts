@@ -170,9 +170,24 @@ serve(async (req) => {
     let result: unknown;
 
     switch (action) {
+      case "list_repos": {
+        // List repos accessible to this installation
+        const repos = await githubAPI(ghToken, `/installation/repositories?per_page=100`);
+        result = {
+          total_count: repos.total_count,
+          repositories: repos.repositories?.map((r: any) => ({
+            full_name: r.full_name,
+            default_branch: r.default_branch,
+            private: r.private,
+          })) || [],
+        };
+        break;
+      }
+
       case "get_tree": {
         // Get repo file tree
         const branch = params.branch || "main";
+        console.log(`Fetching tree for ${owner}/${repo} branch=${branch}`);
         const tree = await githubAPI(ghToken, `/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`);
         result = {
           sha: tree.sha,
