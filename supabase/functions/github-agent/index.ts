@@ -95,6 +95,14 @@ function ensurePkcs8Pem(rawPem: string): string {
 }
 
 async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
+  // Debug: log raw key info
+  console.log("RAW KEY length:", privateKeyPem.length);
+  console.log("RAW KEY first 60 chars:", JSON.stringify(privateKeyPem.substring(0, 60)));
+  console.log("RAW KEY last 60 chars:", JSON.stringify(privateKeyPem.substring(privateKeyPem.length - 60)));
+  console.log("Contains BEGIN RSA:", privateKeyPem.includes("BEGIN RSA PRIVATE KEY"));
+  console.log("Contains BEGIN PRIVATE:", privateKeyPem.includes("BEGIN PRIVATE KEY"));
+  console.log("Contains literal backslash-n:", privateKeyPem.includes("\\n"));
+
   const pkcs8Pem = ensurePkcs8Pem(privateKeyPem);
   const privateKey = await importPKCS8(pkcs8Pem, "RS256");
 
