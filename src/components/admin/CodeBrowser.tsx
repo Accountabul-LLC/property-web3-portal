@@ -98,7 +98,7 @@ function TreeItem({
   );
 }
 
-export default function CodeBrowser() {
+export default function CodeBrowser({ embedded = false }: { embedded?: boolean }) {
   const { getTree, getFile, treeLoading, fileLoading, error } = useGitHubAgent();
   const [files, setFiles] = useState<TreeFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
