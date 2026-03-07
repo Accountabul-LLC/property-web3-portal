@@ -350,7 +350,19 @@ Rules:
       userContent += `## Full Transcript\n${transcript_summary}`
     } else {
       userContent += `## Transcript\nNo transcript provided.`
-    }
+
+    const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: concludeSystemPrompt },
+          { role: 'user', content: userContent },
+        ],
         tools: [{
           type: 'function',
           function: {
