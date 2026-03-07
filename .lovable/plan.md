@@ -1,29 +1,20 @@
+## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
+### Changes Applied
 
-## Plan: Add "Task Dashboard" Button to ActionItemsTab
+1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
 
-**What**: Add a button labeled "Task Dashboard" next to the "Action Items" heading that navigates to `/action-items`.
+2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
 
-**Where**: `src/components/ai-panel/ActionItemsTab.tsx`, line 189
+3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
 
-**How**:
-- Import `useNavigate` from `react-router-dom`
-- Add a `useNavigate` hook call in the component
-- Insert a "Task Dashboard" button next to the `<h2>` heading, using `navigate('/action-items')` on click
-- Style as a small outlined button with an icon (e.g., `ExternalLink` or `LayoutDashboard`) to indicate navigation
+4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
 
-```tsx
-// After the <h2> tag on line 189:
-<Button
-  variant="outline"
-  size="sm"
-  onClick={() => navigate('/action-items')}
-  className="text-xs gap-1.5"
->
-  <LayoutDashboard className="w-3.5 h-3.5" />
-  Task Dashboard
-</Button>
+### New Files
+- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
+
+### Flow
+```text
+Owner submits property → admin approves → owner mints MPT (linked to property)
+    → property status becomes "active" → appears in marketplace as "Listed"
 ```
-
-The heading area will become a flex row with the title on the left and the new button beside it, before the filter buttons on the right.
-
