@@ -18,9 +18,10 @@ const DEFAULT_PARAMS: DebateParams = {
 interface Props {
   loadedSession?: SavedSession | null;
   onSaved?: () => void;
+  selectedFiles?: string[];
 }
 
-const AIPanel = ({ loadedSession, onSaved }: Props) => {
+const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
   const [params, setParams] = useState<DebateParams>(DEFAULT_PARAMS);
   const [userInput, setUserInput] = useState('');
   const { turns, running, error, currentRound, awaitingUserInput, start, continueRound, stop, saveSession, reset, loadTranscript } = useDebateSession();
@@ -47,7 +48,7 @@ const AIPanel = ({ loadedSession, onSaved }: Props) => {
 
   const handleStart = () => {
     setViewingHistory(false);
-    start(params);
+    start({ ...params, selectedFiles });
   };
 
   const handleContinue = () => {

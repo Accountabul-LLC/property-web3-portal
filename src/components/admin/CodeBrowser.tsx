@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useGitHubAgent, type TreeFile, type FileContent } from '@/hooks/useGitHubAgent';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, File, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,14 +55,21 @@ function TreeItem({
   depth,
   selectedPath,
   onSelect,
+  selectable,
+  checkedFiles,
+  onToggleCheck,
 }: {
   node: TreeNode;
   depth: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  selectable?: boolean;
+  checkedFiles?: Set<string>;
+  onToggleCheck?: (path: string) => void;
 }) {
   const [open, setOpen] = useState(depth < 1);
   const isSelected = selectedPath === node.path;
+  const isChecked = checkedFiles?.has(node.path) ?? false;
 
   if (node.isDir) {
     return (
@@ -77,32 +86,44 @@ function TreeItem({
           <span className="truncate">{node.name}</span>
         </button>
         {open && node.children.map((child) => (
-          <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
+          <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} selectable={selectable} checkedFiles={checkedFiles} onToggleCheck={onToggleCheck} />
         ))}
       </div>
     );
   }
 
   return (
-    <button
-      onClick={() => onSelect(node.path)}
+    <div
       className={cn(
-        'flex items-center gap-1 w-full text-left px-2 py-1 text-sm rounded-sm',
+        'flex items-center gap-1 w-full text-left px-2 py-1 text-sm rounded-sm group',
         isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/50 text-foreground',
       )}
       style={{ paddingLeft: `${depth * 12 + 8}px` }}
     >
-      <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      <span className="truncate">{node.name}</span>
-    </button>
+      {selectable && (
+        <Checkbox
+          checked={isChecked}
+          onCheckedChange={() => onToggleCheck?.(node.path)}
+          className="mr-1 h-3.5 w-3.5"
+        />
+      )}
+      <button
+        onClick={() => onSelect(node.path)}
+        className="flex items-center gap-1 flex-1 min-w-0"
+      >
+        <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <span className="truncate">{node.name}</span>
+      </button>
+    </div>
   );
 }
 
-export default function CodeBrowser({ embedded = false }: { embedded?: boolean }) {
+export default function CodeBrowser({ embedded = false, onSelectedFilesChange }: { embedded?: boolean; onSelectedFilesChange?: (files: string[]) => void }) {
   const { getTree, getFile, treeLoading, fileLoading, error } = useGitHubAgent();
   const [files, setFiles] = useState<TreeFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<FileContent | null>(null);
+  const [checkedFiles, setCheckedFiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getTree().then(setFiles);
@@ -115,6 +136,17 @@ export default function CodeBrowser({ embedded = false }: { embedded?: boolean }
     const content = await getFile(path);
     setFileContent(content);
   }, [getFile]);
+
+  const handleToggleCheck = useCallback((path: string) => {
+    setCheckedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else if (next.size < 10) next.add(path);
+      const arr = Array.from(next);
+      onSelectedFilesChange?.(arr);
+      return next;
+    });
+  }, [onSelectedFilesChange]);
 
   if (treeLoading && files.length === 0) {
     return (
@@ -130,15 +162,26 @@ export default function CodeBrowser({ embedded = false }: { embedded?: boolean }
       {error && (
         <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm">{error}</div>
       )}
+      {embedded && checkedFiles.size > 0 && (
+        <div className="px-3 py-1.5 bg-primary/5 border-b flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Agent context:</span>
+          {Array.from(checkedFiles).map(f => (
+            <Badge key={f} variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => handleToggleCheck(f)}>
+              {f.split('/').pop()} ✕
+            </Badge>
+          ))}
+        </div>
+      )}
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={30} minSize={20}>
-          <div className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Files ({files.length})
+          <div className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Files ({files.length})</span>
+            {embedded && <span className="normal-case font-normal">Check for agents</span>}
           </div>
           <ScrollArea className="h-[calc(100%-2.5rem)]">
             <div className="py-1">
               {tree.map((node) => (
-                <TreeItem key={node.path} node={node} depth={0} selectedPath={selectedPath} onSelect={handleSelect} />
+                <TreeItem key={node.path} node={node} depth={0} selectedPath={selectedPath} onSelect={handleSelect} selectable={embedded} checkedFiles={checkedFiles} onToggleCheck={handleToggleCheck} />
               ))}
             </div>
           </ScrollArea>

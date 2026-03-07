@@ -20,6 +20,7 @@ const AdminAIPanel = () => {
   const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [codePanelOpen, setCodePanelOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
   useEffect(() => {
     if (authLoading || accessLoading) return;
@@ -84,7 +85,7 @@ const AdminAIPanel = () => {
                     <><PanelRightOpen className="w-4 h-4" /> Show Code</>
                   )}
                 </Button>
-                <AIPanel loadedSession={selectedSession} onSaved={handleSaved} />
+                <AIPanel loadedSession={selectedSession} onSaved={handleSaved} selectedFiles={selectedFiles} />
               </div>
             </ResizablePanel>
 
@@ -93,7 +94,7 @@ const AdminAIPanel = () => {
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={45} minSize={25}>
                   <Suspense fallback={<div className="flex items-center justify-center h-full"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
-                    <CodeBrowser embedded />
+                    <CodeBrowser embedded onSelectedFilesChange={setSelectedFiles} />
                   </Suspense>
                 </ResizablePanel>
               </>

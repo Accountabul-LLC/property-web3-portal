@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS agent_memory_user_key_unique ON public.agent_memory (user_id, key);
