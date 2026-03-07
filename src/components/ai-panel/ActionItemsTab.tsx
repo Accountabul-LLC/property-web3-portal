@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableHeader, TableHead, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { toast } from 'sonner';
-import { Github, Trash2, Loader2, ExternalLink, FileCode, ChevronDown } from 'lucide-react';
+import { Github, Trash2, Loader2, ExternalLink, FileCode, ChevronDown, LayoutDashboard } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export default function ActionItemsTab({ refreshKey }: Props) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<ActionItemRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<typeof FILTER_OPTIONS[number]>('all');
@@ -186,7 +188,18 @@ export default function ActionItemsTab({ refreshKey }: Props) {
   return (
     <div className="h-full flex flex-col p-4 overflow-hidden">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Action Items</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Action Items</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate('/action-items')}
+            className="text-xs gap-1.5"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            Task Dashboard
+          </Button>
+        </div>
         <div className="flex gap-1">
           {FILTER_OPTIONS.map(f => (
             <Button
