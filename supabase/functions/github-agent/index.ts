@@ -50,15 +50,12 @@ function ensurePkcs8Pem(rawPem: string): string {
 
   if (pem.includes("BEGIN PRIVATE KEY")) return pem; // already PKCS#8
 
-  console.log("Converting PKCS#1 to PKCS#8, PEM starts with:", pem.substring(0, 40));
-
   const b64 = pem
     .replace(/-----BEGIN RSA PRIVATE KEY-----/, "")
     .replace(/-----END RSA PRIVATE KEY-----/, "")
     .replace(/\s/g, "");
 
   const pkcs1Bytes = base64ToUint8(b64);
-  console.log("PKCS#1 key length:", pkcs1Bytes.length, "first byte:", pkcs1Bytes[0]?.toString(16));
 
   // RSA AlgorithmIdentifier OID
   const algorithmId = new Uint8Array([
@@ -89,20 +86,10 @@ function ensurePkcs8Pem(rawPem: string): string {
 
   const b64Out = uint8ToBase64(pkcs8);
   const lines = b64Out.match(/.{1,64}/g) || [];
-  const result = `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
-  console.log("PKCS#8 conversion done, output length:", result.length);
-  return result;
+  return `-----BEGIN PRIVATE KEY-----\n${lines.join("\n")}\n-----END PRIVATE KEY-----`;
 }
 
 async function createGitHubJWT(appId: string, privateKeyPem: string): Promise<string> {
-  // Debug: log raw key info
-  console.log("RAW KEY length:", privateKeyPem.length);
-  console.log("RAW KEY first 60 chars:", JSON.stringify(privateKeyPem.substring(0, 60)));
-  console.log("RAW KEY last 60 chars:", JSON.stringify(privateKeyPem.substring(privateKeyPem.length - 60)));
-  console.log("Contains BEGIN RSA:", privateKeyPem.includes("BEGIN RSA PRIVATE KEY"));
-  console.log("Contains BEGIN PRIVATE:", privateKeyPem.includes("BEGIN PRIVATE KEY"));
-  console.log("Contains literal backslash-n:", privateKeyPem.includes("\\n"));
-
   const pkcs8Pem = ensurePkcs8Pem(privateKeyPem);
   const privateKey = await importPKCS8(pkcs8Pem, "RS256");
 
@@ -128,7 +115,8 @@ async function getInstallationToken(appId: string, privateKey: string, installat
   );
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`GitHub token error [${res.status}]: ${text}`);
+    console.error("GitHub installation token error:", res.status);
+    throw new Error(`GitHub authentication failed (${res.status})`);
   }
   const data = await res.json();
   return data.token;
@@ -147,8 +135,25 @@ async function githubAPI(token: string, path: string, method = "GET", body?: unk
   if (body) opts.body = JSON.stringify(body);
   const res = await fetch(`https://api.github.com${path}`, opts);
   const data = await res.json();
-  if (!res.ok) throw new Error(`GitHub API error [${res.status}]: ${JSON.stringify(data)}`);
+  if (!res.ok) throw new Error(`GitHub API error (${res.status}): ${data.message || 'Unknown'}`);
   return data;
+}
+
+// ─── Audit logging ────────────────────────────────────────────
+async function logAction(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  action: string,
+  metadata: Record<string, unknown> = {},
+) {
+  try {
+    await supabaseAdmin.from('integration_audit_log').insert({
+      actor_id: userId,
+      integration_type: 'github',
+      action,
+      metadata: { ...metadata, timestamp: new Date().toISOString() },
+    })
+  } catch { /* non-critical */ }
 }
 
 serve(async (req) => {
@@ -206,7 +211,7 @@ serve(async (req) => {
 
     if (!appId || !privateKey || !installationId) {
       return new Response(
-        JSON.stringify({ error: "GitHub App credentials not configured. Add GITHUB_APP_ID, GITHUB_APP_PRIVATE_KEY, and GITHUB_APP_INSTALLATION_ID secrets." }),
+        JSON.stringify({ error: "GitHub integration not configured. Contact admin." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -222,11 +227,13 @@ serve(async (req) => {
 
     const ghToken = await getInstallationToken(appId, privateKey, installationId);
 
+    // Audit log the action
+    await logAction(supabaseAdmin, userId, `github_${action}`, { owner, repo });
+
     let result: unknown;
 
     switch (action) {
       case "list_repos": {
-        // List repos accessible to this installation
         const repos = await githubAPI(ghToken, `/installation/repositories?per_page=100`);
         result = {
           total_count: repos.total_count,
@@ -240,11 +247,8 @@ serve(async (req) => {
       }
 
       case "get_tree": {
-        // Get repo file tree using Contents API (more permissive than Git Trees API)
         const branch = params.branch || "main";
-        console.log(`Fetching tree for ${owner}/${repo} branch=${branch}`);
         
-        // Recursively fetch directory contents
         async function listContents(path: string): Promise<Array<{ path: string; size: number }>> {
           const items = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${path}${branch ? `?ref=${branch}` : ''}`);
           const files: Array<{ path: string; size: number }> = [];
@@ -268,7 +272,6 @@ serve(async (req) => {
       }
 
       case "get_file": {
-        // Read a single file
         const path = params.path;
         if (!path) throw new Error("path is required for get_file");
         const file = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${path}${params.branch ? `?ref=${params.branch}` : ""}`);
@@ -326,24 +329,20 @@ serve(async (req) => {
       }
 
       case "create_pr": {
-        // Create a branch, commit changes, open PR
         const baseBranch = params.base || "main";
         const branchName = params.branch_name || `agent/${Date.now()}`;
         const files = params.files as Array<{ path: string; content: string }>;
 
         if (!files?.length) throw new Error("files array required for create_pr");
 
-        // Get base ref
         const baseRef = await githubAPI(ghToken, `/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`);
         const baseSha = baseRef.object.sha;
 
-        // Create branch
         await githubAPI(ghToken, `/repos/${owner}/${repo}/git/refs`, "POST", {
           ref: `refs/heads/${branchName}`,
           sha: baseSha,
         });
 
-        // Commit each file
         for (const f of files) {
           const existing = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${f.path}?ref=${branchName}`).catch(() => null);
           await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${f.path}`, "PUT", {
@@ -354,7 +353,6 @@ serve(async (req) => {
           });
         }
 
-        // Create PR
         const pr = await githubAPI(ghToken, `/repos/${owner}/${repo}/pulls`, "POST", {
           title: params.title || "Agent proposed changes",
           body: params.body || "Changes proposed by AI agent.",
@@ -367,7 +365,6 @@ serve(async (req) => {
       }
 
       case "store_memory": {
-        // Store a memory note
         const { data, error } = await supabase.from("agent_memory").upsert(
           {
             user_id: userId,
@@ -384,7 +381,6 @@ serve(async (req) => {
       }
 
       case "recall_memory": {
-        // Recall memories by category or key
         let query = supabase.from("agent_memory").select("*").eq("user_id", userId);
         if (params.category) query = query.eq("category", params.category);
         if (params.key) query = query.eq("key", params.key);
@@ -396,7 +392,7 @@ serve(async (req) => {
 
       default:
         return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}. Supported: get_tree, get_file, create_issue, get_issue, list_issues, create_pr, store_memory, recall_memory` }),
+          JSON.stringify({ error: `Unknown action: ${action}` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }
@@ -405,9 +401,12 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("github-agent error:", e);
+    // Sanitize: never leak raw error details that might contain tokens/keys
+    const safeMessage = e instanceof Error ? e.message : "Unknown error";
+    // Only log a safe summary
+    console.error("github-agent error:", safeMessage);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: safeMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

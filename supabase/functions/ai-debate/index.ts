@@ -9,6 +9,37 @@ const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-worl
 
 const TREE_CACHE_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
 
+// ─── Security: Rate limiting ──────────────────────────────────
+const RATE_LIMIT_WINDOW_MS = 60_000 // 1 minute
+const RATE_LIMIT_MAX = 10 // max requests per window per user
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+
+function checkRateLimit(userId: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(userId)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(userId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return true
+  }
+  entry.count++
+  return entry.count <= RATE_LIMIT_MAX
+}
+
+// ─── Security: Request validation ─────────────────────────────
+const MAX_TOPIC_LENGTH = 5000
+const MAX_HISTORY_ITEMS = 100
+const MAX_SELECTED_FILES = 15
+const MAX_REQUEST_SIZE_BYTES = 500_000 // 500KB
+
+// ─── Security: Sanitize errors ────────────────────────────────
+function sanitizeProviderError(status: number, _rawError: string): string {
+  if (status === 429) return 'AI provider rate limit exceeded. Please wait and try again.'
+  if (status === 402) return 'AI provider billing issue. Contact admin.'
+  if (status === 401 || status === 403) return 'AI provider authentication failed. Contact admin.'
+  if (status >= 500) return 'AI provider temporarily unavailable. Try again later.'
+  return `AI provider returned an error (${status}). Contact admin if this persists.`
+}
+
 type Speaker = 'claude' | 'gpt' | 'gemini' | 'user'
 type Mode = 'debate' | 'collaborate' | 'compare' | 'conclude'
 
@@ -32,6 +63,28 @@ interface RequestBody {
   thread_id?: string
 }
 
+// ─── Audit logging ────────────────────────────────────────────
+async function logAIAction(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  action: string,
+  metadata: Record<string, unknown> = {},
+) {
+  try {
+    await supabaseAdmin.from('integration_audit_log').insert({
+      actor_id: userId,
+      integration_type: 'ai_panel',
+      action,
+      metadata: {
+        ...metadata,
+        timestamp: new Date().toISOString(),
+      },
+    })
+  } catch (e) {
+    console.warn('Audit log insert failed:', e instanceof Error ? e.message : 'unknown')
+  }
+}
+
 // ─── Memory helpers ───────────────────────────────────────────
 
 async function getCachedTree(
@@ -50,13 +103,11 @@ async function getCachedTree(
   if (cached) {
     const age = Date.now() - new Date(cached.updated_at).getTime()
     if (age < TREE_CACHE_TTL_MS) {
-      console.log('Using cached file tree (age:', Math.round(age / 60000), 'min)')
       return cached.content
     }
   }
 
   // Fetch fresh tree
-  console.log('Fetching fresh file tree from GitHub...')
   try {
     const ghRes = await fetch(`${supabaseUrl}/functions/v1/github-agent`, {
       method: 'POST',
@@ -77,7 +128,7 @@ async function getCachedTree(
 
     return filePaths
   } catch (e) {
-    console.warn('Failed to fetch repo tree:', e)
+    console.warn('Failed to fetch repo tree')
     return ''
   }
 }
@@ -220,7 +271,7 @@ async function storeDebateConclusions(
       metadata: { type: 'debate_conclusion', topic },
     },
     { onConflict: 'user_id,key' }
-  ).then(() => console.log('Stored shared debate conclusion'))
+  ).then(() => {})
 
   // Store per-agent notes
   for (const [speaker, text] of Object.entries(replies)) {
@@ -248,6 +299,10 @@ function modeInstruction(mode: Mode, other: string): string {
       return `You are collaborating with ${other} to give the user the best possible answer. Build on what they said, fill in gaps, and work toward a concrete recommendation.\n\nIMPORTANT: When proposing next steps or action items, format them as a numbered list with this exact structure:\n1. **Title** - Description of the task\n2. **Title** - Description of the task\nThis format allows the platform to parse your suggestions into actionable GitHub issues.`
     case 'compare':
       return `Give your independent analysis. Do not react to ${other}'s response — provide your own assessment so the user can compare perspectives.`
+    case 'conclude':
+      return `Synthesize the conversation into structured, actionable conclusions.`
+    default:
+      return `Provide your analysis on the topic.`
   }
 }
 
@@ -288,16 +343,17 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
 
   if (!authHeader) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders })
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
+  // ─── Auth + role validation ─────────────────────────────────
   const supabaseUser = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: authHeader } },
   })
 
   const { data: { user }, error: authError } = await supabaseUser.auth.getUser()
   if (authError || !user) {
-    return new Response('Unauthorized', { status: 401, headers: corsHeaders })
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey)
@@ -309,23 +365,56 @@ Deno.serve(async (req) => {
     .maybeSingle()
 
   if (!roleRow) {
-    return new Response('Forbidden', { status: 403, headers: corsHeaders })
+    return new Response(JSON.stringify({ error: 'Forbidden: admin access required' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
-  // --- Build context (cached tree + on-demand files + memory) ---
+  // ─── Rate limiting ──────────────────────────────────────────
+  if (!checkRateLimit(user.id)) {
+    await logAIAction(supabaseAdmin, user.id, 'rate_limited', { reason: 'exceeded 10 req/min' })
+    return new Response(
+      JSON.stringify({ error: 'Rate limit exceeded. Maximum 10 requests per minute.' }),
+      { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // ─── Request size validation ────────────────────────────────
+  const contentLength = parseInt(req.headers.get('content-length') || '0', 10)
+  if (contentLength > MAX_REQUEST_SIZE_BYTES) {
+    return new Response(
+      JSON.stringify({ error: 'Request too large. Maximum 500KB.' }),
+      { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+
+  // ─── Parse and validate request body ────────────────────────
   const { topic, mode, history = [], round = 1, turnOffset = 0, selectedFiles = [], transcript_summary, conversation_messages, thread_id }: RequestBody = await req.json()
+
   if (!topic?.trim()) {
-    return new Response('Bad Request: topic required', { status: 400, headers: corsHeaders })
+    return new Response(JSON.stringify({ error: 'Bad Request: topic required' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+  if (topic.length > MAX_TOPIC_LENGTH) {
+    return new Response(JSON.stringify({ error: `Topic too long. Maximum ${MAX_TOPIC_LENGTH} characters.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+  if (history.length > MAX_HISTORY_ITEMS) {
+    return new Response(JSON.stringify({ error: `Too many history items. Maximum ${MAX_HISTORY_ITEMS}.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+  }
+  if (selectedFiles.length > MAX_SELECTED_FILES) {
+    return new Response(JSON.stringify({ error: `Too many selected files. Maximum ${MAX_SELECTED_FILES}.` }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 
   // ─── Conclude mode: structured task extraction ───────────────
   if (mode === 'conclude') {
     const lovableKey = Deno.env.get('LOVABLE_API_KEY')
     if (!lovableKey) {
-      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+      return new Response(JSON.stringify({ error: 'AI provider not configured. Contact admin.' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    await logAIAction(supabaseAdmin, user.id, 'conclude_start', {
+      topic: topic.slice(0, 100),
+      message_count: conversation_messages?.length || 0,
+    })
 
     const concludeSystemPrompt = `You are a technical project manager for an RWA tokenization platform built on XRPL.
 Given the following multi-agent conversation and user input, extract 3 to 8 concrete actionable tasks.
@@ -352,90 +441,112 @@ Rules:
       userContent += `## Transcript\nNo transcript provided.`
     }
 
-    const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
-        messages: [
-          { role: 'system', content: concludeSystemPrompt },
-          { role: 'user', content: userContent },
-        ],
-        tools: [{
-          type: 'function',
-          function: {
-            name: 'extract_action_items',
-            description: 'Extract structured action items from the debate transcript.',
-            parameters: {
-              type: 'object',
-              properties: {
-                action_items: {
-                  type: 'array',
-                  items: {
-                    type: 'object',
-                    properties: {
-                      title: { type: 'string', description: 'Short actionable title' },
-                      priority: { type: 'string', enum: ['HIGH', 'MEDIUM', 'LOW'] },
-                      description: { type: 'string', description: 'Detailed description of the task' },
-                      files: { type: 'array', items: { type: 'string' }, description: 'Relevant file paths' },
-                      expected_outcome: { type: 'string', description: 'What completing this task achieves' },
+    try {
+      const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${lovableKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-3-flash-preview',
+          messages: [
+            { role: 'system', content: concludeSystemPrompt },
+            { role: 'user', content: userContent },
+          ],
+          tools: [{
+            type: 'function',
+            function: {
+              name: 'extract_action_items',
+              description: 'Extract structured action items from the debate transcript.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  action_items: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        title: { type: 'string', description: 'Short actionable title' },
+                        priority: { type: 'string', enum: ['HIGH', 'MEDIUM', 'LOW'] },
+                        description: { type: 'string', description: 'Detailed description of the task' },
+                        files: { type: 'array', items: { type: 'string' }, description: 'Relevant file paths' },
+                        expected_outcome: { type: 'string', description: 'What completing this task achieves' },
+                      },
+                      required: ['title', 'priority', 'description', 'files', 'expected_outcome'],
+                      additionalProperties: false,
                     },
-                    required: ['title', 'priority', 'description', 'files', 'expected_outcome'],
-                    additionalProperties: false,
                   },
                 },
+                required: ['action_items'],
+                additionalProperties: false,
               },
-              required: ['action_items'],
-              additionalProperties: false,
             },
-          },
-        }],
-        tool_choice: { type: 'function', function: { name: 'extract_action_items' } },
-      }),
-    })
+          }],
+          tool_choice: { type: 'function', function: { name: 'extract_action_items' } },
+        }),
+      })
 
-    if (!concludeRes.ok) {
-      const errText = await concludeRes.text()
-      console.error('Conclude AI call failed:', concludeRes.status, errText)
-      return new Response(JSON.stringify({ error: `AI call failed (${concludeRes.status})` }), {
+      if (!concludeRes.ok) {
+        const errText = await concludeRes.text()
+        console.error('Conclude call failed:', concludeRes.status)
+        await logAIAction(supabaseAdmin, user.id, 'conclude_error', { status: concludeRes.status })
+        return new Response(JSON.stringify({ error: sanitizeProviderError(concludeRes.status, errText) }), {
+          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const concludeData = await concludeRes.json()
+      let actionItems: unknown[] = []
+
+      // Extract from tool_calls response
+      const toolCall = concludeData.choices?.[0]?.message?.tool_calls?.[0]
+      if (toolCall?.function?.arguments) {
+        try {
+          const parsed = JSON.parse(toolCall.function.arguments)
+          actionItems = parsed.action_items || []
+        } catch (e) {
+          console.error('Failed to parse tool call arguments')
+        }
+      }
+
+      await logAIAction(supabaseAdmin, user.id, 'conclude_success', {
+        topic: topic.slice(0, 100),
+        items_extracted: actionItems.length,
+      })
+
+      const encoder = new TextEncoder()
+      const concludeStream = new ReadableStream({
+        start(controller) {
+          controller.enqueue(encoder.encode(JSON.stringify({ type: 'conclude_result', action_items: actionItems }) + '\n'))
+          controller.close()
+        },
+      })
+
+      return new Response(concludeStream, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/x-ndjson',
+          'Cache-Control': 'no-cache, no-store',
+          'X-Accel-Buffering': 'no',
+        },
+      })
+    } catch (e) {
+      console.error('Conclude error:', e instanceof Error ? e.message : 'unknown')
+      await logAIAction(supabaseAdmin, user.id, 'conclude_error', { error: 'internal' })
+      return new Response(JSON.stringify({ error: 'Failed to process conclude request.' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-
-    const concludeData = await concludeRes.json()
-    let actionItems: unknown[] = []
-
-    // Extract from tool_calls response
-    const toolCall = concludeData.choices?.[0]?.message?.tool_calls?.[0]
-    if (toolCall?.function?.arguments) {
-      try {
-        const parsed = JSON.parse(toolCall.function.arguments)
-        actionItems = parsed.action_items || []
-      } catch (e) {
-        console.error('Failed to parse tool call arguments:', e)
-      }
-    }
-
-    const encoder = new TextEncoder()
-    const concludeStream = new ReadableStream({
-      start(controller) {
-        controller.enqueue(encoder.encode(JSON.stringify({ type: 'conclude_result', action_items: actionItems }) + '\n'))
-        controller.close()
-      },
-    })
-
-    return new Response(concludeStream, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/x-ndjson',
-        'Cache-Control': 'no-cache',
-        'X-Accel-Buffering': 'no',
-      },
-    })
   }
+
+  // ─── Audit: debate start ────────────────────────────────────
+  await logAIAction(supabaseAdmin, user.id, 'debate_start', {
+    topic: topic.slice(0, 100),
+    mode,
+    round,
+    selectedFileCount: selectedFiles.length,
+  })
 
   // Only fetch context on round 1 to avoid redundant calls
   let codebaseContext = FALLBACK_CONTEXT
@@ -452,7 +563,6 @@ Rules:
     const allFiles = [...new Set([...selectedFiles, ...inferredFiles])]
 
     if (allFiles.length > 0) {
-      console.log('Fetching file contents for:', allFiles)
       fileContents = await fetchFileContents(allFiles, supabaseUrl, authHeader)
       codebaseContext += fileContents
     }
@@ -501,8 +611,7 @@ Rules:
         })
 
         if (!res.ok) {
-          const msg = await res.text()
-          write({ type: 'error', message: `Claude error: ${msg}` })
+          write({ type: 'error', message: sanitizeProviderError(res.status, '') })
           return ''
         }
 
@@ -556,8 +665,7 @@ Rules:
         })
 
         if (!res.ok) {
-          const msg = await res.text()
-          write({ type: 'error', message: `GPT error: ${msg}` })
+          write({ type: 'error', message: sanitizeProviderError(res.status, '') })
           return ''
         }
 
@@ -614,8 +722,7 @@ Rules:
         })
 
         if (!res.ok) {
-          const msg = await res.text()
-          write({ type: 'error', message: `Gemini error (${res.status}): ${msg}` })
+          write({ type: 'error', message: sanitizeProviderError(res.status, '') })
           return ''
         }
 
@@ -662,7 +769,15 @@ Rules:
           claude: claudeReply,
           gpt: gptReply,
           gemini: geminiReply,
-        }).catch(e => console.warn('Failed to store conclusions:', e))
+        }).catch(() => {})
+
+        // Audit: debate completed
+        logAIAction(supabaseAdmin, user.id, 'debate_complete', {
+          topic: topic.slice(0, 100),
+          mode,
+          round,
+          agents: ['claude', 'gpt', 'gemini'],
+        }).catch(() => {})
 
         write({
           type: 'done',
@@ -672,7 +787,10 @@ Rules:
           conversation_id: crypto.randomUUID(),
         })
       } catch (e: unknown) {
-        write({ type: 'error', message: e instanceof Error ? e.message : 'Unknown error' })
+        const safeMessage = e instanceof Error ? 'An internal error occurred during the debate.' : 'Unknown error'
+        console.error('Debate stream error:', e instanceof Error ? e.message : 'unknown')
+        write({ type: 'error', message: safeMessage })
+        logAIAction(supabaseAdmin, user.id, 'debate_error', { error: 'stream_failure' }).catch(() => {})
       } finally {
         controller.close()
       }
@@ -683,7 +801,7 @@ Rules:
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/x-ndjson',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store',
       'X-Accel-Buffering': 'no',
     },
   })
