@@ -245,12 +245,13 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const savedRows = await insertActionItems(session.user.id);
+      // Save to DB first if not already saved
+      const { ids: savedRows, items: selectedItems } = await insertAndGetIds(session.user.id);
 
       let pushed = 0;
-      for (const idx of indices) {
-        const action = items[idx];
-        const dbRow = savedRows?.[idx];
+      for (let i = 0; i < selectedItems.length; i++) {
+        const action = selectedItems[i];
+        const dbRow = savedRows?.[i];
         try {
           const res = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/github-agent`,
@@ -275,14 +276,20 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
 
           if (dbRow?.id && data.url) {
             await (supabase.from('action_items' as any) as any)
-              .update({ github_issue_url: data.url, github_issue_number: data.number, github_sync_status: 'synced' })
+              .update({
+                github_issue_url: data.url,
+                github_issue_number: data.number,
+                github_sync_status: 'synced',
+                github_repo: 'JibreelMuhammad/property-web3-portal',
+                pushed_at: new Date().toISOString(),
+              })
               .eq('id', dbRow.id);
           }
           pushed++;
         } catch { /* continue */ }
       }
 
-      toast.success(`Saved ${items.length} items, pushed ${pushed} to GitHub`);
+      toast.success(`Saved & pushed ${pushed} to GitHub`);
       onOpenChange(false);
     } catch (e) {
       console.error(e);
@@ -369,7 +376,7 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
 
         {!loading && items.length > 0 && (
           <DialogFooter className="gap-2 sm:gap-2">
-            {autoSaved && <span className="text-xs text-muted-foreground mr-auto">✓ Auto-saved</span>}
+            {saved && <span className="text-xs text-muted-foreground mr-auto">✓ Saved</span>}
             <Button
               variant="outline"
               onClick={() => { onOpenChange(false); navigate('/action-items'); }}
@@ -380,6 +387,10 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               Dismiss
+            </Button>
+            <Button onClick={saveSelected} disabled={busy || selected.size === 0 || saved} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save {selected.size} Selected
             </Button>
             <Button onClick={pushSelected} disabled={busy || selected.size === 0} variant="hero" className="gap-2">
               {pushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Github className="w-4 h-4" />}
