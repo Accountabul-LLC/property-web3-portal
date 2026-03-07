@@ -171,21 +171,41 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
   };
 
   const buildIssueBody = (action: ActionItem): string => {
-    const fileSection = action.files?.length
-      ? `\n### Relevant Files\n${action.files.map(f => `- \`${f}\``).join('\n')}\n`
-      : '';
-    const outcomeSection = action.expected_outcome
-      ? `\n### Expected Outcome\n${action.expected_outcome}\n`
-      : '';
-    return [
-      `## ${action.title}`,
-      '',
-      action.description,
-      fileSection,
-      outcomeSection,
-      '---',
+    const sections: string[] = [
+      `## Context`,
+      `Generated from **debate** session via AI Panel.`,
+      ``,
+      `## Problem`,
+      action.description || '_No description provided._',
+      ``,
+    ];
+    if (action.files?.length) {
+      sections.push(`## Files Involved`, ...action.files.map(f => `- \`${f}\``), ``);
+    }
+    if (action.expected_outcome) {
+      sections.push(`## Expected Outcome`, action.expected_outcome, ``);
+    }
+    sections.push(
+      `## Acceptance Criteria`,
+      `- [ ] Implementation complete`,
+      `- [ ] Tests pass`,
+      `- [ ] Reviewed and approved`,
+      ``,
+      `---`,
       `*Priority: ${action.priority} · Generated from AI Panel debate*`,
-    ].join('\n');
+    );
+    return sections.join('\n');
+  };
+
+  const getLabelsForItem = (action: ActionItem): string[] => {
+    const labels = ['ai-generated', 'action-item'];
+    const p = action.priority.toUpperCase();
+    if (p === 'HIGH') labels.push('high-priority');
+    labels.push('agent-debate');
+    const files = action.files || [];
+    if (files.some(f => f.startsWith('src/'))) labels.push('frontend');
+    if (files.some(f => f.startsWith('supabase/'))) labels.push('backend');
+    return labels;
   };
 
   const pushSelected = async () => {
@@ -218,9 +238,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
                 action: 'create_issue',
                 owner: 'JibreelMuhammad',
                 repo: 'property-web3-portal',
-                title: action.title,
+                title: `[${action.priority.toUpperCase()}] ${action.title}`,
                 body: buildIssueBody(action),
-                labels: [`priority:${action.priority}`, 'ai-generated'],
+                labels: getLabelsForItem(action),
               }),
             }
           );
