@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, GitBranch, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, GitBranch, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -37,6 +37,8 @@ export default function IntegrationsDashboard() {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [githubConnected, setGithubConnected] = useState(true);
+  const [togglingGlobal, setTogglingGlobal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -44,8 +46,14 @@ export default function IntegrationsDashboard() {
       supabase.from('agent_integrations' as any).select('*'),
       supabase.from('integration_audit_log' as any).select('*').order('created_at', { ascending: false }).limit(50),
     ]);
-    setIntegrations((intRes.data || []) as unknown as AgentIntegration[]);
+    const ints = (intRes.data || []) as unknown as AgentIntegration[];
+    setIntegrations(ints);
     setAuditLog((auditRes.data || []) as unknown as AuditEntry[]);
+
+    // Derive global connection state: connected if any integration exists
+    // We store this in a special "global" integration record with agent_id = '00000000-0000-0000-0000-000000000000'
+    const globalRecord = ints.find(i => i.agent_id === '00000000-0000-0000-0000-000000000000' && i.integration_type === 'github');
+    setGithubConnected(globalRecord ? globalRecord.enabled : true); // default to connected if no record
     setLoading(false);
   }, []);
 
@@ -82,6 +90,35 @@ export default function IntegrationsDashboard() {
     }
   }, [user, fetchData]);
 
+  const handleGlobalToggle = useCallback(async () => {
+    if (!user) return;
+    const newConnected = !githubConnected;
+    setTogglingGlobal(true);
+
+    try {
+      const { error: upsertErr } = await supabase.from('agent_integrations' as any).upsert(
+        { agent_id: '00000000-0000-0000-0000-000000000000', integration_type: 'github', enabled: newConnected, updated_at: new Date().toISOString() },
+        { onConflict: 'agent_id,integration_type' }
+      );
+      if (upsertErr) throw upsertErr;
+
+      await supabase.from('integration_audit_log' as any).insert({
+        agent_id: null,
+        integration_type: 'github',
+        action: newConnected ? 'connected' : 'disconnected',
+        actor_id: user.id,
+        metadata: { scope: 'global' },
+      });
+
+      toast.success(`GitHub integration ${newConnected ? 'connected' : 'disconnected'}`);
+      await fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update');
+    } finally {
+      setTogglingGlobal(false);
+    }
+  }, [user, githubConnected, fetchData]);
+
   const getIntegration = (agentId: string) =>
     integrations.find((i) => i.agent_id === agentId && i.integration_type === 'github');
 
@@ -104,21 +141,36 @@ export default function IntegrationsDashboard() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <GitBranch className="w-6 h-6 text-primary" />
+            <div className={`p-2 rounded-lg ${githubConnected ? 'bg-primary/10' : 'bg-muted'}`}>
+              <GitBranch className={`w-6 h-6 ${githubConnected ? 'text-primary' : 'text-muted-foreground'}`} />
             </div>
-            <div>
+            <div className="flex-1">
               <CardTitle className="text-lg">GitHub Integration</CardTitle>
               <CardDescription>JibreelMuhammad/property-web3-portal</CardDescription>
             </div>
-            <Badge className="ml-auto bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected
-            </Badge>
+            <div className="flex items-center gap-3">
+              {githubConnected ? (
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-destructive/30 text-destructive">
+                  <XCircle className="w-3.5 h-3.5 mr-1" /> Disconnected
+                </Badge>
+              )}
+              {togglingGlobal ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <Switch checked={githubConnected} onCheckedChange={handleGlobalToggle} />
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            GitHub App is installed and active. Agents with GitHub enabled can browse code, create issues, and propose PRs.
+            {githubConnected
+              ? 'GitHub App is installed and active. Agents with GitHub enabled can browse code, create issues, and propose PRs.'
+              : 'GitHub integration is disconnected. Toggle on to allow agents to access the repository.'}
           </p>
         </CardContent>
       </Card>
@@ -129,7 +181,10 @@ export default function IntegrationsDashboard() {
           <CardTitle className="text-lg">Agent Access</CardTitle>
           <CardDescription>Toggle GitHub access per agent</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className={`space-y-1 ${!githubConnected ? 'opacity-50 pointer-events-none' : ''}`}>
+          {!githubConnected && (
+            <p className="text-sm text-muted-foreground py-2 text-center">Enable the GitHub integration above to manage agent access.</p>
+          )}
           {agents && agents.length > 0 ? agents.map((agent) => {
             const integration = getIntegration(agent.id);
             const enabled = integration?.enabled ?? false;
@@ -142,7 +197,7 @@ export default function IntegrationsDashboard() {
                   <p className="text-xs text-muted-foreground truncate">{agent.type} · {agent.role}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {enabled && (
+                  {enabled && githubConnected && (
                     <Badge variant="outline" className="text-xs">
                       <GitBranch className="w-3 h-3 mr-1" /> GitHub
                     </Badge>
@@ -150,7 +205,7 @@ export default function IntegrationsDashboard() {
                   {isToggling ? (
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   ) : (
-                    <Switch checked={enabled} onCheckedChange={() => handleToggle(agent, enabled)} />
+                    <Switch checked={enabled} onCheckedChange={() => handleToggle(agent, enabled)} disabled={!githubConnected} />
                   )}
                 </div>
               </div>
