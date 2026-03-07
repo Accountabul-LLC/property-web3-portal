@@ -66,7 +66,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
           {!sessionActive && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="flex-shrink-0 h-[44px] w-[44px]" title="Session settings">
+                <Button variant="ghost" size="icon" className="flex-shrink-0 h-[44px] w-[44px] flex items-center justify-center self-center" title="Session settings">
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
