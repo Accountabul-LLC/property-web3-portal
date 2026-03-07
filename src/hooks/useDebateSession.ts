@@ -164,14 +164,21 @@ export function useDebateSession() {
   }
 
   async function start(params: DebateParams) {
-    setTurns([]);
+    // Show the user's initial message as a visible turn
+    const userTurn: DebateTurnData = {
+      speaker: 'user',
+      turn: 0,
+      text: params.topic,
+      streaming: false,
+    };
+    setTurns([userTurn]);
     setSessionId(null);
     setError(null);
     setCurrentRound(1);
     setAwaitingUserInput(false);
-    historyRef.current = [];
+    historyRef.current = [{ speaker: 'user', text: params.topic }];
     paramsRef.current = params;
-    await runRound(params, [], 1);
+    await runRound(params, historyRef.current, 1);
   }
 
   async function continueRound(userMessage?: string) {

@@ -47,13 +47,15 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns.length, awaitingUserInput]);
 
+  const isDone = !running && !awaitingUserInput && turns.length > 0;
+
   const handleSend = (message: string) => {
     if (!sessionActive || viewingHistory) {
       // Start new session
       setViewingHistory(false);
       start({ ...params, topic: message, selectedFiles });
-    } else if (awaitingUserInput) {
-      // Continue with user message
+    } else if (awaitingUserInput || isDone) {
+      // Continue with user message (mid-debate or after completion)
       continueRound(message);
     }
   };
@@ -82,7 +84,6 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
     return round;
   };
 
-  const isDone = !running && !awaitingUserInput && turns.length > 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -157,6 +158,7 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
           running={running}
           sessionActive={turns.length > 0}
           awaitingInput={awaitingUserInput}
+          isDone={isDone}
           onSend={handleSend}
           onStop={stop}
         />
