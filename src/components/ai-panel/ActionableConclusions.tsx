@@ -91,6 +91,41 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
     }
   };
 
+  const buildIssueBody = (action: ActionItem): string => {
+    const speakers = [...new Set(turns.filter(t => !t.streaming).map(t => t.speaker))];
+    const participantList = speakers.map(s => s === 'user' ? 'User' : s.toUpperCase()).join(', ');
+
+    // Build condensed transcript, prioritising recent turns, capped at ~3000 chars
+    const completedTurns = turns.filter(t => !t.streaming && t.text.trim());
+    let transcript = '';
+    for (let i = completedTurns.length - 1; i >= 0; i--) {
+      const t = completedTurns[i];
+      const label = t.speaker === 'user' ? 'User' : t.speaker.toUpperCase();
+      const entry = `**${label}:** ${t.text}\n\n`;
+      if ((transcript.length + entry.length) > 3000) break;
+      transcript = entry + transcript;
+    }
+
+    return [
+      `## Action Item: ${action.title}`,
+      '',
+      action.description,
+      '',
+      '### Debate Context',
+      '',
+      `**Topic:** ${topic}`,
+      `**Participants:** ${participantList}`,
+      '',
+      '#### Key Discussion Points',
+      '',
+      transcript.trim(),
+      '',
+      '---',
+      `*Priority: ${action.priority}*`,
+      '*Generated from AI Panel debate*',
+    ].join('\n');
+  };
+
   const createIssue = async (index: number) => {
     const action = actions[index];
     if (!action || action.issueUrl || action.creating) return;
@@ -101,7 +136,7 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const body = `## ${action.title}\n\n${action.description}\n\n---\n*Priority: ${action.priority}*\n*Generated from AI Panel debate on: "${topic}"*`;
+      const body = buildIssueBody(action);
 
       const res = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/github-agent`,
@@ -200,24 +235,35 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
 };
 
 function parseActions(text: string): ActionItem[] {
-  const lines = text.split('\n').filter(l => l.trim());
+  const lines = text.split('\n');
   const items: ActionItem[] = [];
+  let currentTitle = '';
+  let currentDesc = '';
 
-  for (const line of lines) {
-    const match = line.match(/^\d+[\.\)]\s*\*{0,2}(.+?)\*{0,2}\s*[:\-–]\s*(.+)/);
-    if (match) {
-      const title = match[1].trim();
-      const desc = match[2].trim();
+  const flush = () => {
+    if (currentTitle) {
       const priority: 'high' | 'medium' | 'low' =
         items.length === 0 ? 'high' : items.length < 3 ? 'medium' : 'low';
-      items.push({ title, description: desc, priority });
+      items.push({ title: currentTitle, description: currentDesc.trim(), priority });
+    }
+  };
+
+  for (const line of lines) {
+    const match = line.match(/^\d+[\.\)]\s*\*{0,2}(.+?)\*{0,2}\s*[:\-–]\s*(.*)/);
+    if (match) {
+      flush();
+      currentTitle = match[1].trim();
+      currentDesc = match[2]?.trim() || '';
+    } else if (currentTitle && line.trim()) {
+      currentDesc += (currentDesc ? ' ' : '') + line.trim();
     }
   }
+  flush();
 
   if (items.length === 0 && text.trim()) {
     items.push({
       title: 'Review debate conclusions',
-      description: text.slice(0, 300),
+      description: text.slice(0, 500),
       priority: 'medium',
     });
   }
