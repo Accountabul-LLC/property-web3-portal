@@ -41,7 +41,7 @@ Deno.serve(async (req) => {
     // Check for existing case
     const { data: existingCase, error: fetchError } = await serviceClient
       .from('kyc_cases')
-      .select('id, status, submitted_at, approved_at, rejected_at')
+      .select('id, status')
       .eq('user_id', user.id)
       .maybeSingle()
 
