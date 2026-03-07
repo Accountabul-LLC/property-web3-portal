@@ -88,21 +88,21 @@ const Navigation = () => {
           </div>
 
           {/* Desktop Navigation — centered */}
-          <div className="hidden xl:flex items-center justify-center flex-1 min-w-0">
-            <div className="flex items-center gap-1">
+          <div className="hidden xl:flex items-center justify-center flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center space-x-1.5 px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
+                    className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
                       currentPath === item.path
-                        ? 'text-primary bg-primary/5'
+                        ? 'text-primary bg-primary/10'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
                     <span>{item.label}</span>
                   </button>
                 );
