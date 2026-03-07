@@ -90,6 +90,35 @@ export default function IntegrationsDashboard() {
     }
   }, [user, fetchData]);
 
+  const handleGlobalToggle = useCallback(async () => {
+    if (!user) return;
+    const newConnected = !githubConnected;
+    setTogglingGlobal(true);
+
+    try {
+      const { error: upsertErr } = await supabase.from('agent_integrations' as any).upsert(
+        { agent_id: '00000000-0000-0000-0000-000000000000', integration_type: 'github', enabled: newConnected, updated_at: new Date().toISOString() },
+        { onConflict: 'agent_id,integration_type' }
+      );
+      if (upsertErr) throw upsertErr;
+
+      await supabase.from('integration_audit_log' as any).insert({
+        agent_id: null,
+        integration_type: 'github',
+        action: newConnected ? 'connected' : 'disconnected',
+        actor_id: user.id,
+        metadata: { scope: 'global' },
+      });
+
+      toast.success(`GitHub integration ${newConnected ? 'connected' : 'disconnected'}`);
+      await fetchData();
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to update');
+    } finally {
+      setTogglingGlobal(false);
+    }
+  }, [user, githubConnected, fetchData]);
+
   const getIntegration = (agentId: string) =>
     integrations.find((i) => i.agent_id === agentId && i.integration_type === 'github');
 
