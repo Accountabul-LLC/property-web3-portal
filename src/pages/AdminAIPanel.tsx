@@ -20,6 +20,7 @@ const AdminAIPanel = () => {
   const [selectedSession, setSelectedSession] = useState<SavedSession | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [codePanelOpen, setCodePanelOpen] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
 
   useEffect(() => {
     if (authLoading || accessLoading) return;
