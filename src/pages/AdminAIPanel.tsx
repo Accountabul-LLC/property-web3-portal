@@ -8,10 +8,11 @@ import AIPanel from '@/components/ai-panel/AIPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { Button } from '@/components/ui/button';
-import { Loader2, Bot, Code2, Settings2, PanelRightOpen, PanelRightClose } from 'lucide-react';
+import { Loader2, Bot, Code2, Settings2, ListChecks, PanelRightOpen, PanelRightClose } from 'lucide-react';
 
 const CodeBrowser = lazy(() => import('@/components/admin/CodeBrowser'));
 const IntegrationsDashboard = lazy(() => import('@/components/admin/IntegrationsDashboard'));
+const ActionItemsTab = lazy(() => import('@/components/ai-panel/ActionItemsTab'));
 
 const AdminAIPanel = () => {
   const navigate = useNavigate();
@@ -55,6 +56,9 @@ const AdminAIPanel = () => {
             </TabsTrigger>
             <TabsTrigger value="integrations" className="gap-2 data-[state=active]:bg-primary/10">
               <Settings2 className="w-4 h-4" /> Integrations
+            </TabsTrigger>
+            <TabsTrigger value="action-items" className="gap-2 data-[state=active]:bg-primary/10">
+              <ListChecks className="w-4 h-4" /> Action Items
             </TabsTrigger>
           </TabsList>
         </div>
@@ -111,6 +115,12 @@ const AdminAIPanel = () => {
         <TabsContent value="integrations" className="flex-1 overflow-y-auto mt-0">
           <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
             <IntegrationsDashboard />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="action-items" className="flex-1 overflow-hidden mt-0">
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>}>
+            <ActionItemsTab refreshKey={refreshKey} />
           </Suspense>
         </TabsContent>
       </Tabs>
