@@ -10,7 +10,7 @@ const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-worl
 const TREE_CACHE_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
 
 type Speaker = 'claude' | 'gpt' | 'gemini' | 'user'
-type Mode = 'debate' | 'collaborate' | 'compare'
+type Mode = 'debate' | 'collaborate' | 'compare' | 'conclude'
 
 interface HistoryItem { speaker: Speaker; text: string }
 interface RequestBody {
@@ -20,6 +20,7 @@ interface RequestBody {
   round: number
   turnOffset: number
   selectedFiles?: string[] // file paths selected by admin in Code Browser
+  transcript_summary?: string // full transcript for conclude mode
 }
 
 // ─── Memory helpers ───────────────────────────────────────────
@@ -303,9 +304,105 @@ Deno.serve(async (req) => {
   }
 
   // --- Build context (cached tree + on-demand files + memory) ---
-  const { topic, mode, history = [], round = 1, turnOffset = 0, selectedFiles = [] }: RequestBody = await req.json()
+  const { topic, mode, history = [], round = 1, turnOffset = 0, selectedFiles = [], transcript_summary }: RequestBody = await req.json()
   if (!topic?.trim()) {
     return new Response('Bad Request: topic required', { status: 400, headers: corsHeaders })
+  }
+
+  // ─── Conclude mode: structured task extraction ───────────────
+  if (mode === 'conclude') {
+    const lovableKey = Deno.env.get('LOVABLE_API_KEY')
+    if (!lovableKey) {
+      return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const concludeSystemPrompt = `You are a technical project manager for an RWA tokenization platform built on XRPL. Given a multi-agent debate transcript, extract concrete, actionable engineering tasks. Call the extract_action_items function with 3-8 items. Each item must have a clear title, priority, description referencing specific files/components, a list of relevant file paths, and the expected outcome.`
+
+    const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${lovableKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-3-flash-preview',
+        messages: [
+          { role: 'system', content: concludeSystemPrompt },
+          { role: 'user', content: `## Debate Topic\n${topic}\n\n## Full Transcript\n${transcript_summary || 'No transcript provided.'}` },
+        ],
+        tools: [{
+          type: 'function',
+          function: {
+            name: 'extract_action_items',
+            description: 'Extract structured action items from the debate transcript.',
+            parameters: {
+              type: 'object',
+              properties: {
+                action_items: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      title: { type: 'string', description: 'Short actionable title' },
+                      priority: { type: 'string', enum: ['HIGH', 'MEDIUM', 'LOW'] },
+                      description: { type: 'string', description: 'Detailed description of the task' },
+                      files: { type: 'array', items: { type: 'string' }, description: 'Relevant file paths' },
+                      expected_outcome: { type: 'string', description: 'What completing this task achieves' },
+                    },
+                    required: ['title', 'priority', 'description', 'files', 'expected_outcome'],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ['action_items'],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: 'function', function: { name: 'extract_action_items' } },
+      }),
+    })
+
+    if (!concludeRes.ok) {
+      const errText = await concludeRes.text()
+      console.error('Conclude AI call failed:', concludeRes.status, errText)
+      return new Response(JSON.stringify({ error: `AI call failed (${concludeRes.status})` }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const concludeData = await concludeRes.json()
+    let actionItems: unknown[] = []
+
+    // Extract from tool_calls response
+    const toolCall = concludeData.choices?.[0]?.message?.tool_calls?.[0]
+    if (toolCall?.function?.arguments) {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments)
+        actionItems = parsed.action_items || []
+      } catch (e) {
+        console.error('Failed to parse tool call arguments:', e)
+      }
+    }
+
+    const encoder = new TextEncoder()
+    const concludeStream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(JSON.stringify({ type: 'conclude_result', action_items: actionItems }) + '\n'))
+        controller.close()
+      },
+    })
+
+    return new Response(concludeStream, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/x-ndjson',
+        'Cache-Control': 'no-cache',
+        'X-Accel-Buffering': 'no',
+      },
+    })
   }
 
   // Only fetch context on round 1 to avoid redundant calls

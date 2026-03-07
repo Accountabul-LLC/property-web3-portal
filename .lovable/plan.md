@@ -1,44 +1,20 @@
+## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
+### Changes Applied
 
-## Plan: Structured Task Extraction via `conclude` Mode
+1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
 
-### Problem
-The `ai-debate` edge function has no `conclude` mode. When "Generate Action Items" fires, it falls through the normal 3-agent debate flow, producing prose instead of structured tasks. The frontend parser then struggles to extract multiple discrete items.
+2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
 
-### Approach
-Use **tool calling** (structured output) via the Lovable AI gateway instead of parsing freeform text. This gives us a stable JSON payload every time.
+3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
 
-### Changes
+4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
 
-#### 1. Edge function: Add `conclude` early-return branch (`supabase/functions/ai-debate/index.ts`)
+### New Files
+- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
 
-Before the 3-agent streaming logic, add a branch:
-
+### Flow
+```text
+Owner submits property → admin approves → owner mints MPT (linked to property)
+    → property status becomes "active" → appears in marketplace as "Listed"
 ```
-if (mode === 'conclude') → single Lovable AI call with tool_choice
-```
-
-- Uses `google/gemini-3-flash-preview` via `https://ai.gateway.lovable.dev/v1/chat/completions`
-- Sends the full `transcript_summary` (from request body) as user content
-- Uses **tool calling** with a `extract_action_items` function definition that enforces this schema:
-  - `action_items[]`: array of `{ title, priority (HIGH|MEDIUM|LOW), description, files[], expected_outcome }`
-- Returns a single NDJSON event: `{ type: "conclude_result", action_items: [...] }` then closes the stream
-- No debate flow, no 3-agent rotation
-
-#### 2. Frontend: Update `ActionableConclusions.tsx`
-
-- Update `generate()` to detect the new `conclude_result` event type and read `action_items` directly from the JSON payload (no text parsing needed)
-- Map `priority` from uppercase (`HIGH`/`MEDIUM`/`LOW`) to lowercase for the UI
-- Include `files` and `expected_outcome` in the rendered card and in the GitHub issue body
-- Keep `parseActions()` as a fallback if the response doesn't contain structured data
-- Increase item cap from 5 to 8
-
-#### 3. Update `RequestBody` type in edge function
-
-- Add `'conclude'` to the `Mode` union
-- Add `transcript_summary?: string` field
-
-### Files to modify
-- `supabase/functions/ai-debate/index.ts` — add conclude branch with tool-calling
-- `src/components/ai-panel/ActionableConclusions.tsx` — consume structured JSON, enhance cards with files/outcome
-
