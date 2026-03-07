@@ -52,11 +52,13 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
       // Start new session
       setViewingHistory(false);
       start({ ...params, topic: message, selectedFiles });
-    } else if (awaitingUserInput) {
-      // Continue with user message
+    } else if (awaitingUserInput || isDone) {
+      // Continue with user message (mid-debate or after completion)
       continueRound(message);
     }
   };
+
+  const isDone = !running && !awaitingUserInput && turns.length > 0;
 
   const handleSave = async () => {
     await saveSession(params);
