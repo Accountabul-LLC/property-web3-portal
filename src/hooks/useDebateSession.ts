@@ -20,6 +20,7 @@ export interface DebateParams {
   topic: string;
   mode: DebateMode;
   rounds: number;
+  selectedFiles?: string[];
 }
 
 export function useDebateSession() {
@@ -60,7 +61,7 @@ export function useDebateSession() {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ topic: params.topic, mode: params.mode, history, round, turnOffset }),
+          body: JSON.stringify({ topic: params.topic, mode: params.mode, history, round, turnOffset, selectedFiles: params.selectedFiles || [] }),
           signal: controller.signal,
         }
       );
