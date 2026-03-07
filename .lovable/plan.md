@@ -1,20 +1,30 @@
-## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
-### Changes Applied
 
-1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
+## Fix: `kyc-start` edge function — column `rejected_at` does not exist
 
-2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
+### Root Cause
 
-3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
+The `kyc-start` edge function on line 44 selects `rejected_at` from `kyc_cases`, but that column doesn't exist in the database. This causes a 500 error, which results in the blank screen.
 
-4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
-
-### New Files
-- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
-
-### Flow
-```text
-Owner submits property → admin approves → owner mints MPT (linked to property)
-    → property status becomes "active" → appears in marketplace as "Listed"
 ```
+.select('id, status, submitted_at, approved_at, rejected_at')
+```
+
+### Fix
+
+**Option A (preferred — code fix only):** Remove `submitted_at`, `approved_at`, and `rejected_at` from the select since they're not used in the response anyway. Change line 44 to:
+
+```typescript
+.select('id, status')
+```
+
+This is the simplest fix — the function only returns `id` and `status` to the frontend, so the extra columns are unnecessary.
+
+**Option B (if those columns are needed later):** Add a migration to create the missing columns on `kyc_cases`. But since the function doesn't use them in its response, Option A is correct.
+
+### File Changed
+
+| File | Change |
+|------|--------|
+| `supabase/functions/kyc-start/index.ts` | Line 44: change `.select('id, status, submitted_at, approved_at, rejected_at')` to `.select('id, status')` |
+
