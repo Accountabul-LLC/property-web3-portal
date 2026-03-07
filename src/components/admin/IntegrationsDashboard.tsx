@@ -181,7 +181,10 @@ export default function IntegrationsDashboard() {
           <CardTitle className="text-lg">Agent Access</CardTitle>
           <CardDescription>Toggle GitHub access per agent</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-1">
+        <CardContent className={`space-y-1 ${!githubConnected ? 'opacity-50 pointer-events-none' : ''}`}>
+          {!githubConnected && (
+            <p className="text-sm text-muted-foreground py-2 text-center">Enable the GitHub integration above to manage agent access.</p>
+          )}
           {agents && agents.length > 0 ? agents.map((agent) => {
             const integration = getIntegration(agent.id);
             const enabled = integration?.enabled ?? false;
@@ -194,7 +197,7 @@ export default function IntegrationsDashboard() {
                   <p className="text-xs text-muted-foreground truncate">{agent.type} · {agent.role}</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  {enabled && (
+                  {enabled && githubConnected && (
                     <Badge variant="outline" className="text-xs">
                       <GitBranch className="w-3 h-3 mr-1" /> GitHub
                     </Badge>
@@ -202,7 +205,7 @@ export default function IntegrationsDashboard() {
                   {isToggling ? (
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   ) : (
-                    <Switch checked={enabled} onCheckedChange={() => handleToggle(agent, enabled)} />
+                    <Switch checked={enabled} onCheckedChange={() => handleToggle(agent, enabled)} disabled={!githubConnected} />
                   )}
                 </div>
               </div>
