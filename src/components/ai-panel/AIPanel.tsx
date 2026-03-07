@@ -78,7 +78,7 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
     for (let i = 0; i <= turnIndex; i++) {
       if (turns[i]?.speaker !== 'user') {
         aiCount++;
-        round = Math.ceil(aiCount / 2);
+        round = Math.ceil(aiCount / 3);
       }
     }
     return round;
