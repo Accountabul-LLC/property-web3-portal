@@ -30,7 +30,7 @@ Team access = admin role. Wallet state = ActiveWalletContext (global).
 ## Key Files
 src/pages/ — one component per route
 src/components/ui/ — shadcn primitives (DO NOT edit)
-src/components/ai-panel/ — AIPanel, AIPanelGate, DebateControls, DebateTurn
+src/components/ai-panel/ — AIPanel, AIPanelGate, DebateTurn, ChatInputBar, ActionableConclusions
 src/components/mint/ — MintWizard, MPTForm, NFTForm, IOUForm, MintStatus
 src/hooks/ — useAuth, useTeamAccess, useDebateSession, useProfile, useProperties, usePortfolio, useXRPLPortfolio, useTokenMeta, useAIAgents
 src/contexts/ActiveWalletContext.tsx — global wallet state + inactivity timeout
