@@ -118,11 +118,12 @@ function TreeItem({
   );
 }
 
-export default function CodeBrowser({ embedded = false }: { embedded?: boolean }) {
+export default function CodeBrowser({ embedded = false, onSelectedFilesChange }: { embedded?: boolean; onSelectedFilesChange?: (files: string[]) => void }) {
   const { getTree, getFile, treeLoading, fileLoading, error } = useGitHubAgent();
   const [files, setFiles] = useState<TreeFile[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<FileContent | null>(null);
+  const [checkedFiles, setCheckedFiles] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getTree().then(setFiles);
@@ -135,6 +136,17 @@ export default function CodeBrowser({ embedded = false }: { embedded?: boolean }
     const content = await getFile(path);
     setFileContent(content);
   }, [getFile]);
+
+  const handleToggleCheck = useCallback((path: string) => {
+    setCheckedFiles(prev => {
+      const next = new Set(prev);
+      if (next.has(path)) next.delete(path);
+      else if (next.size < 10) next.add(path);
+      const arr = Array.from(next);
+      onSelectedFilesChange?.(arr);
+      return next;
+    });
+  }, [onSelectedFilesChange]);
 
   if (treeLoading && files.length === 0) {
     return (
@@ -150,15 +162,26 @@ export default function CodeBrowser({ embedded = false }: { embedded?: boolean }
       {error && (
         <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm">{error}</div>
       )}
+      {embedded && checkedFiles.size > 0 && (
+        <div className="px-3 py-1.5 bg-primary/5 border-b flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Agent context:</span>
+          {Array.from(checkedFiles).map(f => (
+            <Badge key={f} variant="secondary" className="text-xs gap-1 cursor-pointer" onClick={() => handleToggleCheck(f)}>
+              {f.split('/').pop()} ✕
+            </Badge>
+          ))}
+        </div>
+      )}
       <ResizablePanelGroup direction="horizontal">
         <ResizablePanel defaultSize={30} minSize={20}>
-          <div className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Files ({files.length})
+          <div className="border-b px-3 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+            <span>Files ({files.length})</span>
+            {embedded && <span className="normal-case font-normal">Check for agents</span>}
           </div>
           <ScrollArea className="h-[calc(100%-2.5rem)]">
             <div className="py-1">
               {tree.map((node) => (
-                <TreeItem key={node.path} node={node} depth={0} selectedPath={selectedPath} onSelect={handleSelect} />
+                <TreeItem key={node.path} node={node} depth={0} selectedPath={selectedPath} onSelect={handleSelect} selectable={embedded} checkedFiles={checkedFiles} onToggleCheck={handleToggleCheck} />
               ))}
             </div>
           </ScrollArea>
