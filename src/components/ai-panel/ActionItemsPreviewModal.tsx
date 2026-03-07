@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -6,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Github, FileCode, ArrowRight } from 'lucide-react';
+import { Loader2, Github, FileCode, ArrowRight, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DebateTurnData } from '@/hooks/useDebateSession';
 
@@ -33,6 +34,7 @@ const priorityVariant: Record<string, 'destructive' | 'default' | 'secondary'> =
 };
 
 export default function ActionItemsPreviewModal({ open, onOpenChange, topic, turns, sessionId }: Props) {
+  const navigate = useNavigate();
   const [items, setItems] = useState<ActionItem[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
@@ -344,6 +346,14 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
         {!loading && items.length > 0 && (
           <DialogFooter className="gap-2 sm:gap-2">
             {autoSaved && <span className="text-xs text-muted-foreground mr-auto">✓ Auto-saved</span>}
+            <Button
+              variant="outline"
+              onClick={() => { onOpenChange(false); navigate('/action-items'); }}
+              disabled={busy}
+              className="gap-2"
+            >
+              <ListChecks className="w-4 h-4" /> View Task List
+            </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               Dismiss
             </Button>
