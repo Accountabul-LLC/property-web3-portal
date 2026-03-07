@@ -121,6 +121,16 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const final = parsed.slice(0, 8);
       setItems(final);
       setSelected(new Set(final.map((_, i) => i)));
+
+      // Auto-save immediately
+      try {
+        const userId = session?.user?.id;
+        if (userId && final.length > 0) {
+          await autoSave(final, userId);
+        }
+      } catch (e) {
+        console.error('Auto-save failed:', e);
+      }
     } catch (e) {
       console.error('Failed to generate conclusions:', e);
       toast.error('Failed to generate action items');
@@ -129,8 +139,10 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
     }
   };
 
-  const insertActionItems = async (userId: string) => {
-    const rows = items.map(item => ({
+  const [autoSaved, setAutoSaved] = useState(false);
+
+  const autoSave = async (itemsToSave: ActionItem[], userId: string) => {
+    const rows = itemsToSave.map(item => ({
       created_by: userId,
       source_thread_id: sessionId || null,
       source_type: 'debate',
@@ -148,23 +160,14 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       .insert(rows as any)
       .select('id');
     if (error) throw error;
+    setAutoSaved(true);
+    toast.success(`${itemsToSave.length} action items saved`);
     return data as any[] | null;
   };
 
-  const saveAll = async () => {
-    setSaving(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      await insertActionItems(session.user.id);
-      toast.success(`${items.length} action items saved`);
-      onOpenChange(false);
-    } catch (e) {
-      console.error(e);
-      toast.error('Failed to save action items');
-    } finally {
-      setSaving(false);
-    }
+  const insertActionItems = async (userId: string) => {
+    if (autoSaved) return null; // already saved
+    return autoSave(items, userId);
   };
 
   const buildIssueBody = (action: ActionItem): string => {
@@ -320,12 +323,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
 
         {!loading && items.length > 0 && (
           <DialogFooter className="gap-2 sm:gap-2">
+            {autoSaved && <span className="text-xs text-muted-foreground mr-auto">✓ Auto-saved</span>}
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               Dismiss
-            </Button>
-            <Button onClick={saveAll} disabled={busy} className="gap-2">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Save All
             </Button>
             <Button onClick={pushSelected} disabled={busy || selected.size === 0} variant="hero" className="gap-2">
               {pushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Github className="w-4 h-4" />}
