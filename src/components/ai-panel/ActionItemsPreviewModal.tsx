@@ -54,9 +54,18 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const transcript = turns
+      // Build full conversation messages from turns
+      const conversationMessages = turns
         .filter(t => !t.streaming)
-        .map(t => `[${t.speaker.toUpperCase()}]: ${t.text}`)
+        .map(t => ({
+          role: t.speaker === 'user' ? 'user' as const : 'agent' as const,
+          speaker: t.speaker,
+          content: t.text,
+        }));
+
+      // Also build fallback transcript_summary
+      const transcript = conversationMessages
+        .map(m => `[${(m.speaker || m.role).toUpperCase()}]: ${m.content}`)
         .join('\n\n');
 
       const res = await fetch(
@@ -73,7 +82,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
             history: [],
             round: 1,
             turnOffset: 0,
+            conversation_messages: conversationMessages,
             transcript_summary: transcript,
+            thread_id: sessionId,
           }),
         }
       );
