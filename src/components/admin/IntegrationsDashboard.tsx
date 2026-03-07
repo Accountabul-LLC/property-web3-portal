@@ -37,6 +37,8 @@ export default function IntegrationsDashboard() {
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
+  const [githubConnected, setGithubConnected] = useState(true);
+  const [togglingGlobal, setTogglingGlobal] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -44,8 +46,14 @@ export default function IntegrationsDashboard() {
       supabase.from('agent_integrations' as any).select('*'),
       supabase.from('integration_audit_log' as any).select('*').order('created_at', { ascending: false }).limit(50),
     ]);
-    setIntegrations((intRes.data || []) as unknown as AgentIntegration[]);
+    const ints = (intRes.data || []) as unknown as AgentIntegration[];
+    setIntegrations(ints);
     setAuditLog((auditRes.data || []) as unknown as AuditEntry[]);
+
+    // Derive global connection state: connected if any integration exists
+    // We store this in a special "global" integration record with agent_id = '00000000-0000-0000-0000-000000000000'
+    const globalRecord = ints.find(i => i.agent_id === '00000000-0000-0000-0000-000000000000' && i.integration_type === 'github');
+    setGithubConnected(globalRecord ? globalRecord.enabled : true); // default to connected if no record
     setLoading(false);
   }, []);
 
