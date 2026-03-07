@@ -350,6 +350,7 @@ Rules:
       userContent += `## Full Transcript\n${transcript_summary}`
     } else {
       userContent += `## Transcript\nNo transcript provided.`
+    }
 
     const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
