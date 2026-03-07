@@ -119,12 +119,6 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
               className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
               style={{ minHeight: '44px', maxHeight: '160px' }}
             />
-            {!sessionActive && (
-              <div className="absolute right-2 bottom-1.5 flex items-center gap-1 text-[10px] text-muted-foreground">
-                <span className="px-1.5 py-0.5 rounded bg-muted/60 capitalize">{params.mode}</span>
-                <span className="px-1.5 py-0.5 rounded bg-muted/60">{params.rounds}r</span>
-              </div>
-            )}
           </div>
 
           {running ? (
