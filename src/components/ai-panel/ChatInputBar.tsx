@@ -62,11 +62,11 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
   return (
     <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4">
       <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-2">
+        <div className="flex items-center gap-2">
           {!sessionActive && (
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="flex-shrink-0 mb-0.5" title="Session settings">
+                <Button variant="ghost" size="icon" className="flex-shrink-0 h-[44px] w-[44px]" title="Session settings">
                   <Settings2 className="w-4 h-4" />
                 </Button>
               </PopoverTrigger>
@@ -122,7 +122,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
           </div>
 
           {running ? (
-            <Button variant="destructive" size="icon" onClick={onStop} className="flex-shrink-0 mb-0.5" title="Stop">
+            <Button variant="destructive" size="icon" onClick={onStop} className="flex-shrink-0 h-[44px] w-[44px]" title="Stop">
               <Square className="w-4 h-4" />
             </Button>
           ) : (
@@ -130,7 +130,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
               size="icon"
               onClick={handleSend}
               disabled={!canSend}
-              className="flex-shrink-0 mb-0.5"
+              className="flex-shrink-0 h-[44px] w-[44px]"
               title="Send"
             >
               <Send className="w-4 h-4" />
