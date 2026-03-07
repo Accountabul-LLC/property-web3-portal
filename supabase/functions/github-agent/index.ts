@@ -282,12 +282,46 @@ serve(async (req) => {
       }
 
       case "create_issue": {
-        const issue = await githubAPI(ghToken, `/repos/${owner}/${repo}/issues`, "POST", {
+        const labels = params.labels || [];
+        const issueBody: any = {
           title: params.title,
           body: params.body,
-          labels: params.labels || [],
-        });
-        result = { number: issue.number, url: issue.html_url, title: issue.title };
+          labels,
+        };
+        if (params.milestone) issueBody.milestone = params.milestone;
+        if (params.assignees?.length) issueBody.assignees = params.assignees;
+        const issue = await githubAPI(ghToken, `/repos/${owner}/${repo}/issues`, "POST", issueBody);
+        result = { number: issue.number, url: issue.html_url, title: issue.title, state: issue.state };
+        break;
+      }
+
+      case "get_issue": {
+        const issueNum = params.issue_number;
+        if (!issueNum) throw new Error("issue_number is required for get_issue");
+        const issue = await githubAPI(ghToken, `/repos/${owner}/${repo}/issues/${issueNum}`);
+        result = {
+          number: issue.number,
+          url: issue.html_url,
+          title: issue.title,
+          state: issue.state,
+          closed_at: issue.closed_at,
+          labels: issue.labels?.map((l: any) => l.name) || [],
+          pull_request: issue.pull_request ? { url: issue.pull_request.html_url, merged: !!issue.pull_request.merged_at } : null,
+        };
+        break;
+      }
+
+      case "list_issues": {
+        const state = params.state || "open";
+        const labelsFilter = params.labels_filter ? `&labels=${params.labels_filter}` : '';
+        const issues = await githubAPI(ghToken, `/repos/${owner}/${repo}/issues?state=${state}&per_page=${params.per_page || 30}${labelsFilter}`);
+        result = {
+          count: issues.length,
+          issues: issues.map((i: any) => ({
+            number: i.number, title: i.title, state: i.state,
+            closed_at: i.closed_at, labels: i.labels?.map((l: any) => l.name) || [],
+          })),
+        };
         break;
       }
 
@@ -362,7 +396,7 @@ serve(async (req) => {
 
       default:
         return new Response(
-          JSON.stringify({ error: `Unknown action: ${action}. Supported: get_tree, get_file, create_issue, create_pr, store_memory, recall_memory` }),
+          JSON.stringify({ error: `Unknown action: ${action}. Supported: get_tree, get_file, create_issue, get_issue, list_issues, create_pr, store_memory, recall_memory` }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
     }

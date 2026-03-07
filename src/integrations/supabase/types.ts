@@ -61,9 +61,12 @@ export type Database = {
           files_json: Json | null
           github_issue_number: number | null
           github_issue_url: string | null
+          github_labels: string[] | null
+          github_repo: string | null
           github_sync_status: string | null
           id: string
           priority: string
+          pushed_at: string | null
           source_thread_id: string | null
           source_type: string
           status: string
@@ -81,9 +84,12 @@ export type Database = {
           files_json?: Json | null
           github_issue_number?: number | null
           github_issue_url?: string | null
+          github_labels?: string[] | null
+          github_repo?: string | null
           github_sync_status?: string | null
           id?: string
           priority?: string
+          pushed_at?: string | null
           source_thread_id?: string | null
           source_type?: string
           status?: string
@@ -101,9 +107,12 @@ export type Database = {
           files_json?: Json | null
           github_issue_number?: number | null
           github_issue_url?: string | null
+          github_labels?: string[] | null
+          github_repo?: string | null
           github_sync_status?: string | null
           id?: string
           priority?: string
+          pushed_at?: string | null
           source_thread_id?: string | null
           source_type?: string
           status?: string
