@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Github, FileCode, ArrowRight, ListChecks } from 'lucide-react';
+import { Loader2, Github, FileCode, ArrowRight, ListChecks, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DebateTurnData } from '@/hooks/useDebateSession';
 
@@ -54,9 +54,18 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const transcript = turns
+      // Build full conversation messages from turns
+      const conversationMessages = turns
         .filter(t => !t.streaming)
-        .map(t => `[${t.speaker.toUpperCase()}]: ${t.text}`)
+        .map(t => ({
+          role: t.speaker === 'user' ? 'user' as const : 'agent' as const,
+          speaker: t.speaker,
+          content: t.text,
+        }));
+
+      // Also build fallback transcript_summary
+      const transcript = conversationMessages
+        .map(m => `[${(m.speaker || m.role).toUpperCase()}]: ${m.content}`)
         .join('\n\n');
 
       const res = await fetch(
@@ -73,7 +82,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
             history: [],
             round: 1,
             turnOffset: 0,
+            conversation_messages: conversationMessages,
             transcript_summary: transcript,
+            thread_id: sessionId,
           }),
         }
       );
@@ -123,16 +134,6 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const final = parsed.slice(0, 8);
       setItems(final);
       setSelected(new Set(final.map((_, i) => i)));
-
-      // Auto-save immediately
-      try {
-        const userId = session?.user?.id;
-        if (userId && final.length > 0) {
-          await autoSave(final, userId);
-        }
-      } catch (e) {
-        console.error('Auto-save failed:', e);
-      }
     } catch (e) {
       console.error('Failed to generate conclusions:', e);
       toast.error('Failed to generate action items');
@@ -141,10 +142,44 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
     }
   };
 
-  const [autoSaved, setAutoSaved] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const autoSave = async (itemsToSave: ActionItem[], userId: string) => {
-    const rows = itemsToSave.map(item => ({
+  const saveSelected = async () => {
+    const indices = Array.from(selected);
+    if (indices.length === 0) { toast.error('Select at least one item'); return; }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const selectedItems = indices.map(i => items[i]);
+      const rows = selectedItems.map(item => ({
+        created_by: session.user.id,
+        source_thread_id: sessionId || null,
+        source_type: 'debate',
+        title: item.title,
+        description: item.description,
+        priority: item.priority.toUpperCase(),
+        files_json: JSON.stringify(item.files || []),
+        expected_outcome: item.expected_outcome || '',
+        status: 'open',
+        github_sync_status: 'none',
+      }));
+      const { error } = await supabase.from('action_items' as any).insert(rows as any);
+      if (error) throw error;
+      setSaved(true);
+      toast.success(`${selectedItems.length} action items saved`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to save action items');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const insertAndGetIds = async (userId: string) => {
+    const indices = Array.from(selected);
+    const selectedItems = indices.map(i => items[i]);
+    const rows = selectedItems.map(item => ({
       created_by: userId,
       source_thread_id: sessionId || null,
       source_type: 'debate',
@@ -156,20 +191,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       status: 'open',
       github_sync_status: 'none',
     }));
-
-    const { data, error } = await supabase
-      .from('action_items' as any)
-      .insert(rows as any)
-      .select('id');
+    const { data, error } = await supabase.from('action_items' as any).insert(rows as any).select('id');
     if (error) throw error;
-    setAutoSaved(true);
-    toast.success(`${itemsToSave.length} action items saved`);
-    return data as any[] | null;
-  };
-
-  const insertActionItems = async (userId: string) => {
-    if (autoSaved) return null; // already saved
-    return autoSave(items, userId);
+    return { ids: data as any[] | null, items: selectedItems };
   };
 
   const buildIssueBody = (action: ActionItem): string => {
@@ -221,12 +245,13 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const savedRows = await insertActionItems(session.user.id);
+      // Save to DB first if not already saved
+      const { ids: savedRows, items: selectedItems } = await insertAndGetIds(session.user.id);
 
       let pushed = 0;
-      for (const idx of indices) {
-        const action = items[idx];
-        const dbRow = savedRows?.[idx];
+      for (let i = 0; i < selectedItems.length; i++) {
+        const action = selectedItems[i];
+        const dbRow = savedRows?.[i];
         try {
           const res = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/github-agent`,
@@ -251,14 +276,20 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
 
           if (dbRow?.id && data.url) {
             await (supabase.from('action_items' as any) as any)
-              .update({ github_issue_url: data.url, github_issue_number: data.number, github_sync_status: 'synced' })
+              .update({
+                github_issue_url: data.url,
+                github_issue_number: data.number,
+                github_sync_status: 'synced',
+                github_repo: 'JibreelMuhammad/property-web3-portal',
+                pushed_at: new Date().toISOString(),
+              })
               .eq('id', dbRow.id);
           }
           pushed++;
         } catch { /* continue */ }
       }
 
-      toast.success(`Saved ${items.length} items, pushed ${pushed} to GitHub`);
+      toast.success(`Saved & pushed ${pushed} to GitHub`);
       onOpenChange(false);
     } catch (e) {
       console.error(e);
@@ -345,7 +376,7 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
 
         {!loading && items.length > 0 && (
           <DialogFooter className="gap-2 sm:gap-2">
-            {autoSaved && <span className="text-xs text-muted-foreground mr-auto">✓ Auto-saved</span>}
+            {saved && <span className="text-xs text-muted-foreground mr-auto">✓ Saved</span>}
             <Button
               variant="outline"
               onClick={() => { onOpenChange(false); navigate('/action-items'); }}
@@ -356,6 +387,10 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
               Dismiss
+            </Button>
+            <Button onClick={saveSelected} disabled={busy || selected.size === 0 || saved} className="gap-2">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              Save {selected.size} Selected
             </Button>
             <Button onClick={pushSelected} disabled={busy || selected.size === 0} variant="hero" className="gap-2">
               {pushing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Github className="w-4 h-4" />}

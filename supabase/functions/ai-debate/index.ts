@@ -12,6 +12,13 @@ const TREE_CACHE_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
 type Speaker = 'claude' | 'gpt' | 'gemini' | 'user'
 type Mode = 'debate' | 'collaborate' | 'compare' | 'conclude'
 
+interface ConversationMessage {
+  role: 'user' | 'agent' | 'assistant' | 'system'
+  speaker?: string
+  content: string
+  timestamp?: string
+}
+
 interface HistoryItem { speaker: Speaker; text: string }
 interface RequestBody {
   topic: string
@@ -19,8 +26,10 @@ interface RequestBody {
   history: HistoryItem[]
   round: number
   turnOffset: number
-  selectedFiles?: string[] // file paths selected by admin in Code Browser
-  transcript_summary?: string // full transcript for conclude mode
+  selectedFiles?: string[]
+  transcript_summary?: string
+  conversation_messages?: ConversationMessage[]
+  thread_id?: string
 }
 
 // ─── Memory helpers ───────────────────────────────────────────
@@ -304,7 +313,7 @@ Deno.serve(async (req) => {
   }
 
   // --- Build context (cached tree + on-demand files + memory) ---
-  const { topic, mode, history = [], round = 1, turnOffset = 0, selectedFiles = [], transcript_summary }: RequestBody = await req.json()
+  const { topic, mode, history = [], round = 1, turnOffset = 0, selectedFiles = [], transcript_summary, conversation_messages, thread_id }: RequestBody = await req.json()
   if (!topic?.trim()) {
     return new Response('Bad Request: topic required', { status: 400, headers: corsHeaders })
   }
@@ -318,7 +327,29 @@ Deno.serve(async (req) => {
       })
     }
 
-    const concludeSystemPrompt = `You are a technical project manager for an RWA tokenization platform built on XRPL. Given a multi-agent debate transcript, extract concrete, actionable engineering tasks. Call the extract_action_items function with 3-8 items. Each item must have a clear title, priority, description referencing specific files/components, a list of relevant file paths, and the expected outcome.`
+    const concludeSystemPrompt = `You are a technical project manager for an RWA tokenization platform built on XRPL.
+Given the following multi-agent conversation and user input, extract 3 to 8 concrete actionable tasks.
+Call the extract_action_items function with your results.
+
+Rules:
+- Each task must be implementation-ready
+- Use specific files, components, functions, routes, or systems where possible
+- Include both user requests and agent conclusions
+- Priority must be HIGH, MEDIUM, or LOW
+- Description should be detailed enough for a developer to start working`
+
+    // Build the user content: prefer conversation_messages over transcript_summary
+    let userContent = `## Debate Topic\n${topic}\n\n`
+    if (conversation_messages && conversation_messages.length > 0) {
+      userContent += `## Full Conversation\n`
+      for (const msg of conversation_messages) {
+        const label = msg.speaker ? `[${msg.speaker.toUpperCase()}]` : `[${msg.role.toUpperCase()}]`
+        userContent += `${label}: ${msg.content}\n\n`
+      }
+    } else if (transcript_summary) {
+      userContent += `## Full Transcript\n${transcript_summary}`
+    } else {
+      userContent += `## Transcript\nNo transcript provided.`
 
     const concludeRes = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -330,7 +361,7 @@ Deno.serve(async (req) => {
         model: 'google/gemini-3-flash-preview',
         messages: [
           { role: 'system', content: concludeSystemPrompt },
-          { role: 'user', content: `## Debate Topic\n${topic}\n\n## Full Transcript\n${transcript_summary || 'No transcript provided.'}` },
+          { role: 'user', content: userContent },
         ],
         tools: [{
           type: 'function',
