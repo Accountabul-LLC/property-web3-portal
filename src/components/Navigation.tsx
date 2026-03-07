@@ -66,7 +66,7 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-full gap-2">
 
           {/* Left: hamburger (< lg) + logo */}
-          <div className="flex items-center flex-shrink-0">
+          <div className="flex items-center flex-shrink-0 mr-4">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
@@ -83,7 +83,7 @@ const Navigation = () => {
                 alt="Accountabul Logo"
                 className="w-8 h-8"
               />
-              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent whitespace-nowrap">
                 Accountabul
               </span>
             </button>
