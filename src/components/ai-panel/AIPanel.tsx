@@ -158,6 +158,7 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
           running={running}
           sessionActive={turns.length > 0}
           awaitingInput={awaitingUserInput}
+          isDone={isDone}
           onSend={handleSend}
           onStop={stop}
         />
