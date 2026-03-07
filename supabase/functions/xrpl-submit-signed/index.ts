@@ -72,6 +72,27 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
+    // SEC-014: Server-side KYC enforcement — never trust the React client gate alone
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    );
+    const { data: kycStatus, error: kycError } = await supabaseAdmin.rpc('get_kyc_status', { p_user_id: userId });
+    if (kycError) {
+      return new Response(JSON.stringify({ success: false, error: 'Unable to verify identity status' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (kycStatus !== 'approved') {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Identity verification required',
+        kyc_status: kycStatus,
+      }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { tx_json, wallet_address, network } = await req.json();
 
     if (network !== 'testnet') {
@@ -83,12 +104,6 @@ Deno.serve(async (req) => {
     }
 
     const nodes = TESTNET_NODES;
-
-    // Look up the wallet secret using service role
-    const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    );
 
     // Ownership check: wallet must belong to the authenticated user
     const { data: walletRow, error: walletError } = await supabaseAdmin

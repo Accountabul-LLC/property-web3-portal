@@ -138,15 +138,35 @@ Deno.serve(async (req) => {
           .eq('wallet_address', wallet_address);
       }
 
-      // Link wallet to authenticated user in user_wallets
+      // SEC-004: Link wallet to user — enforce intended_user_id binding
       if (userId) {
+        // Verify the payload was created by this user (wallet-connect flow).
+        // Prevents attacker from submitting another user's signed QR under their own token.
+        const { data: payloadRow } = await supabase
+          .from('xaman_payloads')
+          .select('intended_user_id')
+          .eq('uuid', uuid)
+          .maybeSingle();
+
+        const intendedUserId = payloadRow?.intended_user_id ?? null;
+        if (intendedUserId && intendedUserId !== userId) {
+          console.warn(`SEC-004 blocked: payload for ${intendedUserId}, caller is ${userId}`);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: 'This payload was not created by your session. Please initiate a new wallet connection.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
+          );
+        }
+
         // Check if wallet is already linked to a DIFFERENT user
         const { data: existingLink } = await supabase
           .from('user_wallets')
           .select('user_id')
           .eq('wallet_address', wallet_address)
           .eq('status', 'active')
-          .single();
+          .maybeSingle();
 
         if (existingLink && existingLink.user_id !== userId) {
           return new Response(
@@ -154,7 +174,7 @@ Deno.serve(async (req) => {
               success: false,
               error: 'This wallet is already linked to another account. Please disconnect it from the other account first.'
             }),
-            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 409 }
           );
         }
 

@@ -105,6 +105,23 @@ Deno.serve(async (req) => {
     }
     const userId = claimsData.claims.sub as string;
 
+    // SEC-014: Enforce KYC approval server-side — the React KycGate is not sufficient
+    const { data: kycStatus, error: kycError } = await supabase.rpc('get_kyc_status', { p_user_id: userId });
+    if (kycError) {
+      return new Response(JSON.stringify({ error: 'Unable to verify identity status' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    if (kycStatus !== 'approved') {
+      return new Response(JSON.stringify({
+        error: 'Identity verification required',
+        kyc_status: kycStatus,
+        message: `KYC status is '${kycStatus}'. Approval required before minting.`,
+      }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { data: walletLink } = await supabase
       .from('user_wallets')
       .select('id')

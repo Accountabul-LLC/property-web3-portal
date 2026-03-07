@@ -34,8 +34,17 @@ Deno.serve(async (req) => {
       throw new Error('Xaman API credentials not configured');
     }
 
-    console.log('Creating Xaman payload for sign-in');
-    console.log('API Key present:', !!xamanApiKey, 'Secret present:', !!xamanApiSecret);
+    // SEC-004: Resolve calling user (if authenticated).
+    // Binding intended_user_id to the payload prevents an attacker from submitting
+    // another user's signed QR response under their own auth token.
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    let intendedUserId: string | null = null;
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
+      if (user?.id) intendedUserId = user.id;
+    }
 
     const payload = {
       txjson: {
@@ -45,7 +54,8 @@ Deno.serve(async (req) => {
         submit: false,
         expire: 300,
         return_url: {
-          web: `${req.headers.get('origin') || req.url.split('/functions/')[0]}`
+          // SEC-016: Use env-configured URL — never trust the Origin header for redirects
+          web: Deno.env.get('APP_URL') || 'https://accountabul.com',
         }
       },
       custom_meta: {
@@ -86,14 +96,14 @@ Deno.serve(async (req) => {
 
     console.log('Xaman payload created:', xamanData.uuid);
 
-    // Store payload reference in database
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
-    
+    // Store payload with intended_user_id binding (SEC-004)
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { error: dbError } = await supabase
       .from('xaman_payloads')
       .insert({
         uuid: xamanData.uuid,
         status: 'pending',
+        intended_user_id: intendedUserId,
         created_at: new Date().toISOString()
       });
 
