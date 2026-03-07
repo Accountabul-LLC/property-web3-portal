@@ -22,7 +22,7 @@ interface Props {
 
 const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
   const [params, setParams] = useState<DebateParams>(DEFAULT_PARAMS);
-  const { turns, running, error, currentRound, awaitingUserInput, start, continueRound, stop, saveSession, reset, loadTranscript } = useDebateSession();
+  const { turns, running, error, currentRound, awaitingUserInput, sessionId, start, continueRound, stop, saveSession, reset, loadTranscript } = useDebateSession();
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [viewingHistory, setViewingHistory] = useState(false);
@@ -138,12 +138,12 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
                   <RotateCcw className="w-4 h-4" /> New Chat
                 </Button>
               </div>
-              <ActionableConclusions topic={params.topic} turns={turns} />
+              <ActionableConclusions topic={params.topic} turns={turns} sessionId={sessionId ?? undefined} />
             </div>
           )}
 
           {isDone && viewingHistory && (
-            <ActionableConclusions topic={params.topic} turns={turns} />
+            <ActionableConclusions topic={params.topic} turns={turns} sessionId={sessionId ?? undefined} />
           )}
 
           <div ref={bottomRef} />
