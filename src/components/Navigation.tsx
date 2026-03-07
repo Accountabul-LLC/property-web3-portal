@@ -26,6 +26,7 @@ const Navigation = () => {
   } = useActiveWallet();
   const { isApproved: kycApproved } = useKycStatus();
 
+  // Check if user has admin or compliance_officer role
   const { data: isAdminOrCompliance } = useQuery({
     queryKey: ['user-is-admin', user?.id],
     queryFn: async () => {
@@ -48,35 +49,32 @@ const Navigation = () => {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isMobileMenuOpen]);
 
-  // shortLabel used between lg (1024px) and xl (1280px) to prevent overflow
   const navItems = [
-    { path: '/marketplace', label: 'Marketplace', shortLabel: 'Market', icon: Building2 },
-    { path: '/tokenize',    label: 'Tokenize',    icon: TrendingUp },
-    { path: '/professionals', label: 'Professionals', shortLabel: 'Pros', icon: Users },
-    { path: '/ai-agents',  label: 'AI Agents',   shortLabel: 'Agents', icon: Bot },
-    { path: '/mint',       label: 'Mint',         icon: Coins },
-    { path: '/portfolio',  label: 'Portfolio',    icon: Wallet },
+    { path: '/marketplace', label: 'Marketplace', icon: Building2 },
+    { path: '/tokenize', label: 'Tokenize', icon: TrendingUp },
+    { path: '/professionals', label: 'Professionals', icon: Users },
+    { path: '/ai-agents', label: 'AI Agents', icon: Bot },
+    { path: '/mint', label: 'Mint', icon: Coins },
+    { path: '/portfolio', label: 'Portfolio', icon: Wallet },
   ];
 
   const currentPath = location.pathname;
 
   return (
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex items-center justify-between h-full gap-2">
-
-          {/* Left: hamburger (< lg) + logo */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-full">
+        <div className="flex items-center justify-between h-full">
+          {/* Mobile menu button + Logo & Brand */}
           <div className="flex items-center flex-shrink-0">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
-              aria-label="Toggle menu"
+              className="xl:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
             <button
               onClick={() => navigate('/')}
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity mr-10"
             >
               <img
                 src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png"
@@ -89,57 +87,54 @@ const Navigation = () => {
             </button>
           </div>
 
-          {/* Center: desktop nav (lg+) */}
-          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 mx-2">
-            <div className="flex items-center gap-0.5 xl:gap-1">
+          {/* Desktop Navigation — centered */}
+          <div className="hidden xl:flex items-center justify-center flex-1 min-w-0 overflow-hidden">
+            <div className="flex items-center gap-0.5">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = currentPath === item.path;
                 return (
                   <button
                     key={item.path}
                     onClick={() => navigate(item.path)}
-                    className={`flex items-center gap-1.5 px-2 xl:px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
-                      isActive
-                        ? 'text-primary bg-primary/5'
+                    className={`flex items-center gap-1 px-2 py-1.5 text-xs font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
+                      currentPath === item.path
+                        ? 'text-primary bg-primary/10'
                         : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
-                    <Icon className="w-4 h-4 flex-shrink-0" />
-                    {/* lg–xl: short label; xl+: full label */}
-                    <span className="lg:inline xl:hidden">{item.shortLabel ?? item.label}</span>
-                    <span className="hidden xl:inline">{item.label}</span>
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>{item.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Right: desktop actions (lg+) */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
+          {/* Desktop Action Buttons */}
+          <div className="hidden xl:flex items-center space-x-3 flex-shrink-0">
             <ThemeToggle />
             {user && !kycApproved && (
               <button
                 onClick={() => navigate('/kyc')}
-                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors whitespace-nowrap"
+                className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 font-medium hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
                 title="Complete identity verification"
               >
                 <span className="relative flex h-2 w-2">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
                 </span>
-                <span className="hidden xl:inline">Verify Identity</span>
+                Verify Identity
               </button>
             )}
             {user && isAdminOrCompliance && (
               <button
                 onClick={() => navigate('/admin')}
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
+                className={`flex items-center space-x-1.5 px-1.5 py-1 text-xs font-medium whitespace-nowrap transition-all duration-300 ${
                   currentPath.startsWith('/admin') ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
-                <span className="hidden xl:inline">Admin</span>
+                <span>Admin</span>
               </button>
             )}
             {user && (
@@ -149,10 +144,10 @@ const Navigation = () => {
                 <Button
                   variant="outline"
                   onClick={openConnectModal}
-                  className="h-9 px-2 xl:px-5 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium text-sm"
+                  className="h-10 px-6 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
                 >
-                  <Wallet className="w-4 h-4 xl:mr-2" />
-                  <span className="hidden xl:inline">Connect Wallet</span>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
                 </Button>
               )
             )}
@@ -162,7 +157,7 @@ const Navigation = () => {
                   variant="outline"
                   size="icon"
                   onClick={() => navigate('/dashboard')}
-                  className="h-9 w-9 font-medium"
+                  className="h-10 w-10 font-medium"
                   title="Dashboard"
                 >
                   <LayoutDashboard className="w-4 h-4" />
@@ -170,29 +165,28 @@ const Navigation = () => {
                 <Button
                   variant="ghost"
                   onClick={signOut}
-                  className="h-9 px-2 xl:px-4 font-medium text-muted-foreground"
-                  title="Sign Out"
+                  className="h-10 px-4 font-medium text-muted-foreground"
                 >
-                  <LogOut className="w-4 h-4 xl:mr-2" />
-                  <span className="hidden xl:inline">Sign Out</span>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Sign Out
                 </Button>
               </>
             ) : (
               <Button
                 variant="hero"
                 onClick={() => navigate('/auth')}
-                className="h-9 px-3 xl:px-6 font-medium text-sm"
+                className="h-10 px-6 font-medium"
               >
-                <LogIn className="w-4 h-4 xl:mr-2" />
-                <span className="hidden xl:inline">Sign In</span>
+                <LogIn className="w-4 h-4 mr-2" />
+                Sign In
               </Button>
             )}
           </div>
 
-          {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
-          <div className="lg:hidden flex items-center gap-2 flex-shrink-0">
+          {/* Mobile header actions */}
+          <div className="xl:hidden flex items-center space-x-2 flex-shrink-0">
             <ThemeToggle />
-            {user ? (
+            {user && (
               isConnected ? (
                 <WalletSelector compact />
               ) : (
@@ -202,10 +196,32 @@ const Navigation = () => {
                   onClick={openConnectModal}
                   className="h-8 px-3 text-xs border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground"
                 >
-                  <Wallet className="w-3.5 h-3.5 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Connect</span>
+                  <Wallet className="w-3.5 h-3.5 mr-1.5" />
+                  Connect
                 </Button>
               )
+            )}
+            {user ? (
+              <div className="flex items-center space-x-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate('/dashboard')}
+                  className="h-8 px-3 text-xs font-medium"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5 mr-1.5" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="h-8 w-8 p-0 text-muted-foreground"
+                  title="Sign Out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </Button>
+              </div>
             ) : (
               <Button
                 variant="hero"
@@ -213,113 +229,116 @@ const Navigation = () => {
                 onClick={() => navigate('/auth')}
                 className="h-8 px-3 text-xs font-medium"
               >
-                <LogIn className="w-3.5 h-3.5 sm:mr-1.5" />
-                <span className="hidden sm:inline">Sign In</span>
+                <LogIn className="w-3.5 h-3.5 mr-1.5" />
+                Sign In
               </Button>
             )}
           </div>
-
         </div>
       </div>
 
-      {/* Mobile/tablet drawer (< lg) — rendered via portal to escape nav overflow */}
+      {/* Backdrop + Mobile Menu rendered via portal so they escape nav overflow */}
       {isMobileMenuOpen && createPortal(
         <>
           <div
-            className="lg:hidden fixed inset-0 z-40"
+            className="xl:hidden fixed inset-0 z-40"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="lg:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            className="xl:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
-          >
-            <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <button
-                    key={item.path}
-                    onClick={() => { navigate(item.path); setIsMobileMenuOpen(false); }}
-                    className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                      currentPath === item.path
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
-              {user && !kycApproved && (
+        >
+          <div className="px-2 pt-2 pb-3 space-y-1">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
                 <button
-                  onClick={() => { navigate('/kyc'); setIsMobileMenuOpen(false); }}
-                  className="flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
-                >
-                  <ShieldAlert className="w-4 h-4" />
-                  <span>Verify Identity</span>
-                </button>
-              )}
-              {user && isAdminOrCompliance && (
-                <button
-                  onClick={() => { navigate('/admin'); setIsMobileMenuOpen(false); }}
+                  key={item.path}
+                  onClick={() => {
+                    navigate(item.path);
+                    setIsMobileMenuOpen(false);
+                  }}
                   className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                    currentPath.startsWith('/admin')
+                    currentPath === item.path
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
                 >
-                  <ClipboardList className="w-4 h-4" />
-                  <span>Admin</span>
+                  <Icon className="w-4 h-4" />
+                  <span>{item.label}</span>
                 </button>
+              );
+            })}
+            {user && !kycApproved && (
+              <button
+                onClick={() => { navigate('/kyc'); setIsMobileMenuOpen(false); }}
+                className="flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+              >
+                <ShieldAlert className="w-4 h-4" />
+                <span>Verify Identity</span>
+              </button>
+            )}
+            {user && isAdminOrCompliance && (
+              <button
+                onClick={() => { navigate('/admin'); setIsMobileMenuOpen(false); }}
+                className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                  currentPath.startsWith('/admin')
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                }`}
+              >
+                <ClipboardList className="w-4 h-4" />
+                <span>Admin</span>
+              </button>
+            )}
+            <div className="pt-2 space-y-2">
+              {user && !isConnected && (
+                <Button
+                  variant="outline"
+                  onClick={openConnectModal}
+                  className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
+                >
+                  <Wallet className="w-4 h-4 mr-2" />
+                  Connect Wallet
+                </Button>
               )}
-              <div className="pt-2 border-t border-border space-y-2">
-                {user && !isConnected && (
+              {user ? (
+                <>
                   <Button
                     variant="outline"
-                    onClick={openConnectModal}
-                    className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect Wallet
-                  </Button>
-                )}
-                {user ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}
-                      className="w-full h-10 font-medium"
-                    >
-                      <LayoutDashboard className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={signOut}
-                      className="w-full h-10 font-medium text-muted-foreground"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="hero"
-                    onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}
+                    onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}
                     className="w-full h-10 font-medium"
                   >
-                    <LogIn className="w-4 h-4 mr-2" />
-                    Sign In
+                    <LayoutDashboard className="w-4 h-4 mr-2" />
+                    Dashboard
                   </Button>
-                )}
-              </div>
+                  <Button
+                    variant="ghost"
+                    onClick={signOut}
+                    className="w-full h-10 font-medium text-muted-foreground"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="hero"
+                  onClick={() => { navigate('/auth'); setIsMobileMenuOpen(false); }}
+                  className="w-full h-10 font-medium"
+                >
+                  <LogIn className="w-4 h-4 mr-2" />
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
+        </div>
         </>,
         document.body
       )}
 
+      {/* Wallet Connect Modal */}
       <WalletConnectModal
         isOpen={isConnectModalOpen}
         onClose={closeConnectModal}
