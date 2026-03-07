@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { Loader2, GitBranch, CheckCircle2, Clock } from 'lucide-react';
+import { Loader2, GitBranch, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -141,21 +141,36 @@ export default function IntegrationsDashboard() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <GitBranch className="w-6 h-6 text-primary" />
+            <div className={`p-2 rounded-lg ${githubConnected ? 'bg-primary/10' : 'bg-muted'}`}>
+              <GitBranch className={`w-6 h-6 ${githubConnected ? 'text-primary' : 'text-muted-foreground'}`} />
             </div>
-            <div>
+            <div className="flex-1">
               <CardTitle className="text-lg">GitHub Integration</CardTitle>
               <CardDescription>JibreelMuhammad/property-web3-portal</CardDescription>
             </div>
-            <Badge className="ml-auto bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected
-            </Badge>
+            <div className="flex items-center gap-3">
+              {githubConnected ? (
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
+                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Connected
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-destructive/30 text-destructive">
+                  <XCircle className="w-3.5 h-3.5 mr-1" /> Disconnected
+                </Badge>
+              )}
+              {togglingGlobal ? (
+                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              ) : (
+                <Switch checked={githubConnected} onCheckedChange={handleGlobalToggle} />
+              )}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            GitHub App is installed and active. Agents with GitHub enabled can browse code, create issues, and propose PRs.
+            {githubConnected
+              ? 'GitHub App is installed and active. Agents with GitHub enabled can browse code, create issues, and propose PRs.'
+              : 'GitHub integration is disconnected. Toggle on to allow agents to access the repository.'}
           </p>
         </CardContent>
       </Card>
