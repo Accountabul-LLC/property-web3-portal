@@ -77,6 +77,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_action_items: {
+        Row: {
+          created_at: string
+          description: string
+          expected_outcome: string | null
+          files: string[] | null
+          github_issue_number: number | null
+          github_issue_url: string | null
+          id: string
+          priority: string
+          session_id: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          expected_outcome?: string | null
+          files?: string[] | null
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          id?: string
+          priority?: string
+          session_id?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          expected_outcome?: string | null
+          files?: string[] | null
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          id?: string
+          priority?: string
+          session_id?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_items_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_debate_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agents: {
         Row: {
           created_at: string
