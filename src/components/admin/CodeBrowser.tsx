@@ -55,14 +55,21 @@ function TreeItem({
   depth,
   selectedPath,
   onSelect,
+  selectable,
+  checkedFiles,
+  onToggleCheck,
 }: {
   node: TreeNode;
   depth: number;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  selectable?: boolean;
+  checkedFiles?: Set<string>;
+  onToggleCheck?: (path: string) => void;
 }) {
   const [open, setOpen] = useState(depth < 1);
   const isSelected = selectedPath === node.path;
+  const isChecked = checkedFiles?.has(node.path) ?? false;
 
   if (node.isDir) {
     return (
@@ -79,24 +86,35 @@ function TreeItem({
           <span className="truncate">{node.name}</span>
         </button>
         {open && node.children.map((child) => (
-          <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} />
+          <TreeItem key={child.path} node={child} depth={depth + 1} selectedPath={selectedPath} onSelect={onSelect} selectable={selectable} checkedFiles={checkedFiles} onToggleCheck={onToggleCheck} />
         ))}
       </div>
     );
   }
 
   return (
-    <button
-      onClick={() => onSelect(node.path)}
+    <div
       className={cn(
-        'flex items-center gap-1 w-full text-left px-2 py-1 text-sm rounded-sm',
+        'flex items-center gap-1 w-full text-left px-2 py-1 text-sm rounded-sm group',
         isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/50 text-foreground',
       )}
       style={{ paddingLeft: `${depth * 12 + 8}px` }}
     >
-      <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-      <span className="truncate">{node.name}</span>
-    </button>
+      {selectable && (
+        <Checkbox
+          checked={isChecked}
+          onCheckedChange={() => onToggleCheck?.(node.path)}
+          className="mr-1 h-3.5 w-3.5"
+        />
+      )}
+      <button
+        onClick={() => onSelect(node.path)}
+        className="flex items-center gap-1 flex-1 min-w-0"
+      >
+        <File className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <span className="truncate">{node.name}</span>
+      </button>
+    </div>
   );
 }
 
