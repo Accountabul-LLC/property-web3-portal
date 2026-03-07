@@ -14,6 +14,112 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_item_events: {
+        Row: {
+          action_item_id: string
+          actor_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          metadata: Json | null
+        }
+        Insert: {
+          action_item_id: string
+          actor_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+        }
+        Update: {
+          action_item_id?: string
+          actor_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_item_events_action_item_id_fkey"
+            columns: ["action_item_id"]
+            isOneToOne: false
+            referencedRelation: "action_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_items: {
+        Row: {
+          acceptance_criteria: string | null
+          assigned_to: string | null
+          completion_signal: string | null
+          created_at: string
+          created_by: string
+          description: string
+          expected_outcome: string | null
+          files_json: Json | null
+          github_issue_number: number | null
+          github_issue_url: string | null
+          github_sync_status: string | null
+          id: string
+          priority: string
+          source_thread_id: string | null
+          source_type: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          acceptance_criteria?: string | null
+          assigned_to?: string | null
+          completion_signal?: string | null
+          created_at?: string
+          created_by: string
+          description?: string
+          expected_outcome?: string | null
+          files_json?: Json | null
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          github_sync_status?: string | null
+          id?: string
+          priority?: string
+          source_thread_id?: string | null
+          source_type?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          acceptance_criteria?: string | null
+          assigned_to?: string | null
+          completion_signal?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string
+          expected_outcome?: string | null
+          files_json?: Json | null
+          github_issue_number?: number | null
+          github_issue_url?: string | null
+          github_sync_status?: string | null
+          id?: string
+          priority?: string
+          source_thread_id?: string | null
+          source_type?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_items_source_thread_id_fkey"
+            columns: ["source_thread_id"]
+            isOneToOne: false
+            referencedRelation: "ai_debate_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_integrations: {
         Row: {
           agent_id: string
@@ -76,62 +182,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      ai_action_items: {
-        Row: {
-          created_at: string
-          description: string
-          expected_outcome: string | null
-          files: string[] | null
-          github_issue_number: number | null
-          github_issue_url: string | null
-          id: string
-          priority: string
-          session_id: string | null
-          status: string
-          title: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          description?: string
-          expected_outcome?: string | null
-          files?: string[] | null
-          github_issue_number?: number | null
-          github_issue_url?: string | null
-          id?: string
-          priority?: string
-          session_id?: string | null
-          status?: string
-          title: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          description?: string
-          expected_outcome?: string | null
-          files?: string[] | null
-          github_issue_number?: number | null
-          github_issue_url?: string | null
-          id?: string
-          priority?: string
-          session_id?: string | null
-          status?: string
-          title?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ai_action_items_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "ai_debate_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       ai_agents: {
         Row: {
