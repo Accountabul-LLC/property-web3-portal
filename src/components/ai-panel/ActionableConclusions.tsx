@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Lightbulb, Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Lightbulb, Loader2, CheckCircle2, ArrowRight, Github, ExternalLink } from 'lucide-react';
 import type { DebateTurnData } from '@/hooks/useDebateSession';
 
 interface ActionItem {
   title: string;
   description: string;
   priority: 'high' | 'medium' | 'low';
+  issueUrl?: string;
+  creating?: boolean;
 }
 
 interface Props {
@@ -69,7 +71,6 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
         buffer += decoder.decode(value, { stream: true });
       }
 
-      // Parse all lines, extract the final full text
       const lines = buffer.split('\n').filter(l => l.trim());
       let fullText = '';
       for (const line of lines) {
@@ -80,7 +81,6 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
         } catch { /* skip */ }
       }
 
-      // Parse action items from the text
       const parsed = parseActions(fullText || buffer);
       setActions(parsed);
       setGenerated(true);
@@ -88,6 +88,51 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
       console.error('Failed to generate conclusions:', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createIssue = async (index: number) => {
+    const action = actions[index];
+    if (!action || action.issueUrl || action.creating) return;
+
+    setActions(prev => prev.map((a, i) => i === index ? { ...a, creating: true } : a));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const body = `## ${action.title}\n\n${action.description}\n\n---\n*Priority: ${action.priority}*\n*Generated from AI Panel debate on: "${topic}"*`;
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/github-agent`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'create_issue',
+            owner: 'JibreelMuhammad',
+            repo: 'property-web3-portal',
+            title: action.title,
+            body,
+            labels: [`priority:${action.priority}`, 'ai-generated'],
+          }),
+        }
+      );
+
+      if (!res.ok) throw new Error('Failed to create issue');
+      const data = await res.json();
+
+      setActions(prev => prev.map((a, i) =>
+        i === index ? { ...a, issueUrl: data.url, creating: false } : a
+      ));
+    } catch (e) {
+      console.error('Failed to create GitHub issue:', e);
+      setActions(prev => prev.map((a, i) =>
+        i === index ? { ...a, creating: false } : a
+      ));
     }
   };
 
@@ -110,12 +155,40 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
             <Card key={i} className={`p-4 border-l-4 ${priorityStyles[action.priority]}`}>
               <div className="flex items-start gap-3">
                 <ArrowRight className="w-4 h-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{action.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{action.description}</p>
-                  <span className="inline-block mt-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                    {action.priority} priority
-                  </span>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+                      {action.priority} priority
+                    </span>
+                    {action.issueUrl ? (
+                      <a
+                        href={action.issueUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        View Issue
+                      </a>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 px-2 text-[10px] gap-1"
+                        onClick={() => createIssue(i)}
+                        disabled={action.creating}
+                      >
+                        {action.creating ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Github className="w-3 h-3" />
+                        )}
+                        {action.creating ? 'Creating…' : 'Create Issue'}
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -127,7 +200,6 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
 };
 
 function parseActions(text: string): ActionItem[] {
-  // Try to extract numbered items like "1. **Title**: description"
   const lines = text.split('\n').filter(l => l.trim());
   const items: ActionItem[] = [];
 
@@ -142,7 +214,6 @@ function parseActions(text: string): ActionItem[] {
     }
   }
 
-  // Fallback: if no structured items found, create one from the whole text
   if (items.length === 0 && text.trim()) {
     items.push({
       title: 'Review debate conclusions',

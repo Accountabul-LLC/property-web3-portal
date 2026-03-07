@@ -235,7 +235,7 @@ function modeInstruction(mode: Mode, other: string): string {
     case 'debate':
       return `You are debating ${other}. Present your strongest reasoning. Challenge weak arguments directly. Aim for clarity, not consensus.`
     case 'collaborate':
-      return `You are collaborating with ${other} to give the user the best possible answer. Build on what they said, fill in gaps, and work toward a concrete recommendation.`
+      return `You are collaborating with ${other} to give the user the best possible answer. Build on what they said, fill in gaps, and work toward a concrete recommendation.\n\nIMPORTANT: When proposing next steps or action items, format them as a numbered list with this exact structure:\n1. **Title** - Description of the task\n2. **Title** - Description of the task\nThis format allows the platform to parse your suggestions into actionable GitHub issues.`
     case 'compare':
       return `Give your independent analysis. Do not react to ${other}'s response — provide your own assessment so the user can compare perspectives.`
   }
