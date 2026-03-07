@@ -18,7 +18,7 @@ import {
 import {
   Loader2, Github, Trash2, ExternalLink, FileCode,
   ChevronDown, Search, ListChecks, ArrowUpDown,
-  AlertCircle, Clock, CheckCircle2, Filter,
+  AlertCircle, Clock, CheckCircle2, Filter, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -320,11 +320,17 @@ export default function ActionItems() {
             <h1 className="text-2xl font-bold tracking-tight">Action Items</h1>
             <p className="text-sm text-muted-foreground mt-1">Manage tasks generated from AI debates and conversations</p>
           </div>
-          <Link to="/admin/ai-panel">
-            <Button variant="outline" size="sm" className="gap-2">
-              <ListChecks className="w-4 h-4" /> Back to AI Panel
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={checkCompletion} disabled={checking} className="gap-2">
+              {checking ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Check Completion
             </Button>
-          </Link>
+            <Link to="/admin/ai-panel">
+              <Button variant="outline" size="sm" className="gap-2">
+                <ListChecks className="w-4 h-4" /> Back to AI Panel
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Stats cards */}
