@@ -116,7 +116,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
               placeholder={placeholder}
               disabled={running && !awaitingInput && !isDone}
               rows={1}
-              className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full resize-none rounded-xl border border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]"
               style={{ minHeight: '44px', maxHeight: '160px' }}
             />
           </div>
