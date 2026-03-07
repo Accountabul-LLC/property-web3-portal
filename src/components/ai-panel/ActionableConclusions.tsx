@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Lightbulb, Loader2, CheckCircle2, ArrowRight, Github, ExternalLink } from 'lucide-react';
+import { Lightbulb, Loader2, CheckCircle2, ArrowRight, Github, ExternalLink, FileCode } from 'lucide-react';
 import type { DebateTurnData } from '@/hooks/useDebateSession';
 
 interface ActionItem {
   title: string;
   description: string;
   priority: 'high' | 'medium' | 'low';
+  files?: string[];
+  expected_outcome?: string;
   issueUrl?: string;
   creating?: boolean;
 }
@@ -72,17 +74,39 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
       }
 
       const lines = buffer.split('\n').filter(l => l.trim());
-      let fullText = '';
+      let parsed: ActionItem[] = [];
+
+      // Try structured conclude_result first
       for (const line of lines) {
         try {
           const ev = JSON.parse(line);
-          if (ev.type === 'turn_end' && ev.full_text) fullText = ev.full_text;
-          if (ev.type === 'chunk' && ev.text) fullText += ev.text;
+          if (ev.type === 'conclude_result' && Array.isArray(ev.action_items)) {
+            parsed = ev.action_items.map((item: any) => ({
+              title: item.title || 'Untitled task',
+              description: item.description || '',
+              priority: (item.priority || 'MEDIUM').toLowerCase() as 'high' | 'medium' | 'low',
+              files: item.files || [],
+              expected_outcome: item.expected_outcome || '',
+            }));
+            break;
+          }
         } catch { /* skip */ }
       }
 
-      const parsed = parseActions(fullText || buffer);
-      setActions(parsed);
+      // Fallback: parse freeform text from debate-style response
+      if (parsed.length === 0) {
+        let fullText = '';
+        for (const line of lines) {
+          try {
+            const ev = JSON.parse(line);
+            if (ev.type === 'turn_end' && ev.full_text) fullText = ev.full_text;
+            if (ev.type === 'chunk' && ev.text) fullText += ev.text;
+          } catch { /* skip */ }
+        }
+        parsed = parseActions(fullText || buffer);
+      }
+
+      setActions(parsed.slice(0, 8));
       setGenerated(true);
     } catch (e) {
       console.error('Failed to generate conclusions:', e);
@@ -95,7 +119,6 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
     const speakers = [...new Set(turns.filter(t => !t.streaming).map(t => t.speaker))];
     const participantList = speakers.map(s => s === 'user' ? 'User' : s.toUpperCase()).join(', ');
 
-    // Build condensed transcript, prioritising recent turns, capped at ~3000 chars
     const completedTurns = turns.filter(t => !t.streaming && t.text.trim());
     let transcript = '';
     for (let i = completedTurns.length - 1; i >= 0; i--) {
@@ -106,11 +129,20 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
       transcript = entry + transcript;
     }
 
+    const fileSection = action.files?.length
+      ? `\n### Relevant Files\n${action.files.map(f => `- \`${f}\``).join('\n')}\n`
+      : '';
+
+    const outcomeSection = action.expected_outcome
+      ? `\n### Expected Outcome\n${action.expected_outcome}\n`
+      : '';
+
     return [
       `## Action Item: ${action.title}`,
       '',
       action.description,
-      '',
+      fileSection,
+      outcomeSection,
       '### Debate Context',
       '',
       `**Topic:** ${topic}`,
@@ -184,7 +216,7 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
         <div className="space-y-3">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-primary" />
-            Recommended Next Steps
+            Recommended Next Steps ({actions.length} items)
           </h3>
           {actions.map((action, i) => (
             <Card key={i} className={`p-4 border-l-4 ${priorityStyles[action.priority]}`}>
@@ -193,6 +225,24 @@ const ActionableConclusions = ({ topic, turns }: Props) => {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm">{action.title}</p>
                   <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{action.description}</p>
+
+                  {action.files && action.files.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {action.files.map((f, fi) => (
+                        <span key={fi} className="inline-flex items-center gap-1 text-[10px] bg-muted px-1.5 py-0.5 rounded font-mono">
+                          <FileCode className="w-2.5 h-2.5" />
+                          {f.split('/').pop()}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {action.expected_outcome && (
+                    <p className="text-[11px] text-muted-foreground/70 mt-1.5 italic">
+                      → {action.expected_outcome}
+                    </p>
+                  )}
+
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
                       {action.priority} priority
@@ -268,7 +318,7 @@ function parseActions(text: string): ActionItem[] {
     });
   }
 
-  return items.slice(0, 5);
+  return items.slice(0, 8);
 }
 
 export default ActionableConclusions;
