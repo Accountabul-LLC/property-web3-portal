@@ -71,7 +71,7 @@ const AdminAIPanel = () => {
 
           <ResizablePanelGroup direction="horizontal" className="flex-1">
             <ResizablePanel defaultSize={codePanelOpen ? 55 : 100} minSize={40}>
-              <div className="h-full overflow-y-auto relative">
+              <div className="h-full flex flex-col relative">
                 {/* Toggle Code Browser button */}
                 <Button
                   variant="ghost"
