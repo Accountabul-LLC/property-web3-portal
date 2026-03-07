@@ -47,6 +47,8 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [turns.length, awaitingUserInput]);
 
+  const isDone = !running && !awaitingUserInput && turns.length > 0;
+
   const handleSend = (message: string) => {
     if (!sessionActive || viewingHistory) {
       // Start new session
@@ -57,8 +59,6 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
       continueRound(message);
     }
   };
-
-  const isDone = !running && !awaitingUserInput && turns.length > 0;
 
   const handleSave = async () => {
     await saveSession(params);
@@ -84,7 +84,6 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
     return round;
   };
 
-  const isDone = !running && !awaitingUserInput && turns.length > 0;
 
   return (
     <div className="flex flex-col h-full">
