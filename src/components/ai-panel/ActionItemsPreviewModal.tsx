@@ -39,7 +39,6 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
   const [saving, setSaving] = useState(false);
   const [pushing, setPushing] = useState(false);
 
-  // Generate on open
   useEffect(() => {
     if (open && items.length === 0 && !loading) {
       generate();
@@ -107,7 +106,6 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
         } catch { /* skip */ }
       }
 
-      // Fallback text parsing
       if (parsed.length === 0) {
         let fullText = '';
         for (const line of lines) {
@@ -131,26 +129,34 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
     }
   };
 
+  const insertActionItems = async (userId: string) => {
+    const rows = items.map(item => ({
+      created_by: userId,
+      source_thread_id: sessionId || null,
+      source_type: 'debate',
+      title: item.title,
+      description: item.description,
+      priority: item.priority.toUpperCase(),
+      files_json: JSON.stringify(item.files || []),
+      expected_outcome: item.expected_outcome || '',
+      status: 'open',
+      github_sync_status: 'none',
+    }));
+
+    const { data, error } = await supabase
+      .from('action_items' as any)
+      .insert(rows as any)
+      .select('id');
+    if (error) throw error;
+    return data as any[] | null;
+  };
+
   const saveAll = async () => {
     setSaving(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
-
-      const rows = items.map(item => ({
-        user_id: session.user.id,
-        session_id: sessionId || null,
-        title: item.title,
-        description: item.description,
-        priority: item.priority,
-        files: item.files || [],
-        expected_outcome: item.expected_outcome || '',
-        status: 'open',
-      }));
-
-      const { error } = await supabase.from('ai_action_items').insert(rows);
-      if (error) throw error;
-
+      await insertActionItems(session.user.id);
       toast.success(`${items.length} action items saved`);
       onOpenChange(false);
     } catch (e) {
@@ -190,25 +196,8 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Save all items to DB first
-      const rows = items.map((item, i) => ({
-        user_id: session.user.id,
-        session_id: sessionId || null,
-        title: item.title,
-        description: item.description,
-        priority: item.priority,
-        files: item.files || [],
-        expected_outcome: item.expected_outcome || '',
-        status: 'open',
-      }));
+      const savedRows = await insertActionItems(session.user.id);
 
-      const { data: savedRows, error: saveError } = await supabase
-        .from('ai_action_items')
-        .insert(rows)
-        .select('id');
-      if (saveError) throw saveError;
-
-      // Push selected to GitHub
       let pushed = 0;
       for (const idx of indices) {
         const action = items[idx];
@@ -236,9 +225,8 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
           const data = await res.json();
 
           if (dbRow?.id && data.url) {
-            await supabase
-              .from('ai_action_items')
-              .update({ github_issue_url: data.url, github_issue_number: data.number })
+            await (supabase.from('action_items' as any) as any)
+              .update({ github_issue_url: data.url, github_issue_number: data.number, github_sync_status: 'synced' })
               .eq('id', dbRow.id);
           }
           pushed++;
