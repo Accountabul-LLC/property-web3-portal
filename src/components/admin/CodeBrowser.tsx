@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useGitHubAgent, type TreeFile, type FileContent } from '@/hooks/useGitHubAgent';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/components/ui/resizable';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Loader2, File, Folder, FolderOpen, ChevronRight, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
