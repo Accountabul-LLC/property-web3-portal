@@ -134,16 +134,6 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const final = parsed.slice(0, 8);
       setItems(final);
       setSelected(new Set(final.map((_, i) => i)));
-
-      // Auto-save immediately
-      try {
-        const userId = session?.user?.id;
-        if (userId && final.length > 0) {
-          await autoSave(final, userId);
-        }
-      } catch (e) {
-        console.error('Auto-save failed:', e);
-      }
     } catch (e) {
       console.error('Failed to generate conclusions:', e);
       toast.error('Failed to generate action items');
@@ -152,10 +142,44 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
     }
   };
 
-  const [autoSaved, setAutoSaved] = useState(false);
+  const [saved, setSaved] = useState(false);
 
-  const autoSave = async (itemsToSave: ActionItem[], userId: string) => {
-    const rows = itemsToSave.map(item => ({
+  const saveSelected = async () => {
+    const indices = Array.from(selected);
+    if (indices.length === 0) { toast.error('Select at least one item'); return; }
+    setSaving(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const selectedItems = indices.map(i => items[i]);
+      const rows = selectedItems.map(item => ({
+        created_by: session.user.id,
+        source_thread_id: sessionId || null,
+        source_type: 'debate',
+        title: item.title,
+        description: item.description,
+        priority: item.priority.toUpperCase(),
+        files_json: JSON.stringify(item.files || []),
+        expected_outcome: item.expected_outcome || '',
+        status: 'open',
+        github_sync_status: 'none',
+      }));
+      const { error } = await supabase.from('action_items' as any).insert(rows as any);
+      if (error) throw error;
+      setSaved(true);
+      toast.success(`${selectedItems.length} action items saved`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Failed to save action items');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const insertAndGetIds = async (userId: string) => {
+    const indices = Array.from(selected);
+    const selectedItems = indices.map(i => items[i]);
+    const rows = selectedItems.map(item => ({
       created_by: userId,
       source_thread_id: sessionId || null,
       source_type: 'debate',
@@ -167,20 +191,9 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       status: 'open',
       github_sync_status: 'none',
     }));
-
-    const { data, error } = await supabase
-      .from('action_items' as any)
-      .insert(rows as any)
-      .select('id');
+    const { data, error } = await supabase.from('action_items' as any).insert(rows as any).select('id');
     if (error) throw error;
-    setAutoSaved(true);
-    toast.success(`${itemsToSave.length} action items saved`);
-    return data as any[] | null;
-  };
-
-  const insertActionItems = async (userId: string) => {
-    if (autoSaved) return null; // already saved
-    return autoSave(items, userId);
+    return { ids: data as any[] | null, items: selectedItems };
   };
 
   const buildIssueBody = (action: ActionItem): string => {
