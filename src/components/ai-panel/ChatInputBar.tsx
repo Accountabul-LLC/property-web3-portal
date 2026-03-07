@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Send, Square, Settings2 } from 'lucide-react';
@@ -17,6 +17,17 @@ interface Props {
 
 const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput, onSend, onStop }: Props) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [chatInput, setChatInput] = useState('');
+
+  // The input value depends on context
+  const inputValue = sessionActive ? chatInput : params.topic;
+  const setInputValue = (val: string) => {
+    if (sessionActive) {
+      setChatInput(val);
+    } else {
+      onChange({ ...params, topic: val });
+    }
+  };
 
   // Auto-resize textarea
   useEffect(() => {
@@ -24,7 +35,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
     if (!el) return;
     el.style.height = 'auto';
     el.style.height = Math.min(el.scrollHeight, 160) + 'px';
-  }, [params.topic]);
+  }, [inputValue]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -34,15 +45,13 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
   };
 
   const handleSend = () => {
-    const msg = params.topic.trim();
+    const msg = inputValue.trim();
     if (!msg || running) return;
     onSend(msg);
-    if (sessionActive) {
-      onChange({ ...params, topic: '' });
-    }
+    if (sessionActive) setChatInput('');
   };
 
-  const canSend = params.topic.trim().length > 0 && !running;
+  const canSend = inputValue.trim().length > 0 && !running;
   const placeholder = sessionActive
     ? awaitingInput
       ? 'Add context, redirect, or ask a follow-up… (Enter to send)'
@@ -53,7 +62,6 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
     <div className="border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-4">
       <div className="max-w-3xl mx-auto">
         <div className="flex items-end gap-2">
-          {/* Settings popover for mode/rounds */}
           {!sessionActive && (
             <Popover>
               <PopoverTrigger asChild>
@@ -98,17 +106,11 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
             </Popover>
           )}
 
-          {/* Text input */}
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
-              value={sessionActive ? undefined : params.topic}
-              defaultValue={sessionActive ? '' : undefined}
-              onChange={e => {
-                if (!sessionActive) {
-                  onChange({ ...params, topic: e.target.value });
-                }
-              }}
+              value={inputValue}
+              onChange={e => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={placeholder}
               disabled={running && !awaitingInput}
@@ -124,7 +126,6 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
             )}
           </div>
 
-          {/* Send / Stop button */}
           {running ? (
             <Button variant="destructive" size="icon" onClick={onStop} className="flex-shrink-0 mb-0.5" title="Stop">
               <Square className="w-4 h-4" />
