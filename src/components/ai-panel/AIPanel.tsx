@@ -18,6 +18,7 @@ const DEFAULT_PARAMS: DebateParams = {
 interface Props {
   loadedSession?: SavedSession | null;
   onSaved?: () => void;
+  selectedFiles?: string[];
 }
 
 const AIPanel = ({ loadedSession, onSaved }: Props) => {
