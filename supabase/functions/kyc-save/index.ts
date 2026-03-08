@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       legal_first_name, legal_last_name, date_of_birth,
       nationality, country_of_residence,
       address_line1, address_line2, city, state, postal_code, country,
-      tax_id, source_of_funds,
+      source_of_funds,
     } = body
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         state: state ?? null,
         postal_code: postal_code ?? null,
         country: country ?? null,
-        tax_id: tax_id ?? null,
+        source_of_funds: source_of_funds ?? null,
         source_of_funds: source_of_funds ?? null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'kyc_case_id' })
