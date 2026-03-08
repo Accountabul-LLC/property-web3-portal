@@ -642,7 +642,17 @@ const Dashboard = () => {
         ) : (
           <div className="space-y-3">
             {properties.map((prop: any) => (
-              <Card key={prop.id} className="p-4 flex items-center justify-between hover:shadow-md transition-shadow">
+              <Card
+                key={prop.id}
+                className="p-4 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => {
+                  if (prop.status === 'draft') {
+                    navigate(`/tokenize?edit=${prop.id}`);
+                  } else {
+                    navigate(`/tokenize?edit=${prop.id}`);
+                  }
+                }}
+              >
                 <div>
                   <p className="font-medium">{prop.title}</p>
                   <p className="text-sm text-muted-foreground">
@@ -654,6 +664,9 @@ const Dashboard = () => {
                   <p className="text-xs text-muted-foreground">
                     {new Date(prop.created_at).toLocaleDateString()}
                   </p>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={(e) => { e.stopPropagation(); navigate(`/tokenize?edit=${prop.id}`); }}>
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </Card>
             ))}
