@@ -85,7 +85,6 @@ Deno.serve(async (req) => {
         postal_code: postal_code ?? null,
         country: country ?? null,
         source_of_funds: source_of_funds ?? null,
-        source_of_funds: source_of_funds ?? null,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'kyc_case_id' })
 
