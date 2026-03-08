@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const MAINNET_WS = ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com'];
 const TESTNET_WS = ['wss://s.altnet.rippletest.net:51233'];
+const DEVNET_WS = ['wss://s.devnet.rippletest.net:51233'];
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 

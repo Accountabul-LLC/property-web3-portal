@@ -90,7 +90,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
         provider: w.provider || 'xaman',
-        network: (w.network === 'testnet' ? 'testnet' : 'mainnet') as 'testnet' | 'mainnet',
+        network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as 'mainnet' | 'testnet' | 'devnet',
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -185,7 +185,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
       provider: w.provider || 'xaman',
-      network: (w.network === 'testnet' ? 'testnet' : 'mainnet') as 'testnet' | 'mainnet',
+      network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as 'mainnet' | 'testnet' | 'devnet',
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,
@@ -253,8 +253,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = null;
   }, [wallets, user]);
 
-  const onWalletConnected = useCallback((address: string, xamanName?: string | null) => {
-    addWallet(address, undefined, xamanName);
+  const onWalletConnected = useCallback((address: string, xamanName?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => {
+    addWallet(address, undefined, xamanName, undefined, undefined, network);
     setConnectModalOpen(false);
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
     toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);

@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const DEVNET_NODES = ['https://s.devnet.rippletest.net:51234'];
 const CACHE_TTL_MS = 30_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;

@@ -46,6 +46,8 @@ Deno.serve(async (req) => {
       if (user?.id) intendedUserId = user.id;
     }
 
+    const { network } = await req.json().catch(() => ({ network: undefined }));
+
     const payload = {
       txjson: {
         TransactionType: 'SignIn'

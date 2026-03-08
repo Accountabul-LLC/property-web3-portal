@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const DEVNET_NODES = ['https://s.devnet.rippletest.net:51234'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
