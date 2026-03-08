@@ -84,7 +84,7 @@ export function IssuerWalletPanel() {
     setRegistering(true)
     try {
       // Insert directly via Supabase client (admin-only table)
-      const { error } = await (supabase.from('xrpl_issuer_wallets') as any).insert({
+      const { error } = await (supabase as any).from('xrpl_issuer_wallets').insert({
         environment: 'testnet',
         issuer_name: newName.trim(),
         issuer_address: newAddress.trim(),
