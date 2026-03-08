@@ -54,15 +54,15 @@ interface PortfolioSectionProps {
 
 const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
   const queryClient = useQueryClient();
-  const { activeAddress, activeWallet, isConnected } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const isTestnet = activeWallet?.network === 'testnet';
-  const network = isTestnet ? 'testnet' : 'mainnet';
+  const isTestnet = activeNetwork === 'testnet';
+  const network: 'mainnet' | 'testnet' = isTestnet ? 'testnet' : 'mainnet';
   const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
   const [isFunding, setIsFunding] = useState(false);
 
-  const explorerBase = isTestnet ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
+  const explorerBase = activeNetwork === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
 
   const handleFaucetFund = async () => {
     if (!displayAddress) return;

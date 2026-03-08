@@ -1,45 +1,20 @@
+## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
+### Changes Applied
 
-# Fix: Network Toggle Should Not Disconnect Wallet
+1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
 
-## Problem
+2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
 
-The current `setActiveNetwork` in `ActiveWalletContext` tries to find a different wallet tagged with the selected network. If no wallet is stored with that network tag, it sets `activeAddress` to `null` — effectively ending the session. The user's intent is different: **switching network is a viewing context change, not a wallet change**. The same XRPL address exists on both mainnet and testnet.
+3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
 
-## Root Cause
+4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
 
-Two places enforce the wrong behavior:
+### New Files
+- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
 
-1. **`setActiveNetwork`** (context) — line 141-152: auto-switches active wallet to one matching the new network, or nulls it out
-2. **`PortfolioSection`** — line 60-62: derives `network` from `activeWallet.network` instead of `activeNetwork` from context
-
-## Plan
-
-| File | Change |
-|------|--------|
-| `src/contexts/ActiveWalletContext.tsx` | Simplify `setActiveNetwork` to only update the network state + localStorage. Remove the wallet-switching/nulling logic. The active wallet stays connected regardless of toggle. |
-| `src/components/PortfolioSection.tsx` | Pull `activeNetwork` from context instead of deriving from `activeWallet?.network`. Use `activeNetwork` for explorer links, data fetching, and faucet visibility. |
-
-### `setActiveNetwork` — new behavior
-```typescript
-const setActiveNetwork = useCallback((network: XRPLNetwork) => {
-  setActiveNetworkState(network);
-  localStorage.setItem(NETWORK_KEY, network);
-  // No wallet switching — same wallet, different network view
-}, []);
+### Flow
+```text
+Owner submits property → admin approves → owner mints MPT (linked to property)
+    → property status becomes "active" → appears in marketplace as "Listed"
 ```
-
-### `PortfolioSection` — use context network
-```typescript
-const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
-// ...
-const network = activeNetwork;  // was: activeWallet?.network === 'testnet' ? 'testnet' : 'mainnet'
-const explorerBase = activeNetwork === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
-```
-
-This means:
-- Wallet session stays persistent through network toggles
-- Portfolio data re-fetches for the same address on the selected network
-- Faucet button appears when `activeNetwork === 'testnet'`
-- No disconnection, no re-auth required
-
