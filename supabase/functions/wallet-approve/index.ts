@@ -185,10 +185,9 @@ Deno.serve(async (req) => {
     console.log('Xaman credential payload created:', xamanData.uuid)
 
     // Store payload reference + all metadata needed by check-credential-payload
-    await serviceClient.from('xaman_payloads').insert({
+    const { error: payloadInsertErr } = await serviceClient.from('xaman_payloads').insert({
       uuid: xamanData.uuid,
       status: 'pending',
-      intended_user_id: user.id,
       network,
       metadata: {
         purpose: 'CREDENTIAL_ISSUE',
@@ -203,6 +202,10 @@ Deno.serve(async (req) => {
         notes: notes ?? null,
       },
     })
+    if (payloadInsertErr) {
+      console.error('Failed to store payload metadata:', payloadInsertErr)
+      throw payloadInsertErr
+    }
 
     // Mark registration as under_review while awaiting signature
     await serviceClient.from('wallet_registrations').update({
