@@ -22,8 +22,11 @@ export interface ConnectedWallet {
 
 interface ActiveWalletContextType {
   wallets: ConnectedWallet[];
+  filteredWallets: ConnectedWallet[];
   activeWallet: ConnectedWallet | null;
   activeAddress: string | null;
+  activeNetwork: XRPLNetwork;
+  setActiveNetwork: (network: XRPLNetwork) => void;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
   addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: XRPLNetwork) => void;
@@ -38,6 +41,7 @@ interface ActiveWalletContextType {
 }
 
 const ACTIVE_KEY = 'accountabul_active_wallet';
+const NETWORK_KEY = 'accountabul_active_network';
 
 function loadActiveAddress(): string | null {
   return localStorage.getItem(ACTIVE_KEY);
@@ -61,6 +65,10 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   const { user } = useAuth();
   const [wallets, setWallets] = useState<ConnectedWallet[]>([]);
   const [activeAddress, setActiveAddressState] = useState<string | null>(() => loadActiveAddress());
+  const [activeNetwork, setActiveNetworkState] = useState<XRPLNetwork>(() => {
+    const saved = localStorage.getItem(NETWORK_KEY);
+    return (saved === 'testnet' || saved === 'devnet') ? saved : 'mainnet';
+  });
   const [isConnectModalOpen, setConnectModalOpen] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
   const prevActiveRef = useRef<string | null>(activeAddress);
@@ -126,8 +134,22 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     localStorage.removeItem('wallet_address');
   }, []);
 
+  const filteredWallets = wallets.filter(w => w.network === activeNetwork);
   const activeWallet = wallets.find(w => w.address === activeAddress) || null;
   const isConnected = !!activeWallet;
+
+  const setActiveNetwork = useCallback((network: XRPLNetwork) => {
+    setActiveNetworkState(network);
+    localStorage.setItem(NETWORK_KEY, network);
+    // Auto-switch active wallet to one on the new network
+    const networkWallets = wallets.filter(w => w.network === network);
+    if (activeWallet && activeWallet.network !== network) {
+      const fallback = networkWallets.length > 0 ? networkWallets[0].address : null;
+      setActiveAddressState(fallback);
+      saveActiveAddress(fallback);
+      prevActiveRef.current = fallback;
+    }
+  }, [wallets, activeWallet]);
 
   const setActiveWallet = useCallback((address: string) => {
     const prev = prevActiveRef.current;
@@ -278,8 +300,11 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   return (
     <ActiveWalletContext.Provider value={{
       wallets,
+      filteredWallets,
       activeWallet,
       activeAddress,
+      activeNetwork,
+      setActiveNetwork,
       isConnected,
       setActiveWallet,
       addWallet,

@@ -15,7 +15,7 @@ interface WalletSelectorProps {
 
 const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   const {
-    wallets, activeWallet, activeAddress,
+    wallets, filteredWallets, activeWallet, activeAddress, activeNetwork,
     setActiveWallet, removeWallet, renameWallet, addWallet,
     openConnectModal, disconnectAll,
   } = useActiveWallet();
@@ -101,9 +101,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
           >
             {activeWallet.label || activeWallet.xamanName || shortenAddress(activeAddress!)}
           </span>
-          {wallets.length > 1 && (
+          {filteredWallets.length > 1 && (
             <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-0.5">
-              {wallets.length}
+              {filteredWallets.length}
             </Badge>
           )}
           <ChevronDown className={`${compact ? 'w-3 h-3' : 'w-3.5 h-3.5'} text-primary/60`} />
@@ -114,7 +114,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
         <div className="space-y-1">
           <p className="text-xs font-medium text-muted-foreground px-2 py-1">Your Wallets</p>
 
-          {wallets.map((w) => (
+          {filteredWallets.map((w) => (
             <div key={w.address}>
               {editingAddress === w.address ? (
                 <div className="flex items-center gap-1 px-2 py-1.5">
@@ -204,16 +204,18 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
               <span>Add Wallet</span>
             </button>
 
-            <button
-              onClick={handleGenerateTestnet}
-              disabled={generatingTestnet}
-              className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
-            >
-              {generatingTestnet ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-              <span>{generatingTestnet ? 'Generating...' : 'Generate Testnet Wallet'}</span>
-            </button>
+            {activeNetwork === 'testnet' && (
+              <button
+                onClick={handleGenerateTestnet}
+                disabled={generatingTestnet}
+                className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                {generatingTestnet ? <Loader2 className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+                <span>{generatingTestnet ? 'Generating...' : 'Generate Testnet Wallet'}</span>
+              </button>
+            )}
 
-            {wallets.length > 0 && (
+            {filteredWallets.length > 0 && (
               <button
                 onClick={() => { disconnectAll(); setIsOpen(false); }}
                 className="w-full flex items-center gap-2 px-2 py-2 rounded-md text-sm text-destructive hover:bg-destructive/10 transition-colors"
