@@ -57,7 +57,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const network = activeNetwork;
+  const isTestnet = activeNetwork === 'testnet';
+  const network: 'mainnet' | 'testnet' = isTestnet ? 'testnet' : 'mainnet';
   const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
   const [isFunding, setIsFunding] = useState(false);
 
