@@ -193,6 +193,8 @@ const MintWizard: React.FC = () => {
         let xamanLinkedPropertyId = selectedPropertyId;
         if (!xamanLinkedPropertyId && tokenType === 'mpt') {
           const p = mptParams;
+          const estVal = p.estimated_value ? Number(String(p.estimated_value).replace(/,/g, '')) : null;
+          const totalTk = p.max_amount ? Number(p.max_amount) : null;
           const propRow = {
             owner_user_id: user.id,
             owner_wallet: mintAddress,
@@ -206,17 +208,23 @@ const MintWizard: React.FC = () => {
             bathrooms: p.bathrooms ? Math.round(Number(p.bathrooms)) : null,
             square_feet: p.square_feet ? Math.round(Number(p.square_feet)) : null,
             year_built: p.year_built ? Math.round(Number(p.year_built)) : null,
-            estimated_value: p.estimated_value ? Number(p.estimated_value.replace(/,/g, '')) : null,
+            estimated_value: estVal,
             description: p.description || null,
             images: p.image_url ? [p.image_url] : [],
-            total_tokens: p.max_amount ? Number(p.max_amount) : null,
-            status: 'pending_mint',
+            total_tokens: totalTk,
+            tokens_available: totalTk,
+            price_per_token: estVal && totalTk ? Math.round(estVal / totalTk) : null,
+            status: 'active',
           };
-          const { data: newProp } = await supabase
+          const { data: newProp, error: propErr } = await supabase
             .from('properties' as any)
             .insert(propRow as any)
             .select('id')
             .single();
+          if (propErr) {
+            console.error('[MintWizard] Failed to create property listing:', propErr);
+            toast.error('Token minted but marketplace listing failed. Contact support.');
+          }
           if (newProp) xamanLinkedPropertyId = (newProp as any).id;
         }
 
