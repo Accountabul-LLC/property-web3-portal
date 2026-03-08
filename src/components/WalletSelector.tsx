@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Wallet, ChevronDown, Plus, X, Check, Pencil, FlaskConical, Loader2, ExternalLink } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useActiveWallet, type ConnectedWallet } from '@/contexts/ActiveWalletContext';
+import { useActiveWallet, type ConnectedWallet, type XRPLNetwork } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
