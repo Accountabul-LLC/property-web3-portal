@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -43,11 +43,54 @@ const initialFormData: TokenizeFormData = {
   propertyTax: '',
 };
 
-export function useTokenizeForm() {
+export function useTokenizeForm(editId?: string | null) {
   const { user } = useAuth();
   const [formData, setFormData] = useState<TokenizeFormData>(initialFormData);
-  const [propertyId, setPropertyId] = useState<string | null>(null);
+  const [propertyId, setPropertyId] = useState<string | null>(editId || null);
   const [saving, setSaving] = useState(false);
+  const [loadingDraft, setLoadingDraft] = useState(false);
+  const [propertyStatus, setPropertyStatus] = useState<string | null>(null);
+
+  // Load existing property when editId is provided
+  useEffect(() => {
+    if (!editId) return;
+    setLoadingDraft(true);
+    supabase
+      .from('properties' as any)
+      .select('*')
+      .eq('id', editId)
+      .single()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          setLoadingDraft(false);
+          return;
+        }
+        const p = data as any;
+        setPropertyId(p.id);
+        setPropertyStatus(p.status);
+        const addr = p.address || '';
+        setFormData({
+          propertyAddress: addr,
+          unit: '',
+          city: p.city || '',
+          state: p.state || '',
+          zip: p.zip || '',
+          country: 'US',
+          propertyType: p.property_type || '',
+          squareFootage: p.square_feet ? String(p.square_feet) : '',
+          bedrooms: p.bedrooms ? String(p.bedrooms) : '',
+          bathrooms: p.bathrooms ? String(p.bathrooms) : '',
+          lotSize: '',
+          yearBuilt: p.year_built ? String(p.year_built) : '',
+          appraisalValue: p.estimated_value ? String(p.estimated_value) : '',
+          monthlyRent: '',
+          description: p.description || '',
+          zoning: '',
+          propertyTax: '',
+        });
+        setLoadingDraft(false);
+      });
+  }, [editId]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -149,5 +192,7 @@ export function useTokenizeForm() {
     saving,
     propertyId,
     setFormData,
+    loadingDraft,
+    propertyStatus,
   };
 }
