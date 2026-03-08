@@ -1,0 +1,1 @@
+UPDATE public.user_wallets SET network = 'testnet' WHERE wallet_address = 'rHsehLToQL7puJCkmk2dne53iXX2K6LffW';

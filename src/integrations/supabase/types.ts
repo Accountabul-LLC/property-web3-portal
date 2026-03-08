@@ -1468,6 +1468,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          network: string | null
           signed_at: string | null
           status: string
           uuid: string
@@ -1476,6 +1477,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          network?: string | null
           signed_at?: string | null
           status?: string
           uuid: string
@@ -1484,6 +1486,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          network?: string | null
           signed_at?: string | null
           status?: string
           uuid?: string

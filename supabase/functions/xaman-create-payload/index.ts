@@ -47,6 +47,7 @@ Deno.serve(async (req) => {
     }
 
     const { network } = await req.json().catch(() => ({ network: undefined }));
+    const resolvedNetwork = network || 'mainnet';
 
     const payload = {
       txjson: {
@@ -62,10 +63,11 @@ Deno.serve(async (req) => {
       },
       custom_meta: {
         identifier: `signin_${Date.now()}`,
-        blob: {
+        blob: JSON.stringify({
           purpose: 'SIGN_IN',
+          network: resolvedNetwork,
           created: new Date().toISOString()
-        }
+        })
       }
     };
 
@@ -106,6 +108,7 @@ Deno.serve(async (req) => {
         uuid: xamanData.uuid,
         status: 'pending',
         intended_user_id: intendedUserId,
+        network: resolvedNetwork,
         created_at: new Date().toISOString()
       });
 
