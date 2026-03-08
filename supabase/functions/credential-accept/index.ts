@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
     const { data: credential, error: credError } = await serviceClient
       .from('wallet_credentials')
       .select(`
-        id, ledger_status, issuer_address, credential_type, credential_type_hex, expires_at,
+        id, ledger_status, issuer_address, credential_type, credential_type_hex,
         wallet_id,
         user_wallets!inner (
           id, wallet_address, user_id, provider, wallet_secret, network, status
@@ -186,7 +186,6 @@ Deno.serve(async (req) => {
       if (engineResult !== 'tesSUCCESS' && !engineResult?.startsWith('tec')) {
         await serviceClient.from('wallet_credentials').update({
           ledger_status: 'failed',
-          error_detail: `${engineResult}: ${submitResult.result?.engine_result_message || ''}`,
           updated_at: new Date().toISOString(),
         }).eq('id', credential_id)
 
@@ -204,7 +203,7 @@ Deno.serve(async (req) => {
       await serviceClient.from('wallet_credentials').update({
         ledger_status: 'accepted',
         accepted_at: acceptedAt,
-        tx_hash_accepted: txHash,
+        tx_hash: txHash,
         updated_at: acceptedAt,
       }).eq('id', credential_id)
 
@@ -270,8 +269,12 @@ Deno.serve(async (req) => {
     await serviceClient.from('xaman_payloads').insert({
       uuid: xamanData.uuid,
       status: 'pending',
-      intended_user_id: user.id,
-      created_at: new Date().toISOString(),
+      metadata: {
+        purpose: 'CREDENTIAL_ACCEPT',
+        credential_id,
+        credential_type: credential.credential_type,
+        user_id: user.id,
+      },
     })
 
     return new Response(JSON.stringify({
