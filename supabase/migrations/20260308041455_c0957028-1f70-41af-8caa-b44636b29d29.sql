@@ -1,0 +1,1 @@
+ALTER TABLE public.xaman_payloads ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;

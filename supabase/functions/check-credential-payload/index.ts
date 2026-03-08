@@ -105,11 +105,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── SIGNED — Parse the metadata from the payload ─────────
-    let meta: any = {}
-    try {
-      meta = JSON.parse(xamanData.payload?.custom_meta?.blob || '{}')
-    } catch { /* ignore */ }
+    // ── SIGNED — Read metadata from our DB (stored by wallet-approve) ──
+    const { data: payloadRow } = await serviceClient
+      .from('xaman_payloads')
+      .select('metadata')
+      .eq('uuid', uuid)
+      .maybeSingle()
+
+    const meta: any = payloadRow?.metadata || {}
 
     const now = new Date().toISOString()
     const walletId = meta.wallet_id

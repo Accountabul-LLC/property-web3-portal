@@ -161,19 +161,7 @@ Deno.serve(async (req) => {
         },
       },
       custom_meta: {
-        identifier: `credential_issue_${registration_id}`,
-        blob: JSON.stringify({
-          purpose: 'CREDENTIAL_ISSUE',
-          registration_id,
-          wallet_id: wallet.id,
-          issuer_wallet_id: issuer.id,
-          issuer_address: issuer.issuer_address,
-          subject_address: wallet.wallet_address,
-          credential_type: credentialType,
-          credential_type_hex: credentialTypeHex,
-          admin_user_id: user.id,
-          notes: notes ?? null,
-        }),
+        identifier: `cred_${registration_id.slice(0, 8)}`,
       },
     }
 
@@ -196,12 +184,24 @@ Deno.serve(async (req) => {
     const xamanData = JSON.parse(xamanText)
     console.log('Xaman credential payload created:', xamanData.uuid)
 
-    // Store payload reference (don't commit registration yet — that happens post-sign)
+    // Store payload reference + all metadata needed by check-credential-payload
     await serviceClient.from('xaman_payloads').insert({
       uuid: xamanData.uuid,
       status: 'pending',
       intended_user_id: user.id,
       network,
+      metadata: {
+        purpose: 'CREDENTIAL_ISSUE',
+        registration_id,
+        wallet_id: wallet.id,
+        issuer_wallet_id: issuer.id,
+        issuer_address: issuer.issuer_address,
+        subject_address: wallet.wallet_address,
+        credential_type: credentialType,
+        credential_type_hex: credentialTypeHex,
+        admin_user_id: user.id,
+        notes: notes ?? null,
+      },
     })
 
     // Mark registration as under_review while awaiting signature
