@@ -41,7 +41,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet } = useActiveWallet();
+  const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
