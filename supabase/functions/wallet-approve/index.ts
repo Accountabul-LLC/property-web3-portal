@@ -201,6 +201,7 @@ Deno.serve(async (req) => {
       uuid: xamanData.uuid,
       status: 'pending',
       intended_user_id: user.id,
+      network,
     })
 
     // Mark registration as under_review while awaiting signature
