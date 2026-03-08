@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
-import NetworkToggle from '@/components/NetworkToggle';
+
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
@@ -119,7 +119,6 @@ const Navigation = () => {
           {/* Right: desktop actions (lg+) */}
           <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
             <ThemeToggle />
-            {user && <NetworkToggle />}
             {user && !kycApproved && (
               <button
                 onClick={() => navigate('/kyc')}
@@ -194,7 +193,6 @@ const Navigation = () => {
           {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
           <div className="lg:hidden flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
-            {user && <NetworkToggle />}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />

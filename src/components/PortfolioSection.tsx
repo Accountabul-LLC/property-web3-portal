@@ -10,6 +10,7 @@ import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
+import NetworkToggle from '@/components/NetworkToggle';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -192,9 +193,12 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-          Your XRPL Portfolio
-        </h2>
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Your XRPL Portfolio
+          </h2>
+          <NetworkToggle />
+        </div>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           {isReadOnly ? 'Viewing portfolio for' : 'Live on-chain data for'}{' '}
           {!isReadOnly && activeWallet?.xamanName && (
@@ -203,16 +207,16 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
           {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
             <span className="text-foreground">{activeWallet.label} · </span>
           )}
-          <a
-            href={`${explorerBase}/accounts/${displayAddress}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1"
-          >
-            {shortenAddress(displayAddress!)}
-            <ExternalLink className="w-3 h-3" />
-          </a>
         </p>
+        <a
+          href={`${explorerBase}/accounts/${displayAddress}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1"
+        >
+          {displayAddress}
+          <ExternalLink className="w-3 h-3" />
+        </a>
         {!isReadOnly && (
           <div className="flex justify-center gap-3 mt-4">
             <Button onClick={() => setIsSendOpen(true)} className="gap-2">
