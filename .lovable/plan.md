@@ -1,20 +1,25 @@
-## Plan: Connect Minting to Marketplace Listings — COMPLETED
 
-### Changes Applied
 
-1. **Database migration** — Added `property_id` (nullable uuid FK → properties) to `token_mints`. Updated RLS on `properties` to allow public reads for both `approved` and `active` statuses.
+## Fix: Blank Screen and kyc-save Edge Function
 
-2. **Property selector in MintWizard** — When minting an MPT, users see a dropdown of their approved properties. Selecting one pre-fills all metadata (name, address, beds, baths, sqft, year, value, image, description). The `property_id` is stored on the `token_mints` record.
+There are two issues to address:
 
-3. **Post-mint activation** — After successful mint (both auto-sign testnet and Xaman QR flows), linked properties are automatically updated to `status = 'active'`, making them appear in the marketplace.
+### 1. kyc-save duplicate line (minor)
+Line 88 has a duplicate `source_of_funds: source_of_funds ?? null` entry. This is harmless but should be cleaned up.
 
-4. **Marketplace updates** — `useProperties` hook now fetches `status IN ('approved', 'active')`. `PropertyListingsSection` updated with new status labels ("Listed" for active, "Approved" for approved) and matching badge colors.
+**Fix**: Remove the duplicate line 88 in `supabase/functions/kyc-save/index.ts`.
 
-### New Files
-- `src/hooks/useApprovedProperties.ts` — Fetches the current user's approved properties for the property selector.
+### 2. Blank screen
+The `App.tsx` provider hierarchy is correct — `ActiveWalletProvider` wraps all routes. The `ActiveWalletContext.tsx` file looks structurally sound. The blank screen is most likely caused by:
+- A stale HMR bundle from the previous multi-file edit (network type expansion across 10+ files)
+- The error may have been cached from the earlier session
 
-### Flow
-```text
-Owner submits property → admin approves → owner mints MPT (linked to property)
-    → property status becomes "active" → appears in marketplace as "Listed"
-```
+**Fix**: Force a clean rebuild by adding a trivial comment or whitespace change to `src/main.tsx` to bust the HMR cache. If the error persists after that, we'll add defensive error boundaries.
+
+### Changes
+
+| File | Change |
+|------|--------|
+| `supabase/functions/kyc-save/index.ts` | Remove duplicate `source_of_funds` line |
+| `src/main.tsx` | Trigger clean rebuild |
+
