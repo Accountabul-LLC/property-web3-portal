@@ -30,7 +30,7 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork } = useActiveWallet();
   const { user } = useAuth();
   const { data: approvedProperties = [] } = useApprovedProperties();
 
@@ -39,9 +39,9 @@ const MintWizard: React.FC = () => {
   const [selectedWalletAddress, setSelectedWalletAddress] = useState<string | null>(activeAddress);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
-  // Derive the selected wallet object and network from it
+  // Network is driven by the global toggle, not per-wallet
   const selectedWallet = wallets.find(w => w.address === selectedWalletAddress) || activeWallet;
-  const network: Network = selectedWallet?.network === 'mainnet' ? 'mainnet' : 'testnet';
+  const network: Network = activeNetwork === 'mainnet' ? 'mainnet' : 'testnet';
   const mintAddress = selectedWallet?.address || activeAddress;
 
   const [nftParams, setNftParams] = useState<NFTParams>(defaultNFT);
@@ -82,8 +82,7 @@ const MintWizard: React.FC = () => {
         'Testnet Faucet Wallet',
         null,
         'testnet_faucet',
-        data.secret,
-        'testnet'
+        data.secret
       );
 
       toast.success(`✅ Testnet wallet created — Funded with ${data.balance} XRP`);
@@ -330,8 +329,8 @@ const MintWizard: React.FC = () => {
                     <SelectItem key={w.address} value={w.address}>
                       <div className="flex items-center gap-2">
                         <span>{w.label}</span>
-                        <Badge variant={w.network === 'testnet' ? 'secondary' : 'outline'} className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}>
-                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
+                        <Badge variant={activeNetwork !== 'mainnet' ? 'secondary' : 'outline'} className={`text-[9px] px-1 py-0 ${activeNetwork === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}>
+                          {activeNetwork === 'testnet' ? 'Testnet' : 'Mainnet'}
                         </Badge>
                       </div>
                     </SelectItem>
@@ -339,7 +338,7 @@ const MintWizard: React.FC = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Network: <strong className="capitalize">{network}</strong> — derived from selected wallet
+                Network: <strong className="capitalize">{network}</strong> — from global toggle
               </p>
             </div>
 
