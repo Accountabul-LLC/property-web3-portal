@@ -619,6 +619,11 @@ const Dashboard = () => {
           )}
         </Card>
 
+        {/* Trading Compliance */}
+        <div className="mb-8">
+          <WalletRegistrationPanel />
+        </div>
+
         {/* Properties */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <Building2 className="w-5 h-5" />
