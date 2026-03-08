@@ -67,18 +67,13 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!network || !['testnet', 'mainnet'].includes(network)) {
+    if (!network || !['testnet', 'mainnet', 'devnet'].includes(network)) {
       return new Response(JSON.stringify({ error: 'Invalid network.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!wallet_address || !isValidXRPLAddress(wallet_address)) {
-      return new Response(JSON.stringify({ error: 'Invalid wallet address.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     // Auth + wallet ownership verification
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

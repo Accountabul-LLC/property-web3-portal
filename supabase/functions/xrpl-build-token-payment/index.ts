@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
   try {
     const { from_address, to_address, currency, issuer, amount, destination_tag, memo, network } = await req.json();
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
     const warnings: string[] = [];
 
     if (!from_address || !isValidXRPLAddress(from_address)) return jsonError('Invalid sender address', 400);

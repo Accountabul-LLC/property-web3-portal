@@ -10,7 +10,7 @@ export interface ConnectedWallet {
   label: string;
   xamanName: string | null;
   provider: string;
-  network: 'testnet' | 'mainnet';
+  network: 'mainnet' | 'testnet' | 'devnet';
   connectedAt: string;
   lastUsedAt: string;
   status: string;
@@ -22,14 +22,14 @@ interface ActiveWalletContextType {
   activeAddress: string | null;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'testnet' | 'mainnet') => void;
+  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => void;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
-  onWalletConnected: (address: string, xamanName?: string | null) => void;
+  onWalletConnected: (address: string, xamanName?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => void;
   walletsLoading: boolean;
 }
 
@@ -144,7 +144,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, [user]);
 
-  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'testnet' | 'mainnet') => {
+  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => {
     if (!user) return;
 
     // Upsert into user_wallets

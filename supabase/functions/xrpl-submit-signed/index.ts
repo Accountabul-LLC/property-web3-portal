@@ -95,15 +95,15 @@ Deno.serve(async (req) => {
 
     const { tx_json, wallet_address, network } = await req.json();
 
-    if (network !== 'testnet') {
-      throw new Error('Server-side signing is only supported on testnet');
+    if (network !== 'testnet' && network !== 'devnet') {
+      throw new Error('Server-side signing is only supported on testnet and devnet');
     }
 
     if (!tx_json || !wallet_address) {
       throw new Error('Missing tx_json or wallet_address');
     }
 
-    const nodes = TESTNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : TESTNET_NODES;
 
     // Ownership check: wallet must belong to the authenticated user
     const { data: walletRow, error: walletError } = await supabaseAdmin

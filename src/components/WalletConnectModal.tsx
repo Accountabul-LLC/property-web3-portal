@@ -5,21 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle, Wallet, LogIn } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTeamAccess } from "@/hooks/useTeamAccess";
+
+type XRPLNetwork = 'mainnet' | 'testnet' | 'devnet';
 
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWalletConnected: (walletAddress: string, accountName?: string | null) => void;
+  onWalletConnected: (walletAddress: string, accountName?: string | null, network?: XRPLNetwork) => void;
 }
+
+const NETWORK_OPTIONS: { value: XRPLNetwork; label: string; description: string }[] = [
+  { value: 'mainnet', label: 'Mainnet', description: 'Production ledger' },
+  { value: 'testnet', label: 'Testnet', description: 'testnet.xrpl-labs.com' },
+  { value: 'devnet', label: 'Devnet', description: 'sdevnet.rippletest.net' },
+];
 
 export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: WalletConnectModalProps) {
   const { user } = useAuth();
+  const { hasAccess: isAdmin } = useTeamAccess();
   const navigate = useNavigate();
   const [step, setStep] = useState<'select' | 'qr' | 'success' | 'error'>('select');
   const [qrCode, setQrCode] = useState<string>('');
   const [payloadUuid, setPayloadUuid] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isPolling, setIsPolling] = useState(false);
+  const [selectedNetwork, setSelectedNetwork] = useState<XRPLNetwork>('mainnet');
 
   const createXamanPayload = async () => {
     try {
@@ -27,7 +38,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
       setError('');
       
       const { data, error } = await supabase.functions.invoke('xaman-create-payload', {
-        body: {}
+        body: { network: selectedNetwork }
       });
 
       if (error) throw error;
@@ -61,7 +72,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
             setStep('success');
             setIsPolling(false);
             clearInterval(pollInterval);
-            onWalletConnected(data.wallet_address, data.account_name || null);
+            onWalletConnected(data.wallet_address, data.account_name || null, selectedNetwork);
           } else if (data.cancelled || data.expired) {
             setError(data.cancelled ? 'Payment request was cancelled' : 'Payment request expired');
             setStep('error');
@@ -94,6 +105,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
     setQrCode('');
     setPayloadUuid('');
     setError('');
+    setSelectedNetwork('mainnet');
     onClose();
   };
 
@@ -104,6 +116,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
       setQrCode('');
       setPayloadUuid('');
       setError('');
+      setSelectedNetwork('mainnet');
     }
   }, [isOpen]);
 
@@ -118,7 +131,6 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Auth gate: must be signed in */}
           {!user ? (
             <div className="space-y-4 text-center">
               <LogIn className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -140,6 +152,29 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
                   <p className="text-sm text-muted-foreground">
                     Choose your preferred wallet to connect securely
                   </p>
+
+                  {/* Admin-only network selector */}
+                  {isAdmin && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Network (Admin)</p>
+                      <div className="flex gap-2">
+                        {NETWORK_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.value}
+                            onClick={() => setSelectedNetwork(opt.value)}
+                            className={`flex-1 rounded-md border px-3 py-2 text-xs font-medium transition-colors ${
+                              selectedNetwork === opt.value
+                                ? 'border-primary bg-primary/10 text-primary'
+                                : 'border-border bg-background text-muted-foreground hover:bg-muted'
+                            }`}
+                          >
+                            <div>{opt.label}</div>
+                            <div className="text-[10px] opacity-70 mt-0.5">{opt.description}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
                   <Button 
                     onClick={createXamanPayload}

@@ -344,7 +344,7 @@ serve(async (req) => {
       });
     }
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     const cacheKey = `${network || 'mainnet'}:${wallet_address}`;
     const cached = getCached(cacheKey);

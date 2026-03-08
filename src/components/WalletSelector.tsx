@@ -51,10 +51,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const getExplorerUrl = (address: string, provider: string) => {
-    if (provider === 'testnet_faucet') {
-      return `https://testnet.xrpl.org/accounts/${address}`;
-    }
+  const getExplorerUrl = (address: string, network: string) => {
+    if (network === 'devnet') return `https://devnet.xrpl.org/accounts/${address}`;
+    if (network === 'testnet') return `https://testnet.xrpl.org/accounts/${address}`;
     return `https://xrpscan.com/account/${address}`;
   };
 
@@ -162,7 +161,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
                       <a
-                        href={getExplorerUrl(w.address, w.provider)}
+                        href={getExplorerUrl(w.address, w.network)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-mono text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5"
