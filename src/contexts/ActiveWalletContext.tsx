@@ -134,7 +134,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     localStorage.removeItem('wallet_address');
   }, []);
 
-  const filteredWallets = wallets.filter(w => w.network === activeNetwork);
+  // Network is now a viewing context, not a wallet filter — show all active wallets
+  const filteredWallets = wallets;
   const activeWallet = wallets.find(w => w.address === activeAddress) || null;
   const isConnected = !!activeWallet;
 
