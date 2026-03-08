@@ -189,6 +189,37 @@ const MintWizard: React.FC = () => {
         setQrCode(signData.qr_code || null);
         setPushed(signData.pushed || false);
 
+        // Auto-create property for standalone MPT mints (Xaman flow)
+        let xamanLinkedPropertyId = selectedPropertyId;
+        if (!xamanLinkedPropertyId && tokenType === 'mpt') {
+          const p = mptParams;
+          const propRow = {
+            owner_user_id: user.id,
+            owner_wallet: mintAddress,
+            title: p.name || 'Untitled Property Token',
+            address: p.property_address || null,
+            city: p.city || null,
+            state: p.state || null,
+            zip: p.zip || null,
+            property_type: p.property_type || null,
+            bedrooms: p.bedrooms ? Math.round(Number(p.bedrooms)) : null,
+            bathrooms: p.bathrooms ? Math.round(Number(p.bathrooms)) : null,
+            square_feet: p.square_feet ? Math.round(Number(p.square_feet)) : null,
+            year_built: p.year_built ? Math.round(Number(p.year_built)) : null,
+            estimated_value: p.estimated_value ? Number(p.estimated_value.replace(/,/g, '')) : null,
+            description: p.description || null,
+            images: p.image_url ? [p.image_url] : [],
+            total_tokens: p.max_amount ? Number(p.max_amount) : null,
+            status: 'pending_mint',
+          };
+          const { data: newProp } = await supabase
+            .from('properties' as any)
+            .insert(propRow as any)
+            .select('id')
+            .single();
+          if (newProp) xamanLinkedPropertyId = (newProp as any).id;
+        }
+
         // Save mint record
         await supabase.from('token_mints' as any).insert({
           user_id: user.id,
@@ -199,7 +230,7 @@ const MintWizard: React.FC = () => {
           tx_json: txJson,
           status: 'pending',
           xaman_payload_uuid: signData.uuid,
-          property_id: selectedPropertyId,
+          property_id: xamanLinkedPropertyId,
         });
 
         // Poll for signing result
