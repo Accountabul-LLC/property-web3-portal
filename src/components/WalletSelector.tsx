@@ -151,10 +151,10 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium truncate">{w.label}</p>
                         <Badge
-                          variant={w.network !== 'mainnet' ? 'secondary' : 'outline'}
-                          className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : w.network === 'devnet' ? 'bg-purple-500/20 text-purple-500 border-purple-500/30' : ''}`}
+                          variant={activeNetwork !== 'mainnet' ? 'secondary' : 'outline'}
+                          className={`text-[9px] px-1 py-0 ${activeNetwork === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : activeNetwork === 'devnet' ? 'bg-purple-500/20 text-purple-500 border-purple-500/30' : ''}`}
                         >
-                          {w.network === 'testnet' ? 'Testnet' : w.network === 'devnet' ? 'Devnet' : 'Mainnet'}
+                          {activeNetwork === 'testnet' ? 'Testnet' : activeNetwork === 'devnet' ? 'Devnet' : 'Mainnet'}
                         </Badge>
                       </div>
                       {w.xamanName && w.xamanName !== w.label && (
