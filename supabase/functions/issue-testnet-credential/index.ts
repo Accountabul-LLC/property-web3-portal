@@ -254,7 +254,6 @@ Deno.serve(async (req) => {
     if (!issuanceSuccess) {
       await serviceClient.from('wallet_credentials').update({
         ledger_status: 'failed',
-        error_detail: `${engineResult}: ${submitResult.result?.engine_result_message ?? ''}`,
         updated_at: now,
       }).eq('id', credential_id)
 
@@ -273,13 +272,12 @@ Deno.serve(async (req) => {
       issuer_wallet_id: issuerRecord.id,
       issuer_address: issuerRecord.issuer_address,
       issued_at: now,
-      tx_hash_issued: txHash,
+      tx_hash: txHash,
       updated_at: now,
     }).eq('id', credential_id)
 
-    // Update issuer last_used_at
+    // Update issuer updated_at
     await serviceClient.from('xrpl_issuer_wallets').update({
-      last_used_at: now,
       updated_at: now,
     }).eq('id', issuerRecord.id)
 
