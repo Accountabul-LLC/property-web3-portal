@@ -242,6 +242,30 @@ export function useMyData() {
   Humans curate this section periodically.
 -->
 
+### 2026-03-07 | claude-sonnet-4-6 (session 2)
+- Built XRPL issuer wallet infrastructure — seed NEVER stored in DB, only pointer (secret_env_key)
+- Migration `20260307210000_xrpl_issuer_wallets.sql`: xrpl_issuer_wallets table + issuer_wallet_id FK on wallet_credentials
+- Refactored wallet-approve: removed all inline XRPL signing; now only approves + creates pending_issuance credential row; looks up active issuer from xrpl_issuer_wallets table
+- New edge fn `issue-testnet-credential`: loads seed via Deno.env.get(issuer.secret_env_key), verifies derived address matches DB issuer_address, signs CredentialCreate, updates wallet_credentials; guards: admin role + pending_issuance status + address mismatch check
+- New edge fn `revoke-credential`: signs CredentialDelete as issuer, updates ledger_status='deleted', revokes TRADE_GLOBAL assignment
+- New edge fn `get-issuer-status`: returns issuer metadata + seed_configured boolean + live XRPL account_info (balance, sequence)
+- config.toml: added issue-testnet-credential, revoke-credential, get-issuer-status
+- Admin UI: AdminCredentials page at /admin/credentials with IssuerWalletPanel, PendingRegistrationsPanel, CredentialLedgerPanel
+- PendingRegistrationsPanel auto-chains approve → issue-testnet-credential in one admin click
+- Supabase secret to set: XRPL_TESTNET_ISSUER_SEED (set in Dashboard → Edge Functions → Secrets)
+- Admin.tsx + App.tsx wired with /admin/credentials route
+
+### 2026-03-07 | claude-sonnet-4-6
+- Built Phase 1A compliance wallet layer (Permissioned DEX design pivot — Credentials native, MPT as ecosystem badge)
+- Migration `20260307200000_compliance_wallet_layer.sql`: tables wallet_registrations, wallet_credentials, permission_profiles, wallet_permission_assignments; function is_wallet_trade_enabled()
+- Edge functions: wallet-register (user requests), wallet-approve (admin approves + auto-issues CredentialCreate on testnet via ACCOUNTABUL_ISSUER_SECRET), credential-accept (user accepts CredentialAccept testnet auto-sign / mainnet Xaman), compliance-check (full state query)
+- Frontend: useWalletCompliance hook (react-query, polls every 30s), WalletRegistrationPanel (6-step UI with actions), TradeGuard (wraps any trade-gated UI)
+- config.toml: added wallet-register, wallet-approve, credential-accept, compliance-check (all verify_jwt=false, manual JWT check inside)
+- Credential type ACCOUNTABUL_TRADE_APPROVED hex-encoded as CredentialType field; XRPL CredentialCreate issuer=platform, subject=user wallet
+- Requires env vars: ACCOUNTABUL_ISSUER_ADDRESS, ACCOUNTABUL_ISSUER_SECRET (testnet); no mainnet issuer signing yet (Phase 1B)
+- Permission profiles seeded: TRADE_GLOBAL, PREMIUM_DEAL_ACCESS, ACCREDITED_INVESTOR
+- useActiveWallet().activeWallet must expose { address, id } — verify against ActiveWalletContext before wiring UI
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements

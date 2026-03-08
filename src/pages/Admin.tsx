@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2, ShieldCheck, Brain, Users, FileSearch } from 'lucide-react'
+import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound } from 'lucide-react'
 
 const ADMIN_LINKS = [
   {
@@ -13,6 +13,12 @@ const ADMIN_LINKS = [
     description: 'Review and approve user identity verification applications.',
     href: '/admin/kyc',
     icon: FileSearch,
+  },
+  {
+    title: 'Credential Management',
+    description: 'Manage the testnet XRPL credential issuer, approve wallet registrations, and issue or revoke trading credentials.',
+    href: '/admin/credentials',
+    icon: KeyRound,
   },
   {
     title: 'AI Panel',

@@ -32,3 +32,24 @@ verify_jwt = false
 
 [functions.github-agent]
 verify_jwt = false
+
+[functions.wallet-register]
+verify_jwt = false
+
+[functions.wallet-approve]
+verify_jwt = false
+
+[functions.credential-accept]
+verify_jwt = false
+
+[functions.compliance-check]
+verify_jwt = false
+
+[functions.issue-testnet-credential]
+verify_jwt = false
+
+[functions.revoke-credential]
+verify_jwt = false
+
+[functions.get-issuer-status]
+verify_jwt = false
