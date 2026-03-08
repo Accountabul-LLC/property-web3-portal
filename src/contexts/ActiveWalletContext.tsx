@@ -1,8 +1,12 @@
+// ActiveWalletContext — manages multi-wallet state, DB persistence, and audit logging
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 import { toast } from 'sonner';
+
+/** Supported XRPL network targets */
+export type XRPLNetwork = 'mainnet' | 'testnet' | 'devnet';
 
 export interface ConnectedWallet {
   id: string;
@@ -10,7 +14,7 @@ export interface ConnectedWallet {
   label: string;
   xamanName: string | null;
   provider: string;
-  network: 'mainnet' | 'testnet' | 'devnet';
+  network: XRPLNetwork;
   connectedAt: string;
   lastUsedAt: string;
   status: string;
@@ -22,14 +26,14 @@ interface ActiveWalletContextType {
   activeAddress: string | null;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => void;
+  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: XRPLNetwork) => void;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
-  onWalletConnected: (address: string, xamanName?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => void;
+  onWalletConnected: (address: string, xamanName?: string | null, network?: XRPLNetwork) => void;
   walletsLoading: boolean;
 }
 
@@ -90,7 +94,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
         provider: w.provider || 'xaman',
-        network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as 'mainnet' | 'testnet' | 'devnet',
+        network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as XRPLNetwork,
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -144,7 +148,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, [user]);
 
-  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => {
+  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: XRPLNetwork) => {
     if (!user) return;
 
     // Upsert into user_wallets
@@ -185,7 +189,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
       provider: w.provider || 'xaman',
-      network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as 'mainnet' | 'testnet' | 'devnet',
+      network: (w.network === 'testnet' ? 'testnet' : w.network === 'devnet' ? 'devnet' : 'mainnet') as XRPLNetwork,
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,
@@ -253,7 +257,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = null;
   }, [wallets, user]);
 
-  const onWalletConnected = useCallback((address: string, xamanName?: string | null, network?: 'mainnet' | 'testnet' | 'devnet') => {
+  const onWalletConnected = useCallback((address: string, xamanName?: string | null, network?: XRPLNetwork) => {
     addWallet(address, undefined, xamanName, undefined, undefined, network);
     setConnectModalOpen(false);
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
