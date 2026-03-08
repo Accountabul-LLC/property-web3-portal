@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
+import { WalletRegistrationPanel } from '@/components/WalletRegistrationPanel';
 import Footer from '@/components/Footer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -617,6 +618,11 @@ const Dashboard = () => {
             </div>
           )}
         </Card>
+
+        {/* Trading Compliance */}
+        <div className="mb-8">
+          <WalletRegistrationPanel />
+        </div>
 
         {/* Properties */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
