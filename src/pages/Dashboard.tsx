@@ -557,8 +557,6 @@ const Dashboard = () => {
           ) : (
             <div className="space-y-3">
               {wallets.map((w) => {
-                // Show trade-enabled badge if this is the active wallet and compliance shows enabled
-                const isActiveWallet = activeWallet?.address === w.address;
                 return (
                 <div key={w.address} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                   <div className="flex-1 min-w-0">
