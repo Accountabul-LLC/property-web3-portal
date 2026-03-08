@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -52,7 +52,7 @@ export function useTokenizeForm(editId?: string | null) {
   const [propertyStatus, setPropertyStatus] = useState<string | null>(null);
 
   // Load existing property when editId is provided
-  useState(() => {
+  useEffect(() => {
     if (!editId) return;
     setLoadingDraft(true);
     supabase
@@ -68,7 +68,6 @@ export function useTokenizeForm(editId?: string | null) {
         const p = data as any;
         setPropertyId(p.id);
         setPropertyStatus(p.status);
-        // Parse address parts from address_display or address
         const addr = p.address || '';
         setFormData({
           propertyAddress: addr,
@@ -91,7 +90,7 @@ export function useTokenizeForm(editId?: string | null) {
         });
         setLoadingDraft(false);
       });
-  });
+  }, [editId]);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
