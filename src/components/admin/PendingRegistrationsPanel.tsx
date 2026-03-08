@@ -81,21 +81,8 @@ export function PendingRegistrationsPanel() {
   async function handleApprove(reg: WalletReg) {
     setActioning(reg.id)
     try {
-      const approveResult = await callEdgeFn('wallet-approve', { registration_id: reg.id })
-      toast.success('Registration approved.')
-
-      // If issuer is configured, immediately issue the credential
-      if (approveResult.issuer_configured && approveResult.credential_id) {
-        try {
-          await callEdgeFn('issue-testnet-credential', { credential_id: approveResult.credential_id })
-          toast.success('XRPL credential issued. User can now accept it.')
-        } catch (issueErr: any) {
-          toast.warning(`Approved but credential issuance failed: ${issueErr.message}`)
-        }
-      } else if (!approveResult.issuer_configured) {
-        toast.warning('Approved but no issuer wallet configured — issue credential manually once issuer is set up.')
-      }
-
+      const result = await callEdgeFn('wallet-approve', { registration_id: reg.id })
+      toast.success(`Wallet approved & credential issued on XRPL (tx: ${result.tx_hash?.slice(0, 12)}…)`)
       qc.invalidateQueries({ queryKey: ['admin-wallet-registrations'] })
       qc.invalidateQueries({ queryKey: ['admin-credential-ledger'] })
     } catch (err: any) {
