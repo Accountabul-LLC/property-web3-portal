@@ -38,7 +38,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       const secret = data.secret || null;
 
       // Add it as a wallet via the context (with secret + testnet_faucet provider)
-      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret);
 
       toast.success(`🧪 Testnet Wallet Created — Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
       setIsOpen(false);
@@ -161,7 +161,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
                       <a
-                        href={getExplorerUrl(w.address, w.network)}
+                        href={getExplorerUrl(w.address, activeNetwork)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-mono text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5"

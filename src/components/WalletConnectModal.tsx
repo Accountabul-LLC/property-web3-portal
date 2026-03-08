@@ -12,7 +12,7 @@ type XRPLNetwork = 'mainnet' | 'testnet' | 'devnet';
 interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onWalletConnected: (walletAddress: string, accountName?: string | null, network?: XRPLNetwork) => void;
+  onWalletConnected: (walletAddress: string, accountName?: string | null) => void;
 }
 
 const NETWORK_OPTIONS: { value: XRPLNetwork; label: string; description: string }[] = [
@@ -72,7 +72,7 @@ export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: Walle
             setStep('success');
             setIsPolling(false);
             clearInterval(pollInterval);
-            onWalletConnected(data.wallet_address, data.account_name || null, selectedNetwork);
+            onWalletConnected(data.wallet_address, data.account_name || null);
           } else if (data.cancelled || data.expired) {
             setError(data.cancelled ? 'Payment request was cancelled' : 'Payment request expired');
             setStep('error');
