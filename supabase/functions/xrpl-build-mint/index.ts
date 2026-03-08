@@ -92,22 +92,29 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     // SEC-014: Enforce KYC approval server-side — the React KycGate is not sufficient
-    const { data: kycStatus, error: kycError } = await supabase.rpc('get_kyc_status', { p_user_id: userId });
+    const { data: kycCase, error: kycError } = await supabase
+      .from('kyc_cases')
+      .select('status')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
     if (kycError) {
+      console.error('KYC lookup error:', kycError);
       return new Response(JSON.stringify({ error: 'Unable to verify identity status' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const kycStatus = kycCase?.status ?? 'not_started';
     if (kycStatus !== 'approved') {
       return new Response(JSON.stringify({
         error: 'Identity verification required',

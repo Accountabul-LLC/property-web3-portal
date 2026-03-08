@@ -63,15 +63,13 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(
-      authHeader.replace('Bearer ', ''),
-    );
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid authentication' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     // SEC-014: Server-side KYC enforcement — never trust the React client gate alone
     const supabaseAdmin = createClient(
@@ -125,7 +123,7 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    const { Wallet } = await import('npm:xrpl@4.1.0');
+    const { Wallet } = await import('https://esm.sh/xrpl@4.1.0');
     
     const wallet = Wallet.fromSeed(secret);
     console.log('Derived wallet address:', wallet.address);

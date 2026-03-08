@@ -68,7 +68,7 @@ export function CredentialLedgerPanel() {
   const { data: credentials = [], isLoading, refetch } = useQuery<CredentialRow[]>({
     queryKey: ['admin-credential-ledger'],
     queryFn: async () => {
-      const { data, error } = await (supabase.from('wallet_credentials') as any)
+      const { data, error } = await (supabase as any).from('wallet_credentials')
         .select(`
           id, ledger_status, credential_type, issuer_address,
           tx_hash_issued, tx_hash_accepted, issued_at, accepted_at, error_detail,

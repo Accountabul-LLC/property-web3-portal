@@ -65,7 +65,7 @@ export function PendingRegistrationsPanel() {
   const { data: registrations = [], isLoading, refetch } = useQuery<WalletReg[]>({
     queryKey: ['admin-wallet-registrations'],
     queryFn: async () => {
-      const { data, error } = await (supabase.from('wallet_registrations') as any)
+      const { data, error } = await (supabase as any).from('wallet_registrations')
         .select(`
           id, registration_status, created_at, notes, user_id,
           user_wallets ( id, wallet_address, network, label ),
