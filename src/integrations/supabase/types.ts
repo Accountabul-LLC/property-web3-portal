@@ -1314,6 +1314,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_kyc_status: { Args: { p_user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
