@@ -250,11 +250,11 @@ const MintWizard: React.FC = () => {
                 .update({ status: 'validated', tx_hash: checkData.tx_hash })
                 .eq('xaman_payload_uuid', uuid);
 
-              // Activate linked property
-              if (selectedPropertyId) {
+              // Activate linked property (either pre-existing approved or auto-created)
+              if (xamanLinkedPropertyId) {
                 await supabase.from('properties' as any)
                   .update({ status: 'active', updated_at: new Date().toISOString() } as any)
-                  .eq('id', selectedPropertyId);
+                  .eq('id', xamanLinkedPropertyId);
               }
 
               toast.success('✅ Token minted successfully!');
