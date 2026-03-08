@@ -22,8 +22,11 @@ export interface ConnectedWallet {
 
 interface ActiveWalletContextType {
   wallets: ConnectedWallet[];
+  filteredWallets: ConnectedWallet[];
   activeWallet: ConnectedWallet | null;
   activeAddress: string | null;
+  activeNetwork: XRPLNetwork;
+  setActiveNetwork: (network: XRPLNetwork) => void;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
   addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null, network?: XRPLNetwork) => void;
