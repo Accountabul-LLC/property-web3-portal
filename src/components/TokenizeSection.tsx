@@ -440,16 +440,39 @@ const TokenizeSection = () => {
     }
   };
 
+  if (loadingDraft) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground mr-2" />
+        <span className="text-muted-foreground">Loading property...</span>
+      </div>
+    );
+  }
+
+  const isEditing = !!editId;
+  const isReadOnly = propertyStatus && !['draft', 'needs_info'].includes(propertyStatus);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
         <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-primary bg-clip-text text-transparent">
-          Tokenize Your Property
+          {isEditing ? 'Edit Property' : 'Tokenize Your Property'}
         </h2>
+        {isEditing && propertyStatus && (
+          <Badge variant={propertyStatus === 'draft' ? 'outline' : 'secondary'} className="mb-3">
+            Status: {propertyStatus}
+          </Badge>
+        )}
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Transform your real estate into liquid, tradeable tokens. Our secure platform guides you through 
-          every step of the tokenization process.
+          {isEditing
+            ? 'Review and update your property details below.'
+            : 'Transform your real estate into liquid, tradeable tokens. Our secure platform guides you through every step of the tokenization process.'}
         </p>
+        {isReadOnly && (
+          <p className="text-sm text-warning mt-2">
+            This property has been submitted and is read-only. Contact support if you need changes.
+          </p>
+        )}
         {!user && (
           <p className="text-sm text-warning mt-2">
             You'll need to <button onClick={() => navigate('/auth')} className="underline text-primary">sign in</button> to save or submit.
