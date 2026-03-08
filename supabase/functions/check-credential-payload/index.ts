@@ -112,7 +112,44 @@ Deno.serve(async (req) => {
       .eq('uuid', uuid)
       .maybeSingle()
 
-    const meta: any = payloadRow?.metadata || {}
+    let meta: any = payloadRow?.metadata || {}
+
+    // Fallback: if metadata is empty (legacy payload), resolve from registration
+    if (!meta.wallet_id) {
+      const { data: reg } = await serviceClient
+        .from('wallet_registrations')
+        .select('wallet_id, user_id, notes')
+        .eq('id', registration_id)
+        .maybeSingle()
+
+      if (reg) {
+        // Look up issuer for this wallet's network
+        const { data: wallet } = await serviceClient
+          .from('user_wallets')
+          .select('id, wallet_address, network')
+          .eq('id', reg.wallet_id)
+          .single()
+
+        const walletNetwork = wallet?.network || 'testnet'
+        const { data: issuer } = await serviceClient
+          .from('xrpl_issuer_wallets')
+          .select('id, issuer_address')
+          .eq('network', walletNetwork)
+          .eq('status', 'active')
+          .limit(1)
+          .maybeSingle()
+
+        meta = {
+          wallet_id: reg.wallet_id,
+          issuer_wallet_id: issuer?.id,
+          issuer_address: issuer?.issuer_address || xamanData.response?.account,
+          credential_type: 'ACCOUNTABUL_TRADE_APPROVED',
+          credential_type_hex: null,
+          admin_user_id: user.id,
+          notes: reg.notes,
+        }
+      }
+    }
 
     const now = new Date().toISOString()
     const walletId = meta.wallet_id
