@@ -141,15 +141,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   const setActiveNetwork = useCallback((network: XRPLNetwork) => {
     setActiveNetworkState(network);
     localStorage.setItem(NETWORK_KEY, network);
-    // Auto-switch active wallet to one on the new network
-    const networkWallets = wallets.filter(w => w.network === network);
-    if (activeWallet && activeWallet.network !== network) {
-      const fallback = networkWallets.length > 0 ? networkWallets[0].address : null;
-      setActiveAddressState(fallback);
-      saveActiveAddress(fallback);
-      prevActiveRef.current = fallback;
-    }
-  }, [wallets, activeWallet]);
+    // No wallet switching — same wallet, different network view
+  }, []);
 
   const setActiveWallet = useCallback((address: string) => {
     const prev = prevActiveRef.current;
