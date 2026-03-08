@@ -1,7 +1,7 @@
 /**
  * CredentialLedgerPanel
  *
- * Shows all wallet_credentials rows with lifecycle state.
+ * Shows all wallet_credentials rows with lifecycle state + analytics summary.
  * Admin can:
  *   • Issue a pending credential (issue-testnet-credential)
  *   • Revoke an issued or accepted credential (revoke-credential)
@@ -16,18 +16,18 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Send, Trash2, RefreshCw, FileKey } from 'lucide-react'
+import { Loader2, Send, Trash2, RefreshCw, FileKey, BarChart3, ShieldCheck, Clock, AlertTriangle } from 'lucide-react'
 
 interface CredentialRow {
   id: string
   ledger_status: string
   credential_type: string
   issuer_address: string
-  tx_hash_issued: string | null
-  tx_hash_accepted: string | null
+  tx_hash: string | null
   issued_at: string | null
   accepted_at: string | null
-  error_detail: string | null
+  created_at: string
+  revoked_at: string | null
   user_wallets: {
     wallet_address: string
     user_id: string
@@ -71,7 +71,7 @@ export function CredentialLedgerPanel() {
       const { data, error } = await (supabase as any).from('wallet_credentials')
         .select(`
           id, ledger_status, credential_type, issuer_address,
-          tx_hash_issued, tx_hash_accepted, issued_at, accepted_at, error_detail,
+          tx_hash, issued_at, accepted_at, created_at, revoked_at,
           user_wallets ( wallet_address, user_id, network, label )
         `)
         .order('created_at', { ascending: false })
@@ -80,6 +80,15 @@ export function CredentialLedgerPanel() {
       return data ?? []
     },
   })
+
+  // Analytics summary
+  const analytics = {
+    total: credentials.length,
+    pending: credentials.filter(c => c.ledger_status === 'pending_issuance').length,
+    issued: credentials.filter(c => c.ledger_status === 'issued').length,
+    accepted: credentials.filter(c => c.ledger_status === 'accepted').length,
+    revoked: credentials.filter(c => ['deleted', 'expired'].includes(c.ledger_status) || c.revoked_at).length,
+  }
 
   async function handleIssue(cred: CredentialRow) {
     setActioning(cred.id)
@@ -130,7 +139,40 @@ export function CredentialLedgerPanel() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Analytics Summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="border rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Total</span>
+            </div>
+            <p className="text-2xl font-bold">{analytics.total}</p>
+          </div>
+          <div className="border rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <Clock className="h-4 w-4 text-yellow-500" />
+              <span className="text-xs text-muted-foreground">Pending</span>
+            </div>
+            <p className="text-2xl font-bold text-yellow-600">{analytics.pending}</p>
+          </div>
+          <div className="border rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <ShieldCheck className="h-4 w-4 text-green-500" />
+              <span className="text-xs text-muted-foreground">Active</span>
+            </div>
+            <p className="text-2xl font-bold text-green-600">{analytics.issued + analytics.accepted}</p>
+          </div>
+          <div className="border rounded-lg p-3 text-center">
+            <div className="flex items-center justify-center gap-1.5 mb-1">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <span className="text-xs text-muted-foreground">Revoked</span>
+            </div>
+            <p className="text-2xl font-bold text-destructive">{analytics.revoked}</p>
+          </div>
+        </div>
+
+        {/* Credential List */}
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading…
@@ -160,16 +202,13 @@ export function CredentialLedgerPanel() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  {cred.tx_hash_issued && (
+                  <span className="text-muted-foreground">Issuer</span>
+                  <span className="font-mono">{truncate(cred.issuer_address, 14)}</span>
+
+                  {cred.tx_hash && (
                     <>
-                      <span className="text-muted-foreground">Issue tx</span>
-                      <span className="font-mono">{truncate(cred.tx_hash_issued, 14)}</span>
-                    </>
-                  )}
-                  {cred.tx_hash_accepted && (
-                    <>
-                      <span className="text-muted-foreground">Accept tx</span>
-                      <span className="font-mono">{truncate(cred.tx_hash_accepted, 14)}</span>
+                      <span className="text-muted-foreground">Tx hash</span>
+                      <span className="font-mono">{truncate(cred.tx_hash, 14)}</span>
                     </>
                   )}
                   {cred.issued_at && (
@@ -184,12 +223,8 @@ export function CredentialLedgerPanel() {
                       <span>{new Date(cred.accepted_at).toLocaleString()}</span>
                     </>
                   )}
-                  {cred.error_detail && (
-                    <>
-                      <span className="text-muted-foreground">Error</span>
-                      <span className="text-red-600 text-xs break-all">{cred.error_detail}</span>
-                    </>
-                  )}
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{new Date(cred.created_at).toLocaleString()}</span>
                 </div>
 
                 <div className="flex gap-2 pt-1">
