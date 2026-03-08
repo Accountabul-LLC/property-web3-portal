@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
 
     const secret = walletRow.wallet_secret;
 
-    const { Wallet } = await import('https://esm.sh/xrpl@4.1.0');
+    const { Wallet } = await import('npm:xrpl@3.1.0');
     
     const wallet = Wallet.fromSeed(secret);
     console.log('Derived wallet address:', wallet.address);
