@@ -510,6 +510,27 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_profiles: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          label: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          label: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          label?: string
+        }
+        Relationships: []
+      }
       portfolio_holdings: {
         Row: {
           average_purchase_price: number
@@ -1205,6 +1226,141 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_credentials: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          credential_type: string
+          credential_type_hex: string | null
+          id: string
+          issued_at: string | null
+          issuer_address: string
+          issuer_wallet_id: string | null
+          ledger_status: string
+          revoked_at: string | null
+          tx_hash: string | null
+          updated_at: string
+          wallet_id: string
+          wallet_registration_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          credential_type?: string
+          credential_type_hex?: string | null
+          id?: string
+          issued_at?: string | null
+          issuer_address: string
+          issuer_wallet_id?: string | null
+          ledger_status?: string
+          revoked_at?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+          wallet_id: string
+          wallet_registration_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          credential_type?: string
+          credential_type_hex?: string | null
+          id?: string
+          issued_at?: string | null
+          issuer_address?: string
+          issuer_wallet_id?: string | null
+          ledger_status?: string
+          revoked_at?: string | null
+          tx_hash?: string | null
+          updated_at?: string
+          wallet_id?: string
+          wallet_registration_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_credentials_issuer_wallet_id_fkey"
+            columns: ["issuer_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "xrpl_issuer_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_credentials_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "user_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_credentials_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "user_wallets_safe"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_credentials_wallet_registration_id_fkey"
+            columns: ["wallet_registration_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallet_permission_assignments: {
+        Row: {
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          permission_profile_code: string
+          starts_at: string
+          status: string
+          updated_at: string
+          wallet_id: string
+        }
+        Insert: {
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_profile_code: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          wallet_id: string
+        }
+        Update: {
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          permission_profile_code?: string
+          starts_at?: string
+          status?: string
+          updated_at?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_permission_assignments_permission_profile_code_fkey"
+            columns: ["permission_profile_code"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "wallet_permission_assignments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "user_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_permission_assignments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "user_wallets_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_profiles: {
         Row: {
           avatar_url: string | null
@@ -1238,6 +1394,76 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_registrations: {
+        Row: {
+          created_at: string
+          id: string
+          kyc_case_id: string | null
+          kyc_snapshot: Json | null
+          notes: string | null
+          registration_status: string
+          reviewed_at: string | null
+          reviewer_id: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kyc_case_id?: string | null
+          kyc_snapshot?: Json | null
+          notes?: string | null
+          registration_status?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kyc_case_id?: string | null
+          kyc_snapshot?: Json | null
+          notes?: string | null
+          registration_status?: string
+          reviewed_at?: string | null
+          reviewer_id?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_registrations_kyc_case_id_fkey"
+            columns: ["kyc_case_id"]
+            isOneToOne: false
+            referencedRelation: "kyc_cases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_registrations_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: true
+            referencedRelation: "user_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_registrations_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: true
+            referencedRelation: "user_wallets_safe"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xaman_payloads: {
         Row: {
           created_at: string
@@ -1262,6 +1488,39 @@ export type Database = {
           status?: string
           uuid?: string
           wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      xrpl_issuer_wallets: {
+        Row: {
+          created_at: string
+          id: string
+          issuer_address: string
+          label: string | null
+          network: string
+          secret_env_key: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          issuer_address: string
+          label?: string | null
+          network?: string
+          secret_env_key: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          issuer_address?: string
+          label?: string | null
+          network?: string
+          secret_env_key?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1320,6 +1579,10 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_wallet_trade_enabled: {
+        Args: { p_wallet_address: string }
         Returns: boolean
       }
       owns_wallet: { Args: { _wallet_address: string }; Returns: boolean }
