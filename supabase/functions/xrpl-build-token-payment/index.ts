@@ -100,10 +100,9 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
-    const token = authHeader.replace('Bearer ', '');
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims?.sub) return jsonError('Invalid authentication', 401);
-    const userId = claimsData.claims.sub as string;
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) return jsonError('Invalid authentication', 401);
+    const userId = user.id;
 
     const { data: walletLink } = await db
       .from('user_wallets')
