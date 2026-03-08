@@ -141,14 +141,13 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       issuer_id: issuer.id,
-      issuer_name: issuer.issuer_name,
+      issuer_name: issuer.label,
       issuer_address: issuer.issuer_address,
-      environment: issuer.environment,
       network: issuer.network,
       status: issuer.status,
       secret_env_key: issuer.secret_env_key,
       seed_configured: seedConfigured,
-      last_used_at: issuer.last_used_at,
+      last_used_at: issuer.updated_at,
       created_at: issuer.created_at,
       xrpl: xrplInfo,
     }), {
