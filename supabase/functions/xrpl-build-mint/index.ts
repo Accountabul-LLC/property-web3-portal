@@ -7,6 +7,7 @@ const corsHeaders = {
 
 const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
+const DEVNET_NODES = ['https://s.devnet.rippletest.net:51234'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
@@ -67,18 +68,13 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!network || !['testnet', 'mainnet'].includes(network)) {
+    if (!network || !['testnet', 'mainnet', 'devnet'].includes(network)) {
       return new Response(JSON.stringify({ error: 'Invalid network.' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!wallet_address || !isValidXRPLAddress(wallet_address)) {
-      return new Response(JSON.stringify({ error: 'Invalid wallet address.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
     // Auth + wallet ownership verification
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;

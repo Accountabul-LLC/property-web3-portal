@@ -51,10 +51,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
-  const getExplorerUrl = (address: string, provider: string) => {
-    if (provider === 'testnet_faucet') {
-      return `https://testnet.xrpl.org/accounts/${address}`;
-    }
+  const getExplorerUrl = (address: string, network: string) => {
+    if (network === 'devnet') return `https://devnet.xrpl.org/accounts/${address}`;
+    if (network === 'testnet') return `https://testnet.xrpl.org/accounts/${address}`;
     return `https://xrpscan.com/account/${address}`;
   };
 
@@ -152,17 +151,17 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium truncate">{w.label}</p>
                         <Badge
-                          variant={w.network === 'testnet' ? 'secondary' : 'outline'}
-                          className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}
+                          variant={w.network !== 'mainnet' ? 'secondary' : 'outline'}
+                          className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : w.network === 'devnet' ? 'bg-purple-500/20 text-purple-500 border-purple-500/30' : ''}`}
                         >
-                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
+                          {w.network === 'testnet' ? 'Testnet' : w.network === 'devnet' ? 'Devnet' : 'Mainnet'}
                         </Badge>
                       </div>
                       {w.xamanName && w.xamanName !== w.label && (
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
                       <a
-                        href={getExplorerUrl(w.address, w.provider)}
+                        href={getExplorerUrl(w.address, w.network)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-mono text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5"
