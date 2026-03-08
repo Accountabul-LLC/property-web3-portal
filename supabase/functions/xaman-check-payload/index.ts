@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
         // Prevents attacker from submitting another user's signed QR under their own token.
         const { data: payloadRow } = await supabase
           .from('xaman_payloads')
-          .select('intended_user_id')
+          .select('intended_user_id, network')
           .eq('uuid', uuid)
           .maybeSingle();
 
@@ -158,6 +158,9 @@ Deno.serve(async (req) => {
             { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
           );
         }
+
+        // Resolve network from stored payload (falls back to mainnet)
+        const walletNetwork = payloadRow?.network || 'mainnet';
 
         // Check if wallet is already linked to a DIFFERENT user
         const { data: existingLink } = await supabase
@@ -177,12 +180,13 @@ Deno.serve(async (req) => {
           );
         }
 
-        // Upsert the wallet link
+        // Upsert the wallet link with the correct network
         await supabase
           .from('user_wallets')
           .upsert({
             user_id: userId,
             wallet_address,
+            network: walletNetwork,
             xaman_account_name: account_name,
             xaman_user_token: userToken,
             label: account_name || 'Wallet',
@@ -192,7 +196,7 @@ Deno.serve(async (req) => {
             revoked_at: null,
           }, { onConflict: 'wallet_address' });
 
-        console.log('Linked wallet', wallet_address, 'to user', userId);
+        console.log('Linked wallet', wallet_address, 'to user', userId, 'on network', walletNetwork);
       }
 
     } else if (xamanData.meta?.cancelled) {
