@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle, Save } from 'lucide-react';
+import { Upload, MapPin, DollarSign, FileText, Shield, CheckCircle, AlertCircle, Save, Loader2 } from 'lucide-react';
 import { useTokenizeForm } from '@/hooks/useTokenizeForm';
 import { useAuth } from '@/hooks/useAuth';
 import AddressAutocomplete from '@/components/AddressAutocomplete';
@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 
 const TokenizeSection = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const { user } = useAuth();
   const {
     formData,
@@ -23,7 +25,9 @@ const TokenizeSection = () => {
     saveDraft,
     submitForTokenization,
     saving,
-  } = useTokenizeForm();
+    loadingDraft,
+    propertyStatus,
+  } = useTokenizeForm(editId);
 
   const [currentStep, setCurrentStep] = React.useState(1);
   const [uploadedFiles, setUploadedFiles] = React.useState<string[]>([]);

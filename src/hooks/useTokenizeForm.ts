@@ -192,5 +192,7 @@ export function useTokenizeForm(editId?: string | null) {
     saving,
     propertyId,
     setFormData,
+    loadingDraft,
+    propertyStatus,
   };
 }
