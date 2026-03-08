@@ -193,10 +193,10 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="text-center mb-12">
-        <div className="flex items-center justify-center gap-3 mb-4">
-          <h2 className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            Your XRPL Portfolio
-          </h2>
+        <h2 className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
+          Your XRPL Portfolio
+        </h2>
+        <div className="flex justify-center mb-4">
           <NetworkToggle />
         </div>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
