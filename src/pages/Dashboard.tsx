@@ -41,7 +41,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet } = useActiveWallet();
+  const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -556,7 +556,8 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {wallets.map((w) => (
+              {wallets.map((w) => {
+                return (
                 <div key={w.address} className="flex items-center justify-between p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors">
                   <div className="flex-1 min-w-0">
                     {editingWalletAddr === w.address ? (
@@ -576,10 +577,12 @@ const Dashboard = () => {
                         </Button>
                       </div>
                     ) : (
-                      <>
-                        <p className="font-medium text-sm">{w.label}</p>
-                        <p className="text-xs text-muted-foreground font-mono truncate">{w.address}</p>
-                      </>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium text-sm">{w.label}</p>
+                          <p className="text-xs text-muted-foreground font-mono truncate">{w.address}</p>
+                        </div>
+                      </div>
                     )}
                     <p className="text-xs text-muted-foreground mt-1">
                       Connected {new Date(w.connectedAt).toLocaleDateString()}
@@ -610,7 +613,8 @@ const Dashboard = () => {
                     </Button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
               <Button variant="outline" onClick={openConnectModal} className="w-full mt-2 gap-2">
                 <Plus className="w-4 h-4" />
                 Connect Another Wallet

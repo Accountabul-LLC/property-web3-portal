@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     // ── Capture KYC snapshot ─────────────────────────────────
     const { data: kycCase } = await serviceClient
       .from('kyc_cases')
-      .select('id, status, approved_at, expires_at')
+      .select('id, status, approved_at')
       .eq('user_id', user.id)
       .maybeSingle()
 
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
         registration_status: 'pending',
         kyc_case_id: kycCase?.id ?? null,
         kyc_snapshot: kycCase
-          ? { status: kycCase.status, approved_at: kycCase.approved_at, expires_at: kycCase.expires_at }
+          ? { status: kycCase.status, approved_at: kycCase.approved_at }
           : null,
       })
       .select('id, registration_status')
