@@ -172,10 +172,15 @@ export function WalletRegistrationPanel() {
     try {
       await callEdgeFunction('wallet-register', { wallet_id: activeWallet.id })
       toast.success('Registration request submitted. Pending compliance review.')
-      await refetch()
     } catch (err: any) {
-      toast.error(err.message)
+      // 409 = already registered — not an error, just refresh state
+      if (err.message?.includes('already has a registration')) {
+        toast.info('Wallet is already registered. Refreshing status…')
+      } else {
+        toast.error(err.message)
+      }
     } finally {
+      await refetch()
       setActionLoading(null)
     }
   }
