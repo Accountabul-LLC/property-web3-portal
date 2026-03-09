@@ -22,6 +22,7 @@ import Admin from "./pages/Admin";
 import AdminAIPanel from "./pages/AdminAIPanel";
 import AdminCredentials from "./pages/AdminCredentials";
 import ActionItems from "./pages/ActionItems";
+import Credentials from "./pages/Credentials";
 import KycGate from "./components/KycGate";
 import NotFound from "./pages/NotFound";
 
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
               <Route path="/admin/credentials" element={<AdminCredentials />} />
               <Route path="/action-items" element={<ActionItems />} />
+              <Route path="/credentials" element={<Credentials />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

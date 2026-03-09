@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 import { WalletConnectModal } from '@/components/WalletConnectModal';
@@ -51,12 +51,13 @@ const Navigation = () => {
 
   // shortLabel used between lg (1024px) and xl (1280px) to prevent overflow
   const navItems = [
-    { path: '/marketplace', label: 'Marketplace', shortLabel: 'Market', icon: Building2 },
-    { path: '/tokenize',    label: 'Tokenize',    icon: TrendingUp },
-    { path: '/professionals', label: 'Professionals', shortLabel: 'Pros', icon: Users },
-    { path: '/ai-agents',  label: 'AI Agents',   shortLabel: 'Agents', icon: Bot },
-    { path: '/mint',       label: 'Mint',         icon: Coins },
-    { path: '/portfolio',  label: 'Portfolio',    icon: Wallet },
+    { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
+    { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },
+    { path: '/professionals', label: 'Professionals', shortLabel: 'Pros',  icon: Users },
+    { path: '/ai-agents',   label: 'AI Agents',    shortLabel: 'Agents',  icon: Bot },
+    { path: '/mint',         label: 'Mint',          icon: Coins },
+    { path: '/portfolio',    label: 'Portfolio',     icon: Wallet },
+    { path: '/credentials',  label: 'Credentials',   shortLabel: 'Creds',  icon: ShieldCheck },
   ];
 
   const currentPath = location.pathname;
