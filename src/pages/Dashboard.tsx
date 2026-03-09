@@ -16,7 +16,6 @@ import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { WalletHistoryPanel } from '@/components/WalletHistoryPanel';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
