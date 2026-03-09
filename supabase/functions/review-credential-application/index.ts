@@ -163,16 +163,49 @@ Deno.serve(async (req) => {
         })
       }
 
+      // Look up the user's wallet_id from wallet_address
+      const { data: userWallet, error: walletError } = await serviceClient
+        .from('user_wallets')
+        .select('id')
+        .eq('wallet_address', app.wallet_address)
+        .eq('user_id', app.user_id)
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (walletError || !userWallet) {
+        return new Response(JSON.stringify({ error: 'Could not find active wallet for this user/address', details: walletError?.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Look up an active issuer wallet
+      const { data: issuerWallet, error: issuerError } = await serviceClient
+        .from('xrpl_issuer_wallets')
+        .select('id, issuer_address')
+        .eq('status', 'active')
+        .limit(1)
+        .single()
+
+      if (issuerError || !issuerWallet) {
+        return new Response(JSON.stringify({ error: 'No active issuer wallet configured', details: issuerError?.message }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
       const issuedAt = new Date()
       const expiresAt = new Date(issuedAt.getTime() + 48 * 60 * 60 * 1000)
 
-      // Create wallet_credentials row
+      // Create wallet_credentials row with correct columns
       const { data: walletCred, error: credError } = await serviceClient
         .from('wallet_credentials')
         .insert({
-          user_id: app.user_id,
-          wallet_id: null, // will be linked by wallet_address lookup
+          wallet_id: userWallet.id,
           credential_type: app.credential_key,
+          issuer_address: issuerWallet.issuer_address,
+          issuer_wallet_id: issuerWallet.id,
           ledger_status: 'pending_issuance',
           issued_at: issuedAt.toISOString(),
         })
