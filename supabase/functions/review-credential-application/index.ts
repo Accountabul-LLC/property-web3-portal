@@ -194,9 +194,7 @@ Deno.serve(async (req) => {
           issued_at: issuedAt.toISOString(),
           expires_at: expiresAt.toISOString(),
           wallet_credential_id: walletCred.id,
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
