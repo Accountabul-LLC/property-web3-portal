@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Build and sign CredentialCreate ──────────────────────
-    const { Wallet: XrplWallet } = await import('https://esm.sh/xrpl@3.1.0?bundle-deps')
+    const { Wallet: XrplWallet } = await import('npm:xrpl@3.1.0')
     const issuerWallet = XrplWallet.fromSeed(issuerSeed)
 
     // Guard: derived address must match the stored issuer address
