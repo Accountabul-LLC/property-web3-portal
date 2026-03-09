@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import { WalletRegistrationPanel } from '@/components/WalletRegistrationPanel';
+import { WalletHistoryPanel } from '@/components/WalletHistoryPanel';
 import Footer from '@/components/Footer';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,6 +16,7 @@ import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { WalletHistoryPanel } from '@/components/WalletHistoryPanel';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
@@ -626,6 +628,11 @@ const Dashboard = () => {
         {/* Trading Compliance */}
         <div className="mb-8">
           <WalletRegistrationPanel />
+        </div>
+
+        {/* Wallet History */}
+        <div className="mb-8">
+          <WalletHistoryPanel />
         </div>
 
         {/* Properties */}

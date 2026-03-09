@@ -7,6 +7,9 @@ import { Badge } from '../ui/badge';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { useTokenOrders } from '@/hooks/usePropertyData';
 import { useParams } from 'react-router-dom';
+import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+import { useKycStatus } from '@/hooks/useKycStatus';
+import { useWalletRegistration } from '@/hooks/useWalletRegistration';
 
 const OrderBook: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +18,22 @@ const OrderBook: React.FC = () => {
   const [quantity, setQuantity] = React.useState('');
 
   const { data: orders = [], isLoading } = useTokenOrders(id);
+  const { activeAddress } = useActiveWallet();
+  const { isApproved: kycApproved } = useKycStatus();
+  const { isRegistered, isPending } = useWalletRegistration(activeAddress);
+
+  function getOrderButtonState(): { label: string; disabled: boolean } {
+    if (!activeAddress) return { label: 'Connect Wallet', disabled: true };
+    if (!kycApproved) return { label: 'Complete KYC to Trade', disabled: true };
+    if (isPending) return { label: 'Registration Pending Review', disabled: true };
+    if (!isRegistered) return { label: 'Register Wallet to Trade', disabled: true };
+    return {
+      label: `Place ${orderType === 'buy' ? 'Buy' : 'Sell'} Order`,
+      disabled: !price || !quantity,
+    };
+  }
+
+  const { label: orderButtonLabel, disabled: orderButtonDisabled } = getOrderButtonState();
 
   const buyOrders = orders.filter(o => o.side === 'buy').sort((a, b) => b.price - a.price);
   const sellOrders = orders.filter(o => o.side === 'sell').sort((a, b) => a.price - b.price);
@@ -52,8 +71,8 @@ const OrderBook: React.FC = () => {
                 <div className="text-sm text-muted-foreground">
                   Total: ${(Number(price) * Number(quantity) || 0).toLocaleString()}
                 </div>
-                <Button className="w-full" disabled={!price || !quantity}>
-                  Place {orderType === 'buy' ? 'Buy' : 'Sell'} Order
+                <Button className="w-full" disabled={orderButtonDisabled}>
+                  {orderButtonLabel}
                 </Button>
               </div>
             </div>
