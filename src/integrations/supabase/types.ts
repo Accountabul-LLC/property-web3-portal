@@ -345,6 +345,7 @@ export type Database = {
       credential_catalog: {
         Row: {
           allowed_account_types: string[]
+          application_mode: string
           credential_key: string
           credential_name: string
           description: string
@@ -353,9 +354,12 @@ export type Database = {
           requires_kyc: boolean
           requires_wallet: boolean
           sort_order: number
+          user_benefit: string | null
+          user_cta: string | null
         }
         Insert: {
           allowed_account_types?: string[]
+          application_mode?: string
           credential_key: string
           credential_name: string
           description?: string
@@ -364,9 +368,12 @@ export type Database = {
           requires_kyc?: boolean
           requires_wallet?: boolean
           sort_order?: number
+          user_benefit?: string | null
+          user_cta?: string | null
         }
         Update: {
           allowed_account_types?: string[]
+          application_mode?: string
           credential_key?: string
           credential_name?: string
           description?: string
@@ -375,6 +382,8 @@ export type Database = {
           requires_kyc?: boolean
           requires_wallet?: boolean
           sort_order?: number
+          user_benefit?: string | null
+          user_cta?: string | null
         }
         Relationships: []
       }
