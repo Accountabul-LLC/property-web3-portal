@@ -76,9 +76,7 @@ async function callEdgeFn(fn: string, body: Record<string, unknown>) {
 }
 
 function userName(app: AdminApplication): string {
-  if (app.profiles?.first_name || app.profiles?.last_name) {
-    return [app.profiles.first_name, app.profiles.last_name].filter(Boolean).join(' ')
-  }
+  if (app._profile_name) return app._profile_name
   return app.user_id.slice(0, 8) + '...'
 }
 
