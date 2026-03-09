@@ -5,8 +5,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from 'react-router-dom'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useKycStatus } from '@/hooks/useKycStatus'
-import { useCredentialApplications, CredentialApplication } from '@/hooks/useCredentialApplications'
-import { useCredentialCatalog, CatalogEntry } from '@/hooks/useCredentialCatalog'
+import {
+  useCredentialEligibility,
+  CredentialEligibilityResult,
+} from '@/hooks/useCredentialEligibility'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,170 +21,107 @@ import {
   RefreshCw,
   AlertTriangle,
   Wallet,
-  Unlock,
+  Zap,
+  FileText,
   Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { supabase } from '@/integrations/supabase/client'
 
-// ─── Countdown Timer ────────────────────────────────────────────────────────
+// ─── Countdown Timer ─────────────────────────────────────────────────────────
 
-interface CountdownTimerProps {
-  expiresAt: string
-}
-
-function CountdownTimer({ expiresAt }: CountdownTimerProps) {
-  const [remaining, setRemaining] = useState<number>(0)
+function CountdownTimer({ expiresAt }: { expiresAt: string }) {
+  const [remaining, setRemaining] = useState('')
+  const [urgency, setUrgency] = useState<'green' | 'yellow' | 'orange' | 'red'>('green')
 
   useEffect(() => {
-    function calc() {
-      const diff = new Date(expiresAt).getTime() - Date.now()
-      setRemaining(Math.max(0, diff))
+    function tick() {
+      const ms = new Date(expiresAt).getTime() - Date.now()
+      if (ms <= 0) { setRemaining('Expired'); setUrgency('red'); return }
+      const h = Math.floor(ms / 3600000)
+      const m = Math.floor((ms % 3600000) / 60000)
+      const s = Math.floor((ms % 60000) / 1000)
+      setRemaining(`${h}h ${m}m ${s}s`)
+      setUrgency(h > 24 ? 'green' : h > 12 ? 'yellow' : h > 6 ? 'orange' : 'red')
     }
-    calc()
-    const interval = setInterval(calc, 1000)
-    return () => clearInterval(interval)
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
   }, [expiresAt])
 
-  const totalSeconds = Math.floor(remaining / 1000)
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = totalSeconds % 60
-
-  const pad = (n: number) => String(n).padStart(2, '0')
-
-  let colorClass = 'text-green-600 dark:text-green-400'
-  if (hours < 1) colorClass = 'text-red-600 dark:text-red-400'
-  else if (hours < 6) colorClass = 'text-orange-500 dark:text-orange-400'
-  else if (hours < 24) colorClass = 'text-yellow-600 dark:text-yellow-400'
-
-  if (remaining <= 0) {
-    return <span className="text-xs text-destructive font-mono">Expired</span>
+  const colors = {
+    green: 'text-green-600',
+    yellow: 'text-yellow-600',
+    orange: 'text-orange-600',
+    red: 'text-red-600',
   }
 
-  return (
-    <span className={`text-xs font-mono font-semibold ${colorClass}`}>
-      {pad(hours)}h {pad(minutes)}m {pad(seconds)}s remaining
-    </span>
-  )
+  return <span className={`font-mono font-medium ${colors[urgency]}`}>{remaining}</span>
 }
 
-// ─── Status Badge ────────────────────────────────────────────────────────────
+// ─── Status Badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-    applied: { label: 'Applied', variant: 'secondary' },
+    active: { label: 'Active', variant: 'outline' },
+    issued_pending_acceptance: { label: 'Pending Acceptance', variant: 'default' },
+    approved: { label: 'Approved', variant: 'secondary' },
     under_review: { label: 'Under Review', variant: 'secondary' },
-    approved: { label: 'Approved', variant: 'outline' },
-    issued_pending_acceptance: { label: 'Awaiting Acceptance', variant: 'outline' },
-    active: { label: 'Active', variant: 'default' },
+    applied: { label: 'Applied', variant: 'secondary' },
     expired: { label: 'Expired', variant: 'destructive' },
     rejected: { label: 'Rejected', variant: 'destructive' },
     revoked: { label: 'Revoked', variant: 'destructive' },
-    draft: { label: 'Draft', variant: 'secondary' },
   }
   const entry = map[status] ?? { label: status, variant: 'secondary' as const }
   return <Badge variant={entry.variant}>{entry.label}</Badge>
 }
 
-// ─── Credential Apply Card ──────────────────────────────────────────────────
+// ─── Requirements Checklist ───────────────────────────────────────────────────
 
-function CredentialApplyCard({
-  entry,
-  applying,
-  disabled,
-  onApply,
-}: {
-  entry: CatalogEntry
-  applying: boolean
-  disabled: boolean
-  onApply: () => void
-}) {
+function RequirementsChecklist({ cred }: { cred: CredentialEligibilityResult }) {
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">{entry.credential_name}</CardTitle>
-        {entry.user_benefit && (
-          <div className="flex items-start gap-1.5 mt-1">
-            <Unlock className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
-            <span className="text-sm text-primary font-medium">{entry.user_benefit}</span>
-          </div>
-        )}
-      </CardHeader>
-      <CardContent className="pt-0 flex-1 flex flex-col justify-between gap-3">
-        <div className="space-y-2">
-          {entry.user_cta && (
-            <p className="text-xs text-muted-foreground">{entry.user_cta}</p>
+    <ul className="space-y-1.5 mt-2">
+      {cred.requirements.map((req) => (
+        <li key={req.requirement_key} className="flex items-start gap-2 text-sm">
+          {req.met ? (
+            <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
+          ) : (
+            <XCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
           )}
-          <div className="flex gap-1 flex-wrap">
-            {entry.requires_kyc && (
-              <Badge variant="outline" className="text-xs">KYC Required</Badge>
-            )}
-            {entry.requires_wallet && (
-              <Badge variant="outline" className="text-xs">Wallet Required</Badge>
-            )}
-          </div>
-        </div>
-        <Button
-          size="sm"
-          className="w-full"
-          disabled={applying || disabled}
-          onClick={onApply}
-        >
-          {applying && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-          Apply Now
-        </Button>
-      </CardContent>
-    </Card>
+          <span className={req.met ? 'text-muted-foreground line-through' : ''}>
+            {req.display_label}
+          </span>
+          {!req.met && req.display_hint && (
+            <span className="text-xs text-muted-foreground ml-1">— {req.display_hint}</span>
+          )}
+        </li>
+      ))}
+    </ul>
   )
 }
 
-// ─── Application Card (shared for review/active/expired/rejected) ───────────
-
-function ApplicationCard({
-  app,
-  actions,
-}: {
-  app: CredentialApplication
-  actions?: React.ReactNode
-}) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">
-            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
-          </CardTitle>
-          <StatusBadge status={app.status} />
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0 space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Wallet: {app.wallet_address.slice(0, 8)}...{app.wallet_address.slice(-6)}
-        </p>
-        {actions}
-      </CardContent>
-    </Card>
-  )
-}
-
-// ─── Main Page ───────────────────────────────────────────────────────────────
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 const Credentials = () => {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const { activeAddress, isConnected } = useActiveWallet()
   const { isApproved: kycApproved, isLoading: kycLoading } = useKycStatus()
-  const { applications, isLoading: appsLoading, refetch } = useCredentialApplications()
-  const { eligibleCatalog, autoIssuedCatalog, isLoading: catalogLoading } = useCredentialCatalog()
+  const {
+    sections,
+    isLoading,
+    forceRefresh,
+    triggerAutoIssue,
+    applyForCredential,
+    acceptCredential,
+  } = useCredentialEligibility(activeAddress ?? null)
 
-  const [applyingFor, setApplyingFor] = useState<string | null>(null)
-  const [acceptingFor, setAcceptingFor] = useState<string | null>(null)
-
-  const { applyForCredential } = useCredentialApplications()
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    if (!authLoading && !user) navigate('/auth')
+    if (!authLoading && !user) {
+      navigate('/auth')
+    }
   }, [user, authLoading, navigate])
 
   if (authLoading || kycLoading) {
@@ -195,86 +134,97 @@ const Credentials = () => {
 
   if (!user) return null
 
-  // Partition applications
-  const underReview = applications.filter((a) =>
-    ['applied', 'under_review', 'approved'].includes(a.status)
-  )
-  const readyToAccept = applications.filter((a) => a.status === 'issued_pending_acceptance')
-  const active = applications.filter((a) => a.status === 'active')
-  const expired = applications.filter((a) => a.status === 'expired')
-  const rejected = applications.filter((a) => a.status === 'rejected')
-
-  const appliedKeys = new Set(
-    applications
-      .filter((a) => !['rejected', 'expired', 'revoked'].includes(a.status))
-      .map((a) => a.credential_key)
-  )
-
-  const availableToApply = eligibleCatalog.filter((c) => !appliedKeys.has(c.credential_key))
+  async function handleAutoIssue(credential_key: string) {
+    setActionInProgress(credential_key)
+    try {
+      await triggerAutoIssue(credential_key)
+      toast.success('Credential issued — check Ready to Accept section')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to issue credential')
+    } finally {
+      setActionInProgress(null)
+    }
+  }
 
   async function handleApply(credential_key: string) {
-    if (!activeAddress) {
-      toast.error('Connect your wallet before applying')
-      return
-    }
-    if (!kycApproved) {
-      toast.error('KYC verification must be approved before applying')
-      navigate('/kyc/status')
-      return
-    }
-    setApplyingFor(credential_key)
+    setActionInProgress(credential_key)
     try {
-      await applyForCredential(credential_key, activeAddress)
+      await applyForCredential(credential_key)
       toast.success('Application submitted successfully')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit application')
     } finally {
-      setApplyingFor(null)
+      setActionInProgress(null)
     }
   }
 
-  async function handleAccept(app: CredentialApplication) {
-    if (!app.wallet_credential_id) {
+  async function handleAccept(wallet_credential_id: string | null, credential_key: string) {
+    if (!wallet_credential_id) {
       toast.error('No credential ID linked to this application')
       return
     }
-    setAcceptingFor(app.id)
+    setActionInProgress(credential_key)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) throw new Error('Not authenticated')
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/credential-accept`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ credential_id: app.wallet_credential_id }),
-      })
-      const json = await res.json()
-      if (!res.ok) throw new Error(json.error || res.statusText)
+      await acceptCredential(wallet_credential_id)
       toast.success('Credential accepted successfully')
-      refetch()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to accept credential')
     } finally {
-      setAcceptingFor(null)
+      setActionInProgress(null)
     }
   }
 
-  const isLoading = appsLoading || catalogLoading
+  async function handleRefresh() {
+    setRefreshing(true)
+    try {
+      await forceRefresh()
+      toast.success('Eligibility refreshed')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Refresh failed')
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const totalCredentials =
+    sections.active.length +
+    sections.ready_to_accept.length +
+    sections.auto_issuable.length +
+    sections.eligible_apply.length +
+    sections.needs_more_info.length +
+    sections.unavailable.length
 
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <ShieldCheck className="w-5 h-5 text-primary" />
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">My Credentials</h1>
+              <p className="text-sm text-muted-foreground">
+                Manage your on-chain credentials for platform access
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">My Credentials</h1>
-            <p className="text-sm text-muted-foreground">
-              Apply for credentials to unlock platform features and trading access
-            </p>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={refreshing || !activeAddress}
+          >
+            {refreshing ? (
+              <Loader2 className="w-3 h-3 animate-spin mr-1" />
+            ) : (
+              <RefreshCw className="w-3 h-3 mr-1" />
+            )}
+            Refresh
+          </Button>
         </div>
 
         {/* Wallet warning */}
@@ -283,20 +233,20 @@ const Credentials = () => {
             <CardContent className="pt-4 flex items-center gap-3">
               <Wallet className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <p className="text-sm text-amber-700 dark:text-amber-400">
-                Connect your wallet to apply for credentials and track acceptance.
+                Connect your wallet to view and manage credentials.
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* KYC warning */}
-        {!kycApproved && (
+        {isConnected && !kycApproved && (
           <Card className="mb-6 border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/20">
             <CardContent className="pt-4 flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Identity verification required before applying for credentials.
+                  Identity verification required before credentials can be issued.
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={() => navigate('/kyc')}>
@@ -310,128 +260,192 @@ const Credentials = () => {
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
           </div>
+        ) : totalCredentials === 0 && isConnected ? (
+          <div className="text-center py-16">
+            <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">No credentials available for your account type.</p>
+          </div>
         ) : (
-          <div className="space-y-8">
-            {/* ── Available to Apply ────────────────────────────────── */}
-            <section>
-              <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                <Unlock className="w-5 h-5 text-primary" />
-                Unlock More Features
-              </h2>
-              <p className="text-sm text-muted-foreground mb-4">
-                Apply for credentials below to access advanced trading, exclusive offerings, and premium services.
-              </p>
-              {availableToApply.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  You've applied for all available credentials, or none are available for your account type.
-                </p>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {availableToApply.map((entry) => (
-                    <CredentialApplyCard
-                      key={entry.credential_key}
-                      entry={entry}
-                      applying={applyingFor === entry.credential_key}
-                      disabled={!isConnected || !kycApproved}
-                      onApply={() => handleApply(entry.credential_key)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
+          <div className="space-y-10">
 
-            {/* ── Ready to Accept ───────────────────────────────────── */}
-            {readyToAccept.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                  Ready to Accept
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {readyToAccept.map((app) => (
-                    <Card key={app.id} className="border-blue-200 dark:border-blue-800">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
-                          </CardTitle>
-                          <StatusBadge status={app.status} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-3">
-                        {app.expires_at && <CountdownTimer expiresAt={app.expires_at} />}
-                        <p className="text-xs text-muted-foreground">
-                          Wallet: {app.wallet_address.slice(0, 8)}...{app.wallet_address.slice(-6)}
-                        </p>
-                        <Button
-                          size="sm"
-                          className="w-full"
-                          disabled={acceptingFor === app.id || !isConnected}
-                          onClick={() => handleAccept(app)}
-                        >
-                          {acceptingFor === app.id && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
-                          Accept Credential
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* ── Under Review ──────────────────────────────────────── */}
-            {underReview.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-yellow-500" />
-                  Under Review
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {underReview.map((app) => (
-                    <ApplicationCard key={app.id} app={app} actions={
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          Applied: {new Date(app.applied_at).toLocaleDateString()}
-                        </p>
-                        {app.status === 'approved' && (
-                          <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            Approved — awaiting issuance
-                          </p>
-                        )}
-                      </>
-                    } />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* ── Active ────────────────────────────────────────────── */}
-            {active.length > 0 && (
+            {/* ── Section 1: Active Credentials ── */}
+            {sections.active.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
                   <CheckCircle2 className="w-5 h-5 text-green-500" />
                   Active Credentials
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {active.map((app) => (
-                    <Card key={app.id} className="border-green-200 dark:border-green-800">
+                  {sections.active.map((cred) => {
+                    const app = cred.existing_application
+                    return (
+                      <Card key={cred.credential_key} className="border-green-200 dark:border-green-800">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base">{cred.credential_name}</CardTitle>
+                            {app && <StatusBadge status={app.status} />}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-1">
+                          {app?.status === 'applied' && (
+                            <p className="text-xs text-muted-foreground">Application submitted — awaiting review.</p>
+                          )}
+                          {app?.status === 'under_review' && (
+                            <p className="text-xs text-muted-foreground">Under review by our compliance team.</p>
+                          )}
+                          {app?.status === 'approved' && (
+                            <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                              Approved — awaiting issuance.
+                            </p>
+                          )}
+                          {app?.status === 'active' && (
+                            <p className="text-xs text-green-600 dark:text-green-400 font-medium">
+                              Credential active on XRPL.
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ── Section 2: Ready to Accept ── */}
+            {sections.ready_to_accept.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-blue-500" />
+                  Ready to Accept
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {sections.ready_to_accept.map((cred) => {
+                    const app = cred.existing_application
+                    const inProgress = actionInProgress === cred.credential_key
+                    return (
+                      <Card key={cred.credential_key} className="border-blue-200 dark:border-blue-800">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base">{cred.credential_name}</CardTitle>
+                            {app && <StatusBadge status={app.status} />}
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0 space-y-3">
+                          {app?.expires_at && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              Expires in: <CountdownTimer expiresAt={app.expires_at} />
+                            </div>
+                          )}
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={inProgress || !isConnected}
+                            onClick={() => handleAccept(app?.wallet_credential_id ?? null, cred.credential_key)}
+                          >
+                            {inProgress ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                            Accept Credential
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ── Section 3a: Available Now — Instant Access (Class A) ── */}
+            {sections.auto_issuable.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-primary" />
+                  Available Now
+                </h2>
+                <p className="text-sm text-muted-foreground mb-3">Instant Access — you qualify now, no review required.</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {sections.auto_issuable.map((cred) => {
+                    const inProgress = actionInProgress === cred.credential_key
+                    return (
+                      <Card key={cred.credential_key} className="border-primary/30 bg-primary/5">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-base">{cred.credential_name}</CardTitle>
+                            <Badge variant="outline" className="text-xs border-primary text-primary">Instant</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <Button
+                            size="sm"
+                            className="w-full"
+                            disabled={inProgress || !isConnected}
+                            onClick={() => handleAutoIssue(cred.credential_key)}
+                          >
+                            {inProgress ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Zap className="w-3 h-3 mr-1" />}
+                            Get Credential
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ── Section 3b: Available Now — Apply (Class B, all docs on file) ── */}
+            {sections.eligible_apply.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-blue-500" />
+                  Apply
+                </h2>
+                <p className="text-sm text-muted-foreground mb-3">Documents on file — admin review required.</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {sections.eligible_apply.map((cred) => {
+                    const inProgress = actionInProgress === cred.credential_key
+                    return (
+                      <Card key={cred.credential_key}>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-base">{cred.credential_name}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="w-full"
+                            disabled={inProgress || !isConnected || !kycApproved}
+                            onClick={() => handleApply(cred.credential_key)}
+                          >
+                            {inProgress ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                            Apply
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* ── Section 4: Needs More Information ── */}
+            {sections.needs_more_info.length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <Info className="w-5 h-5 text-yellow-500" />
+                  Needs More Information
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {sections.needs_more_info.map((cred) => (
+                    <Card key={cred.credential_key} className="border-yellow-200 dark:border-yellow-800">
                       <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
-                          </CardTitle>
-                          <StatusBadge status={app.status} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-1">
-                        {app.accepted_at && (
-                          <p className="text-xs text-muted-foreground">
-                            Accepted: {new Date(app.accepted_at).toLocaleDateString()}
-                          </p>
+                        <CardTitle className="text-base">{cred.credential_name}</CardTitle>
+                        {cred.blocking_reasons.length > 0 && (
+                          <CardDescription className="text-xs">
+                            Complete requirements to unlock
+                          </CardDescription>
                         )}
-                        <p className="text-xs text-muted-foreground">
-                          Wallet: {app.wallet_address.slice(0, 8)}...{app.wallet_address.slice(-6)}
-                        </p>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        <RequirementsChecklist cred={cred} />
                       </CardContent>
                     </Card>
                   ))}
@@ -439,108 +453,35 @@ const Credentials = () => {
               </section>
             )}
 
-            {/* ── Expired ───────────────────────────────────────────── */}
-            {expired.length > 0 && (
+            {/* ── Section 5: Not Available ── */}
+            {sections.unavailable.length > 0 && (
               <section>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-muted-foreground" />
-                  Expired
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {expired.map((app) => (
-                    <ApplicationCard key={app.id} app={app} actions={
-                      <>
-                        <p className="text-xs text-muted-foreground">
-                          Issued credential expired before acceptance.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={applyingFor === app.credential_key || !isConnected || !kycApproved}
-                          onClick={() => handleApply(app.credential_key)}
-                        >
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          Reapply
-                        </Button>
-                      </>
-                    } />
-                  ))}
-                </div>
+                <details className="group">
+                  <summary className="text-sm font-medium text-muted-foreground cursor-pointer flex items-center gap-2 select-none list-none">
+                    <XCircle className="w-4 h-4" />
+                    Not Available for Your Account Type ({sections.unavailable.length})
+                    <span className="ml-1 group-open:hidden">▶</span>
+                    <span className="ml-1 hidden group-open:inline">▼</span>
+                  </summary>
+                  <div className="grid gap-2 sm:grid-cols-2 mt-3">
+                    {sections.unavailable.map((cred) => (
+                      <Card key={cred.credential_key} className="opacity-50">
+                        <CardHeader className="pb-1">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm text-muted-foreground">{cred.credential_name}</CardTitle>
+                            <Badge variant="secondary" className="text-xs">Unavailable</Badge>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-0">
+                          <p className="text-xs text-muted-foreground">Not available for your account type.</p>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </details>
               </section>
             )}
 
-            {/* ── Rejected ──────────────────────────────────────────── */}
-            {rejected.length > 0 && (
-              <section>
-                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-destructive" />
-                  Rejected
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {rejected.map((app) => (
-                    <Card key={app.id} className="border-destructive/30 opacity-80">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
-                          </CardTitle>
-                          <StatusBadge status={app.status} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-2">
-                        {app.rejection_reason && (
-                          <p className="text-xs text-destructive">
-                            Reason: {app.rejection_reason}
-                          </p>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={applyingFor === app.credential_key || !isConnected || !kycApproved}
-                          onClick={() => handleApply(app.credential_key)}
-                        >
-                          <RefreshCw className="w-3 h-3 mr-1" />
-                          Reapply
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* ── Auto-Issued Info ──────────────────────────────────── */}
-            {autoIssuedCatalog.length > 0 && (
-              <section>
-                <Card className="bg-muted/50 border-muted">
-                  <CardContent className="pt-5 flex items-start gap-3">
-                    <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium mb-1">Automatically Issued Credentials</p>
-                      <p className="text-xs text-muted-foreground mb-2">
-                        Some credentials are granted automatically after identity verification and don't require a separate application.
-                        These include KYC clearances, AML/OFAC checks, and basic trading access.
-                      </p>
-                      <div className="flex gap-1.5 flex-wrap">
-                        {autoIssuedCatalog.map((c) => (
-                          <Badge key={c.credential_key} variant="secondary" className="text-xs">
-                            {c.credential_name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </section>
-            )}
-
-            {/* Empty state */}
-            {applications.length === 0 && availableToApply.length === 0 && (
-              <div className="text-center py-16">
-                <ShieldCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No credentials available for your account type.</p>
-              </div>
-            )}
           </div>
         )}
       </div>

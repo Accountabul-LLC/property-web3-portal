@@ -48,7 +48,7 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const { application_id, action, rejection_reason, notes } = body as {
       application_id: string
-      action: 'start_review' | 'approve' | 'reject' | 'issue'
+      action: 'start_review' | 'approve' | 'reject' | 'issue' | 'get_evidence'
       rejection_reason?: string
       notes?: string
     }
@@ -251,6 +251,68 @@ Deno.serve(async (req) => {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         }
+      )
+    }
+
+    if (action === 'get_evidence') {
+      // Fetch the credential_key from the application
+      const { data: evidenceApp } = await serviceClient
+        .from('credential_applications' as any)
+        .select('credential_key, user_id, wallet_address')
+        .eq('id', application_id)
+        .single()
+
+      if (!evidenceApp) {
+        return new Response(JSON.stringify({ error: 'Application not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const eApp = evidenceApp as any
+
+      // Fetch manual requirements for this credential
+      const { data: manualReqs } = await serviceClient
+        .from('credential_requirements' as any)
+        .select('requirement_key, display_label, artifact_type, artifact_subtype')
+        .eq('credential_key', eApp.credential_key)
+        .eq('check_mode', 'manual')
+        .order('sort_order')
+
+      // Fetch kyc_case for this user
+      const { data: kycCase } = await serviceClient
+        .from('kyc_cases' as any)
+        .select('id')
+        .eq('user_id', eApp.user_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
+      let documents: any[] = []
+      if (kycCase) {
+        const { data: docs } = await serviceClient
+          .from('kyc_documents' as any)
+          .select('id, doc_type, file_name, storage_path, status, uploaded_at, metadata')
+          .eq('kyc_case_id', (kycCase as any).id)
+          .order('uploaded_at', { ascending: false })
+        documents = docs ?? []
+      }
+
+      // Build evidence structure
+      const evidence = (manualReqs ?? []).map((req: any) => ({
+        requirement_key: req.requirement_key,
+        display_label: req.display_label,
+        artifact_type: req.artifact_type,
+        artifact_subtype: req.artifact_subtype,
+        documents: documents.filter((doc: any) => {
+          if (!req.artifact_subtype) return doc.doc_type === 'other'
+          return doc.metadata?.artifact_subtype === req.artifact_subtype
+        }),
+      }))
+
+      return new Response(
+        JSON.stringify({ evidence, kyc_case_id: kycCase ? (kycCase as any).id : null }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
