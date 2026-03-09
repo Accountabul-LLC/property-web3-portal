@@ -12,6 +12,9 @@ export interface CatalogEntry {
   requires_wallet: boolean
   is_active: boolean
   sort_order: number
+  application_mode: string
+  user_benefit: string | null
+  user_cta: string | null
 }
 
 export function useCredentialCatalog() {
@@ -22,7 +25,7 @@ export function useCredentialCatalog() {
     queryKey: ['credential-catalog'],
     queryFn: async () => {
       const { data, error } = await (supabase.from('credential_catalog') as any)
-        .select('credential_key, credential_name, description, allowed_account_types, requires_kyc, requires_wallet, is_active, sort_order')
+        .select('credential_key, credential_name, description, allowed_account_types, requires_kyc, requires_wallet, is_active, sort_order, application_mode, user_benefit, user_cta')
         .eq('is_active', true)
         .order('sort_order')
       if (error) throw error
@@ -32,7 +35,12 @@ export function useCredentialCatalog() {
   })
 
   const accountType = (profile as any)?.account_type ?? 'individual'
-  const eligibleCatalog = catalog.filter((c) => c.allowed_account_types.includes(accountType))
+  const eligibleCatalog = catalog.filter(
+    (c) => c.allowed_account_types.includes(accountType) && c.application_mode === 'user_apply'
+  )
+  const autoIssuedCatalog = catalog.filter(
+    (c) => c.allowed_account_types.includes(accountType) && c.application_mode === 'auto_issued'
+  )
 
-  return { catalog, eligibleCatalog, isLoading, accountType }
+  return { catalog, eligibleCatalog, autoIssuedCatalog, isLoading, accountType }
 }

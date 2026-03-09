@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useKycStatus } from '@/hooks/useKycStatus'
 import { useCredentialApplications, CredentialApplication } from '@/hooks/useCredentialApplications'
-import { useCredentialCatalog } from '@/hooks/useCredentialCatalog'
+import { useCredentialCatalog, CatalogEntry } from '@/hooks/useCredentialCatalog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -19,6 +19,8 @@ import {
   RefreshCw,
   AlertTriangle,
   Wallet,
+  Unlock,
+  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
@@ -55,7 +57,7 @@ function CountdownTimer({ expiresAt }: CountdownTimerProps) {
   else if (hours < 24) colorClass = 'text-yellow-600 dark:text-yellow-400'
 
   if (remaining <= 0) {
-    return <span className="text-xs text-red-600 dark:text-red-400 font-mono">Expired</span>
+    return <span className="text-xs text-destructive font-mono">Expired</span>
   }
 
   return (
@@ -83,6 +85,87 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge variant={entry.variant}>{entry.label}</Badge>
 }
 
+// ─── Credential Apply Card ──────────────────────────────────────────────────
+
+function CredentialApplyCard({
+  entry,
+  applying,
+  disabled,
+  onApply,
+}: {
+  entry: CatalogEntry
+  applying: boolean
+  disabled: boolean
+  onApply: () => void
+}) {
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">{entry.credential_name}</CardTitle>
+        {entry.user_benefit && (
+          <div className="flex items-start gap-1.5 mt-1">
+            <Unlock className="w-3.5 h-3.5 text-primary mt-0.5 flex-shrink-0" />
+            <span className="text-sm text-primary font-medium">{entry.user_benefit}</span>
+          </div>
+        )}
+      </CardHeader>
+      <CardContent className="pt-0 flex-1 flex flex-col justify-between gap-3">
+        <div className="space-y-2">
+          {entry.user_cta && (
+            <p className="text-xs text-muted-foreground">{entry.user_cta}</p>
+          )}
+          <div className="flex gap-1 flex-wrap">
+            {entry.requires_kyc && (
+              <Badge variant="outline" className="text-xs">KYC Required</Badge>
+            )}
+            {entry.requires_wallet && (
+              <Badge variant="outline" className="text-xs">Wallet Required</Badge>
+            )}
+          </div>
+        </div>
+        <Button
+          size="sm"
+          className="w-full"
+          disabled={applying || disabled}
+          onClick={onApply}
+        >
+          {applying && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+          Apply Now
+        </Button>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ─── Application Card (shared for review/active/expired/rejected) ───────────
+
+function ApplicationCard({
+  app,
+  actions,
+}: {
+  app: CredentialApplication
+  actions?: React.ReactNode
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base">
+            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
+          </CardTitle>
+          <StatusBadge status={app.status} />
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-2">
+        <p className="text-xs text-muted-foreground">
+          Wallet: {app.wallet_address.slice(0, 8)}...{app.wallet_address.slice(-6)}
+        </p>
+        {actions}
+      </CardContent>
+    </Card>
+  )
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 const Credentials = () => {
@@ -91,7 +174,7 @@ const Credentials = () => {
   const { activeAddress, isConnected } = useActiveWallet()
   const { isApproved: kycApproved, isLoading: kycLoading } = useKycStatus()
   const { applications, isLoading: appsLoading, refetch } = useCredentialApplications()
-  const { eligibleCatalog, isLoading: catalogLoading } = useCredentialCatalog()
+  const { eligibleCatalog, autoIssuedCatalog, isLoading: catalogLoading } = useCredentialCatalog()
 
   const [applyingFor, setApplyingFor] = useState<string | null>(null)
   const [acceptingFor, setAcceptingFor] = useState<string | null>(null)
@@ -99,9 +182,7 @@ const Credentials = () => {
   const { applyForCredential } = useCredentialApplications()
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate('/auth')
-    }
+    if (!authLoading && !user) navigate('/auth')
   }, [user, authLoading, navigate])
 
   if (authLoading || kycLoading) {
@@ -114,7 +195,7 @@ const Credentials = () => {
 
   if (!user) return null
 
-  // Partition applications by status group
+  // Partition applications
   const underReview = applications.filter((a) =>
     ['applied', 'under_review', 'approved'].includes(a.status)
   )
@@ -123,7 +204,6 @@ const Credentials = () => {
   const expired = applications.filter((a) => a.status === 'expired')
   const rejected = applications.filter((a) => a.status === 'rejected')
 
-  // Keys that already have a non-terminal application
   const appliedKeys = new Set(
     applications
       .filter((a) => !['rejected', 'expired', 'revoked'].includes(a.status))
@@ -192,7 +272,7 @@ const Credentials = () => {
           <div>
             <h1 className="text-2xl font-bold">My Credentials</h1>
             <p className="text-sm text-muted-foreground">
-              Apply for and manage your on-chain credentials for platform access
+              Apply for credentials to unlock platform features and trading access
             </p>
           </div>
         </div>
@@ -232,51 +312,35 @@ const Credentials = () => {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Available to Apply */}
+            {/* ── Available to Apply ────────────────────────────────── */}
             <section>
-              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-                Available to Apply
+              <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                <Unlock className="w-5 h-5 text-primary" />
+                Unlock More Features
               </h2>
+              <p className="text-sm text-muted-foreground mb-4">
+                Apply for credentials below to access advanced trading, exclusive offerings, and premium services.
+              </p>
               {availableToApply.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  No new credentials available for your account type, or all eligible credentials have active applications.
+                  You've applied for all available credentials, or none are available for your account type.
                 </p>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2">
                   {availableToApply.map((entry) => (
-                    <Card key={entry.credential_key}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-base">{entry.credential_name}</CardTitle>
-                        <CardDescription className="text-xs">{entry.description}</CardDescription>
-                      </CardHeader>
-                      <CardContent className="pt-0 flex items-center justify-between">
-                        <div className="flex gap-1 flex-wrap">
-                          {entry.requires_kyc && (
-                            <Badge variant="outline" className="text-xs">KYC Required</Badge>
-                          )}
-                          {entry.requires_wallet && (
-                            <Badge variant="outline" className="text-xs">Wallet Required</Badge>
-                          )}
-                        </div>
-                        <Button
-                          size="sm"
-                          disabled={applyingFor === entry.credential_key || !isConnected || !kycApproved}
-                          onClick={() => handleApply(entry.credential_key)}
-                        >
-                          {applyingFor === entry.credential_key ? (
-                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                          ) : null}
-                          Apply
-                        </Button>
-                      </CardContent>
-                    </Card>
+                    <CredentialApplyCard
+                      key={entry.credential_key}
+                      entry={entry}
+                      applying={applyingFor === entry.credential_key}
+                      disabled={!isConnected || !kycApproved}
+                      onApply={() => handleApply(entry.credential_key)}
+                    />
                   ))}
                 </div>
               )}
             </section>
 
-            {/* Ready to Accept */}
+            {/* ── Ready to Accept ───────────────────────────────────── */}
             {readyToAccept.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -289,7 +353,7 @@ const Credentials = () => {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">
-                            {app.credential_catalog?.credential_name ?? app.credential_key}
+                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
                           </CardTitle>
                           <StatusBadge status={app.status} />
                         </div>
@@ -305,9 +369,7 @@ const Credentials = () => {
                           disabled={acceptingFor === app.id || !isConnected}
                           onClick={() => handleAccept(app)}
                         >
-                          {acceptingFor === app.id ? (
-                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
-                          ) : null}
+                          {acceptingFor === app.id && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
                           Accept Credential
                         </Button>
                       </CardContent>
@@ -317,7 +379,7 @@ const Credentials = () => {
               </section>
             )}
 
-            {/* Under Review */}
+            {/* ── Under Review ──────────────────────────────────────── */}
             {underReview.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -326,35 +388,24 @@ const Credentials = () => {
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {underReview.map((app) => (
-                    <Card key={app.id}>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            {app.credential_catalog?.credential_name ?? app.credential_key}
-                          </CardTitle>
-                          <StatusBadge status={app.status} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-1">
+                    <ApplicationCard key={app.id} app={app} actions={
+                      <>
                         <p className="text-xs text-muted-foreground">
                           Applied: {new Date(app.applied_at).toLocaleDateString()}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          Wallet: {app.wallet_address.slice(0, 8)}...{app.wallet_address.slice(-6)}
-                        </p>
                         {app.status === 'approved' && (
                           <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                            Approved — awaiting issuance by Accountabul
+                            Approved — awaiting issuance
                           </p>
                         )}
-                      </CardContent>
-                    </Card>
+                      </>
+                    } />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Active */}
+            {/* ── Active ────────────────────────────────────────────── */}
             {active.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -367,7 +418,7 @@ const Credentials = () => {
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">
-                            {app.credential_catalog?.credential_name ?? app.credential_key}
+                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
                           </CardTitle>
                           <StatusBadge status={app.status} />
                         </div>
@@ -388,7 +439,7 @@ const Credentials = () => {
               </section>
             )}
 
-            {/* Expired */}
+            {/* ── Expired ───────────────────────────────────────────── */}
             {expired.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
@@ -397,16 +448,8 @@ const Credentials = () => {
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {expired.map((app) => (
-                    <Card key={app.id} className="opacity-80">
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base">
-                            {app.credential_catalog?.credential_name ?? app.credential_key}
-                          </CardTitle>
-                          <StatusBadge status={app.status} />
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-2">
+                    <ApplicationCard key={app.id} app={app} actions={
+                      <>
                         <p className="text-xs text-muted-foreground">
                           Issued credential expired before acceptance.
                         </p>
@@ -419,34 +462,34 @@ const Credentials = () => {
                           <RefreshCw className="w-3 h-3 mr-1" />
                           Reapply
                         </Button>
-                      </CardContent>
-                    </Card>
+                      </>
+                    } />
                   ))}
                 </div>
               </section>
             )}
 
-            {/* Rejected */}
+            {/* ── Rejected ──────────────────────────────────────────── */}
             {rejected.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-red-500" />
+                  <XCircle className="w-5 h-5 text-destructive" />
                   Rejected
                 </h2>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {rejected.map((app) => (
-                    <Card key={app.id} className="border-red-200 dark:border-red-900 opacity-80">
+                    <Card key={app.id} className="border-destructive/30 opacity-80">
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-base">
-                            {app.credential_catalog?.credential_name ?? app.credential_key}
+                            {(app as any).credential_catalog?.credential_name ?? app.credential_key}
                           </CardTitle>
                           <StatusBadge status={app.status} />
                         </div>
                       </CardHeader>
                       <CardContent className="pt-0 space-y-2">
                         {app.rejection_reason && (
-                          <p className="text-xs text-red-600 dark:text-red-400">
+                          <p className="text-xs text-destructive">
                             Reason: {app.rejection_reason}
                           </p>
                         )}
@@ -463,6 +506,31 @@ const Credentials = () => {
                     </Card>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* ── Auto-Issued Info ──────────────────────────────────── */}
+            {autoIssuedCatalog.length > 0 && (
+              <section>
+                <Card className="bg-muted/50 border-muted">
+                  <CardContent className="pt-5 flex items-start gap-3">
+                    <Info className="w-5 h-5 text-muted-foreground mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium mb-1">Automatically Issued Credentials</p>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        Some credentials are granted automatically after identity verification and don't require a separate application.
+                        These include KYC clearances, AML/OFAC checks, and basic trading access.
+                      </p>
+                      <div className="flex gap-1.5 flex-wrap">
+                        {autoIssuedCatalog.map((c) => (
+                          <Badge key={c.credential_key} variant="secondary" className="text-xs">
+                            {c.credential_name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </section>
             )}
 
