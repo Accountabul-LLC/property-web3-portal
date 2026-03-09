@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     if (action === 'start_review') {
       const { data: updated, error: updateError } = await serviceClient
         .from('credential_applications')
-        .update({ status: 'under_review', updated_at: now, ...(notes ? { notes } : {}) })
+        .update({ status: 'under_review', ...(notes ? { notes } : {}) })
         .eq('id', application_id)
         .select()
         .single()
