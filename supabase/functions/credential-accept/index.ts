@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
 
     // ── Testnet: auto-sign ────────────────────────────────────
     if (wallet.network === 'testnet' && wallet.wallet_secret) {
-      const { Wallet: XrplWallet } = await import('https://esm.sh/xrpl@3.1.0?bundle-deps')
+      const { Wallet: XrplWallet } = await import('npm:xrpl@3.1.0')
       const subjectWallet = XrplWallet.fromSeed(wallet.wallet_secret)
 
       const accountInfo = await xrplRequest(TESTNET_NODES, 'account_info', [
