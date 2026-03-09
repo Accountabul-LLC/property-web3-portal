@@ -102,9 +102,7 @@ Deno.serve(async (req) => {
         .from('credential_applications')
         .update({
           status: 'approved',
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
