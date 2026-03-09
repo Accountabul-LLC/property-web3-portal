@@ -273,6 +273,111 @@ export type Database = {
         }
         Relationships: []
       }
+      credential_applications: {
+        Row: {
+          accepted_at: string | null
+          applied_at: string
+          credential_key: string
+          expires_at: string | null
+          id: string
+          issued_at: string | null
+          notes: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          status: string
+          user_id: string
+          wallet_address: string
+          wallet_credential_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          applied_at?: string
+          credential_key: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          status?: string
+          user_id: string
+          wallet_address: string
+          wallet_credential_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          applied_at?: string
+          credential_key?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string | null
+          notes?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          status?: string
+          user_id?: string
+          wallet_address?: string
+          wallet_credential_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credential_applications_credential_key_fkey"
+            columns: ["credential_key"]
+            isOneToOne: false
+            referencedRelation: "credential_catalog"
+            referencedColumns: ["credential_key"]
+          },
+          {
+            foreignKeyName: "credential_applications_wallet_credential_id_fkey"
+            columns: ["wallet_credential_id"]
+            isOneToOne: false
+            referencedRelation: "wallet_credentials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credential_catalog: {
+        Row: {
+          allowed_account_types: string[]
+          credential_key: string
+          credential_name: string
+          description: string
+          is_active: boolean
+          maps_to_xrpl_code: string | null
+          requires_kyc: boolean
+          requires_wallet: boolean
+          sort_order: number
+        }
+        Insert: {
+          allowed_account_types?: string[]
+          credential_key: string
+          credential_name: string
+          description?: string
+          is_active?: boolean
+          maps_to_xrpl_code?: string | null
+          requires_kyc?: boolean
+          requires_wallet?: boolean
+          sort_order?: number
+        }
+        Update: {
+          allowed_account_types?: string[]
+          credential_key?: string
+          credential_name?: string
+          description?: string
+          is_active?: boolean
+          maps_to_xrpl_code?: string | null
+          requires_kyc?: boolean
+          requires_wallet?: boolean
+          sort_order?: number
+        }
+        Relationships: []
+      }
       integration_audit_log: {
         Row: {
           action: string
