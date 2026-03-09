@@ -14,7 +14,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, ShieldCheck, RefreshCw } from 'lucide-react'
+import { Loader2, ShieldCheck, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { useAuth } from '@/hooks/useAuth'
@@ -22,6 +22,7 @@ import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { IssuerWalletPanel } from '@/components/admin/IssuerWalletPanel'
 import { PendingRegistrationsPanel } from '@/components/admin/PendingRegistrationsPanel'
 import { CredentialLedgerPanel } from '@/components/admin/CredentialLedgerPanel'
+import { CredentialEvidencePanel } from '@/components/admin/CredentialEvidencePanel'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -141,6 +142,7 @@ const AdminCredentials = () => {
 
   const [activeTab, setActiveTab] = useState('new')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [evidenceOpenId, setEvidenceOpenId] = useState<string | null>(null)
 
   // Reject dialog state
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
@@ -358,33 +360,61 @@ const AdminCredentials = () => {
             ) : reviewingApps.length === 0 ? (
               <p className="text-sm text-muted-foreground">No applications under review.</p>
             ) : (
-              reviewingApps.map((app) => (
-                <AppRow
-                  key={app.id}
-                  app={app}
-                  actions={
-                    <>
-                      <ActionButton
-                        appId={app.id}
-                        actionKey="approve"
-                        label="Approve"
-                        onClick={() => runAction(app.id, 'approve')}
-                      />
-                      <ActionButton
-                        appId={app.id}
-                        actionKey="reject"
-                        label="Reject"
-                        variant="destructive"
-                        onClick={() => {
-                          setRejectTarget(app)
-                          setRejectReason('')
-                          setRejectDialogOpen(true)
-                        }}
-                      />
-                    </>
-                  }
-                />
-              ))
+              reviewingApps.map((app) => {
+                const evidenceOpen = evidenceOpenId === app.id
+                return (
+                  <div key={app.id} className="mb-3">
+                    <AppRow
+                      app={app}
+                      actions={
+                        <>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setEvidenceOpenId(evidenceOpen ? null : app.id)}
+                          >
+                            {evidenceOpen
+                              ? <><ChevronUp className="w-3 h-3 mr-1" />Hide Evidence</>
+                              : <><ChevronDown className="w-3 h-3 mr-1" />View Evidence</>
+                            }
+                          </Button>
+                          <ActionButton
+                            appId={app.id}
+                            actionKey="approve"
+                            label="Approve"
+                            onClick={() => runAction(app.id, 'approve')}
+                          />
+                          <ActionButton
+                            appId={app.id}
+                            actionKey="reject"
+                            label="Reject"
+                            variant="destructive"
+                            onClick={() => {
+                              setRejectTarget(app)
+                              setRejectReason('')
+                              setRejectDialogOpen(true)
+                            }}
+                          />
+                        </>
+                      }
+                    />
+                    {evidenceOpen && (
+                      <Card className="mt-1 mb-1 border-dashed">
+                        <CardContent className="pt-4">
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                            Submitted Evidence — {app.credential_catalog?.credential_name ?? app.credential_key}
+                          </p>
+                          <CredentialEvidencePanel
+                            applicationId={app.id}
+                            credentialKey={app.credential_key}
+                            userId={app.user_id}
+                          />
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                )
+              })
             )}
           </TabsContent>
 
