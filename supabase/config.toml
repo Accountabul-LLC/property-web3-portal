@@ -53,3 +53,45 @@ verify_jwt = false
 
 [functions.get-issuer-status]
 verify_jwt = false
+
+[functions.apply-for-credential]
+verify_jwt = false
+
+[functions.review-credential-application]
+verify_jwt = false
+
+[functions.check-credential]
+verify_jwt = false
+
+[functions.check-credential-payload]
+verify_jwt = false
+
+[functions.issue-credential]
+verify_jwt = false
+
+[functions.kyc-save]
+verify_jwt = false
+
+[functions.kyc-start]
+verify_jwt = false
+
+[functions.kyc-submit]
+verify_jwt = false
+
+[functions.kyc-admin-review]
+verify_jwt = false
+
+[functions.xaman-create-payload]
+verify_jwt = false
+
+[functions.xrpl-account-data]
+verify_jwt = false
+
+[functions.xrpl-token-meta]
+verify_jwt = false
+
+[functions.wallet-audit-log]
+verify_jwt = false
+
+[functions.tokenization-pipeline]
+verify_jwt = false
