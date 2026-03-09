@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Build and sign CredentialDelete ──────────────────────
-    const { Wallet: XrplWallet } = await import('https://esm.sh/xrpl@3.1.0')
+    const { Wallet: XrplWallet } = await import('npm:xrpl@3.1.0')
     const issuerWallet = XrplWallet.fromSeed(issuerSeed)
 
     const nodes = TESTNET_NODES
