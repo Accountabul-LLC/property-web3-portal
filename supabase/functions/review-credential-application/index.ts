@@ -135,9 +135,7 @@ Deno.serve(async (req) => {
         .update({
           status: 'rejected',
           rejection_reason,
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
