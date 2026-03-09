@@ -57,10 +57,7 @@ interface AdminApplication {
   credential_catalog: {
     credential_name: string
   } | null
-  profiles: {
-    first_name: string | null
-    last_name: string | null
-  } | null
+  _profile_name?: string | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -79,9 +76,7 @@ async function callEdgeFn(fn: string, body: Record<string, unknown>) {
 }
 
 function userName(app: AdminApplication): string {
-  if (app.profiles?.first_name || app.profiles?.last_name) {
-    return [app.profiles.first_name, app.profiles.last_name].filter(Boolean).join(' ')
-  }
+  if (app._profile_name) return app._profile_name
   return app.user_id.slice(0, 8) + '...'
 }
 
@@ -172,12 +167,28 @@ const AdminCredentials = () => {
           id, user_id, wallet_address, credential_key, status, applied_at, reviewed_at,
           rejection_reason, issued_at, expires_at, accepted_at, revoked_at, revocation_reason,
           notes, wallet_credential_id,
-          credential_catalog ( credential_name ),
-          profiles ( first_name, last_name )
+          credential_catalog ( credential_name )
         `)
         .order('applied_at', { ascending: false })
       if (error) throw error
-      return data ?? []
+      const apps = (data ?? []) as AdminApplication[]
+
+      // Fetch profile names for all unique user_ids
+      const userIds = [...new Set(apps.map((a: AdminApplication) => a.user_id))]
+      if (userIds.length > 0) {
+        const { data: profiles } = await (supabase.from('profiles') as any)
+          .select('id, first_name, last_name')
+          .in('id', userIds)
+        const profileMap = new Map<string, string>()
+        for (const p of (profiles ?? [])) {
+          const name = [p.first_name, p.last_name].filter(Boolean).join(' ')
+          if (name) profileMap.set(p.id, name)
+        }
+        for (const app of apps) {
+          app._profile_name = profileMap.get(app.user_id) ?? null
+        }
+      }
+      return apps
     },
     enabled: !!user && !!hasAccess,
     staleTime: 30_000,
