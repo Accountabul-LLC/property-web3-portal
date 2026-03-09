@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
     if (action === 'start_review') {
       const { data: updated, error: updateError } = await serviceClient
         .from('credential_applications')
-        .update({ status: 'under_review', updated_at: now, ...(notes ? { notes } : {}) })
+        .update({ status: 'under_review', ...(notes ? { notes } : {}) })
         .eq('id', application_id)
         .select()
         .single()
@@ -102,9 +102,7 @@ Deno.serve(async (req) => {
         .from('credential_applications')
         .update({
           status: 'approved',
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
@@ -137,9 +135,7 @@ Deno.serve(async (req) => {
         .update({
           status: 'rejected',
           rejection_reason,
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
@@ -198,9 +194,7 @@ Deno.serve(async (req) => {
           issued_at: issuedAt.toISOString(),
           expires_at: expiresAt.toISOString(),
           wallet_credential_id: walletCred.id,
-          reviewed_by: user.id,
           reviewed_at: now,
-          updated_at: now,
           ...(notes ? { notes } : {}),
         })
         .eq('id', application_id)
