@@ -57,10 +57,7 @@ interface AdminApplication {
   credential_catalog: {
     credential_name: string
   } | null
-  profiles: {
-    first_name: string | null
-    last_name: string | null
-  } | null
+  _profile_name?: string | null
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
