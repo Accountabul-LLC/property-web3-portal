@@ -63,6 +63,8 @@ const Footer = () => {
                   <li key={index}>
                     <a 
                       href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {link.label}
