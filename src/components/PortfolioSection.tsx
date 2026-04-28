@@ -191,38 +191,38 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-3">
-          Your XRPL Portfolio
-        </h2>
-        <div className="flex justify-center mb-4">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="mb-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:flex-wrap gap-x-4 gap-y-2">
+          <h2 className="text-2xl md:text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            Your XRPL Portfolio
+          </h2>
           <NetworkToggle />
+          <div className="flex items-center flex-wrap gap-x-2 gap-y-1 text-sm text-muted-foreground">
+            <span>{isReadOnly ? 'Viewing' : 'Live'}</span>
+            {!isReadOnly && activeWallet?.xamanName && (
+              <span className="font-semibold text-foreground">{activeWallet.xamanName}</span>
+            )}
+            {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
+              <span className="text-foreground">· {activeWallet.label}</span>
+            )}
+            <a
+              href={`${explorerBase}/accounts/${displayAddress}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1"
+            >
+              {displayAddress}
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
         </div>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          {isReadOnly ? 'Viewing portfolio for' : 'Live on-chain data for'}{' '}
-          {!isReadOnly && activeWallet?.xamanName && (
-            <span className="font-semibold text-foreground">{activeWallet.xamanName} · </span>
-          )}
-          {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
-            <span className="text-foreground">{activeWallet.label} · </span>
-          )}
-        </p>
-        <a
-          href={`${explorerBase}/accounts/${displayAddress}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-mono text-sm text-primary hover:underline inline-flex items-center gap-1 mt-1"
-        >
-          {displayAddress}
-          <ExternalLink className="w-3 h-3" />
-        </a>
         {!isReadOnly && (
-          <div className="flex justify-center gap-3 mt-4">
-            <Button onClick={() => setIsSendOpen(true)} className="gap-2">
+          <div className="flex gap-2 shrink-0">
+            <Button onClick={() => setIsSendOpen(true)} size="sm" className="gap-2">
               <Send className="w-4 h-4" /> Send
             </Button>
-            <Button onClick={() => setIsReceiveOpen(true)} variant="outline" className="gap-2">
+            <Button onClick={() => setIsReceiveOpen(true)} size="sm" variant="outline" className="gap-2">
               <QrCode className="w-4 h-4" /> Receive
             </Button>
           </div>
