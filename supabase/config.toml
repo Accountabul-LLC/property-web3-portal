@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.xrpl-build-payment]
 verify_jwt = false
 
+[functions.xrpl-build-swap]
+verify_jwt = false
+
 [functions.xrpl-build-token-payment]
 verify_jwt = false
 
