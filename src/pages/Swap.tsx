@@ -499,13 +499,13 @@ const Swap = () => {
             >
               <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 items-start">
                 <Card className="p-6 shadow-lg">
-                  <div className="flex items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center justify-between gap-4 mb-5">
                     <div>
-                      <h2 className="text-2xl font-semibold">Build swap quote</h2>
-                      <p className="text-sm text-muted-foreground mt-1">Choose the asset you pay and the asset you want back.</p>
+                      <h2 className="text-2xl font-semibold">Exchange crypto</h2>
+                      <p className="text-sm text-muted-foreground mt-1">Send one asset, receive another. Routed through XRPL.</p>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
                         setSourceAmount('');
@@ -519,135 +519,125 @@ const Swap = () => {
                     </Button>
                   </div>
 
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <Label>Pay with</Label>
+                  <div className="relative space-y-1">
+                    {/* You send */}
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground font-medium">You send</span>
                         <button
                           type="button"
                           onClick={() => {
                             const bal = getBalance(sourceAsset);
                             if (bal > 0) setSourceAmount(String(bal));
                           }}
-                          className="text-xs text-primary hover:underline"
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
                         >
-                          Balance: {getBalance(sourceAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })} (Max)
+                          Balance: {getBalance(sourceAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                          <span className="ml-1.5 text-primary font-medium">MAX</span>
                         </button>
                       </div>
-                      <Select
-                        value={assetKey(sourceAsset)}
-                        onValueChange={(value) => {
-                          if (value === 'xrp') {
-                            setSourceAsset({ kind: 'xrp' });
-                            return;
-                          }
-                          const [currency, ...rest] = value.split(':');
-                          setSourceAsset({ kind: 'token', currency, issuer: rest.join(':') });
-                        }}
-                      >
-                        <SelectTrigger className="h-14">
-                          <SelectValue placeholder="Choose source asset">
-                            {renderAssetRow(sourceAsset, { compact: true })}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sourceOptions.map((asset) => (
-                            <SelectItem key={assetKey(asset)} value={assetKey(asset)} className="py-2">
-                              {renderAssetRow(asset)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-end">
-                      <div className="space-y-2">
-                        <Label htmlFor="source-amount">Amount in</Label>
+                      <div className="flex items-center gap-3">
                         <Input
-                          id="source-amount"
                           type="number"
                           min="0"
                           step="any"
                           placeholder="0.00"
                           value={sourceAmount}
                           onChange={(e) => setSourceAmount(e.target.value)}
+                          className="border-0 bg-transparent text-3xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
+                        {renderAssetButton(sourceAsset, () => setPickerOpen('source'))}
                       </div>
-                      <div className="flex justify-center md:pb-1">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <ArrowUpDown className="w-4 h-4" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Receive as</Label>
-                        <Select value={destinationKind} onValueChange={(v) => setDestinationKind(v as 'xrp' | 'token')}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="token">Token</SelectItem>
-                            <SelectItem value="xrp">XRP</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="mt-1 h-4 text-xs text-muted-foreground">
+                        {sourceUsdValue !== null && `≈ $${sourceUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
                       </div>
                     </div>
 
-                    {destinationKind === 'token' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="dest-currency">Destination currency</Label>
-                          <Input
-                            id="dest-currency"
-                            value={destinationCurrency}
-                            onChange={(e) => setDestinationCurrency(e.target.value.toUpperCase())}
-                            placeholder="USD"
-                            maxLength={40}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dest-issuer">Destination issuer</Label>
-                          <Input
-                            id="dest-issuer"
-                            value={destinationIssuer}
-                            onChange={(e) => setDestinationIssuer(e.target.value.trim())}
-                            placeholder="r..."
-                            className="font-mono text-sm"
-                          />
-                        </div>
+                    {/* Flip button */}
+                    <div className="flex justify-center -my-2 relative z-10">
+                      <button
+                        type="button"
+                        onClick={flipAssets}
+                        className="h-9 w-9 rounded-xl bg-background border-4 border-card hover:bg-muted transition-colors flex items-center justify-center shadow"
+                        aria-label="Flip assets"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* You receive */}
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground font-medium">You receive</span>
+                        <span className="text-xs text-muted-foreground">
+                          Balance: {getBalance(destAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3">
+                        <Input
+                          readOnly
+                          placeholder="0.00"
+                          value={
+                            estimatedReceive
+                              ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                              : ''
+                          }
+                          className="border-0 bg-transparent text-3xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
+                        />
+                        {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
+                      </div>
+                      <div className="mt-1 h-4 text-xs text-muted-foreground">
+                        {destUsdValue !== null && `≈ $${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
+                      </div>
+                    </div>
+                  </div>
 
+                  <div className="space-y-3 mt-5">
                     {sourceDisabled ? (
-                      <Card className="p-4 border-dashed bg-muted/30">
-                        <div className="flex items-start gap-3">
-                          <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Trading is not enabled for this wallet</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              The page can still show the UI, but quotes and signing are blocked until compliance is complete.
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
+                      <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex items-start gap-3">
+                        <ShieldAlert className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          Trading is not enabled for this wallet. Complete compliance to send a swap.
+                        </p>
+                      </div>
                     ) : null}
 
-                    {destinationSameAsSource ? (
-                      <p className="text-sm text-destructive">Pick a different destination asset.</p>
-                    ) : null}
+                    {destinationSameAsSource && (
+                      <p className="text-sm text-destructive">Pick a different asset to receive.</p>
+                    )}
 
                     {loadingQuote && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Building live quote...
+                        Finding the best route...
                       </div>
                     )}
 
                     {error && !loadingQuote && (
                       <p className="text-sm text-destructive">{error}</p>
                     )}
+
+                    <Button
+                      className="w-full h-12 text-base gap-2"
+                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount}
+                      onClick={handleSwap}
+                    >
+                      {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+                      {signing
+                        ? 'Opening Xaman...'
+                        : !sourceAmount
+                          ? 'Enter an amount'
+                          : !quoteReady
+                            ? 'Quote unavailable'
+                            : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                estimatedReceive
+                                  ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                  : '...'
+                              } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                    </Button>
                   </div>
                 </Card>
+
 
                 <Card className="p-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
