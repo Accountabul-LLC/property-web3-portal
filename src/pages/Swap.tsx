@@ -690,16 +690,6 @@ const Swap = () => {
                         </p>
                       </div>
 
-                      <div className="flex gap-3">
-                        <Button
-                          className="flex-1 gap-2"
-                          disabled={!quoteReady || signing || loadingQuote}
-                          onClick={handleSwap}
-                        >
-                          {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
-                          {signing ? 'Opening Xaman...' : 'Swap in Xaman'}
-                        </Button>
-                      </div>
 
                       {qrCode && (
                         <div className="space-y-3 pt-2">
