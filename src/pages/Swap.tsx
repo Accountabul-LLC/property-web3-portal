@@ -276,6 +276,111 @@ const Swap = () => {
 
   const quoteReady = !!quote && !!txJson && !destinationSameAsSource && !sourceDisabled;
 
+  // Build wallet token list for picker
+  const walletPickerTokens = React.useMemo<TokenPickerToken[]>(() => {
+    return (portfolio?.token_holdings || []).map((h) => {
+      const meta = tokenMap?.get(`${h.currency}:${h.issuer}`);
+      const usd = meta?.price && xrpUsd ? h.balance * meta.price * xrpUsd : null;
+      return {
+        currency: h.currency,
+        issuer: h.issuer,
+        name: meta?.name || null,
+        icon: meta?.icon || null,
+        issuer_name: meta?.issuer_name || null,
+        domain: meta?.domain || null,
+        balance: h.balance,
+        balance_usd: usd,
+      };
+    });
+  }, [portfolio?.token_holdings, tokenMap, xrpUsd]);
+
+  const handlePickerSelect = (
+    side: 'source' | 'destination',
+    selection: TokenPickerToken | { kind: 'xrp' },
+  ) => {
+    if ('kind' in selection && selection.kind === 'xrp') {
+      if (side === 'source') setSourceAsset({ kind: 'xrp' });
+      else setDestinationKind('xrp');
+      return;
+    }
+    const t = selection as TokenPickerToken;
+    if (side === 'source') {
+      setSourceAsset({ kind: 'token', currency: t.currency, issuer: t.issuer });
+    } else {
+      setDestinationKind('token');
+      setDestinationCurrency(t.currency);
+      setDestinationIssuer(t.issuer);
+    }
+  };
+
+  const renderAssetButton = (asset: Asset, onClick: () => void) => {
+    const meta = getMeta(asset);
+    const symbol = assetSymbol(asset, meta);
+    const icon = asset.kind === 'xrp' ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png' : meta?.icon || null;
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-2 bg-background hover:bg-muted/80 border border-border rounded-full pl-1.5 pr-3 py-1.5 transition-colors shadow-sm"
+      >
+        <div className="h-7 w-7 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+          {icon ? (
+            <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
+          ) : (
+            symbol.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <span className="font-semibold text-sm">{symbol}</span>
+        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+      </button>
+    );
+  };
+
+  // Estimated destination amount as a number (for display in receive box)
+  const estimatedReceive = React.useMemo(() => {
+    if (!quote) return '';
+    const v = quote.quoted_destination_amount;
+    if (typeof v === 'string') {
+      if (destAsset.kind === 'xrp' && /^\d+$/.test(v)) return (Number(v) / 1_000_000).toString();
+      return v;
+    }
+    if (v && typeof v === 'object' && 'value' in v) return String((v as Record<string, string>).value);
+    return '';
+  }, [quote, destAsset]);
+
+  const sourceUsdValue = React.useMemo(() => {
+    const amt = Number(sourceAmount);
+    if (!amt) return null;
+    if (sourceAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    const meta = getMeta(sourceAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return amt * meta.price * xrpUsd;
+  }, [sourceAmount, sourceAsset, getMeta, xrpUsd]);
+
+  const destUsdValue = React.useMemo(() => {
+    const amt = Number(estimatedReceive);
+    if (!amt) return null;
+    if (destAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    const meta = getMeta(destAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return amt * meta.price * xrpUsd;
+  }, [estimatedReceive, destAsset, getMeta, xrpUsd]);
+
+  const flipAssets = () => {
+    if (destAsset.kind === 'xrp' && sourceAsset.kind === 'xrp') return;
+    const newSource = destAsset;
+    if (sourceAsset.kind === 'xrp') {
+      setDestinationKind('xrp');
+    } else {
+      setDestinationKind('token');
+      setDestinationCurrency(sourceAsset.currency);
+      setDestinationIssuer(sourceAsset.issuer);
+    }
+    setSourceAsset(newSource);
+    setSourceAmount('');
+  };
+
+
   const handleSwap = async () => {
     if (!quoteReady || !txJson) return;
     setSigning(true);
