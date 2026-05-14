@@ -82,6 +82,17 @@ function formatAmount(value: unknown, asset: Asset) {
   return '-';
 }
 
+const XRP_LOGO = 'https://cryptologos.cc/logos/xrp-xrp-logo.png';
+
+function assetKey(asset: Asset) {
+  return asset.kind === 'xrp' ? 'xrp' : `${asset.currency}:${asset.issuer}`;
+}
+
+function assetSymbol(asset: Asset, meta?: TokenMeta | null) {
+  if (asset.kind === 'xrp') return 'XRP';
+  return meta?.name || decodeCurrency(asset.currency);
+}
+
 const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
@@ -104,6 +115,44 @@ const Swap = () => {
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
 
+  const tokenQueries = React.useMemo(
+    () => (portfolio?.token_holdings || []).map((t) => ({ currency: t.currency, issuer: t.issuer })),
+    [portfolio?.token_holdings],
+  );
+  const { data: tokenMetaData } = useTokenMeta(tokenQueries);
+  const tokenMap = tokenMetaData?.tokenMap;
+  const xrpUsd = tokenMetaData?.xrpUsd ?? 0;
+
+  const getMeta = React.useCallback(
+    (asset: Asset): TokenMeta | null => {
+      if (asset.kind === 'xrp') return null;
+      return tokenMap?.get(`${asset.currency}:${asset.issuer}`) || null;
+    },
+    [tokenMap],
+  );
+
+  const getBalance = React.useCallback(
+    (asset: Asset): number => {
+      if (asset.kind === 'xrp') return portfolio?.spendable_xrp ?? 0;
+      const h = portfolio?.token_holdings?.find(
+        (t) => t.currency === asset.currency && t.issuer === asset.issuer,
+      );
+      return h?.balance ?? 0;
+    },
+    [portfolio],
+  );
+
+  const getUsdValue = React.useCallback(
+    (asset: Asset, balance: number): number | null => {
+      if (asset.kind === 'xrp') return xrpUsd ? balance * xrpUsd : null;
+      const meta = getMeta(asset);
+      if (!meta?.price || !xrpUsd) return null;
+      // token meta price is in XRP per token
+      return balance * meta.price * xrpUsd;
+    },
+    [getMeta, xrpUsd],
+  );
+
   const sourceOptions = React.useMemo<Asset[]>(() => {
     const holdings = (portfolio?.token_holdings || [])
       .filter((token) => token.balance > 0)
@@ -114,6 +163,35 @@ const Swap = () => {
       }));
     return [{ kind: 'xrp' }, ...holdings];
   }, [portfolio?.token_holdings]);
+
+  const renderAssetRow = (asset: Asset, opts?: { compact?: boolean }) => {
+    const meta = getMeta(asset);
+    const symbol = assetSymbol(asset, meta);
+    const balance = getBalance(asset);
+    const usd = getUsdValue(asset, balance);
+    const icon = asset.kind === 'xrp' ? XRP_LOGO : meta?.icon || null;
+    return (
+      <div className="flex items-center gap-3 w-full min-w-0">
+        <div className="h-7 w-7 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+          {icon ? (
+            <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
+          ) : (
+            symbol.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{symbol}</div>
+          {!opts?.compact && asset.kind === 'token' && (
+            <div className="text-[11px] text-muted-foreground truncate">{formatAddress(asset.issuer)}</div>
+          )}
+        </div>
+        <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+          <div className="text-foreground font-medium">{balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+          {usd !== null && <div>${usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>}
+        </div>
+      </div>
+    );
+  };
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedAmount(sourceAmount.trim()), 400);
@@ -129,6 +207,7 @@ const Swap = () => {
       }
     }
   }, [destinationKind, destinationIssuer, portfolio?.token_holdings]);
+
 
   React.useEffect(() => {
     const run = async () => {
