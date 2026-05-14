@@ -193,7 +193,7 @@ const Navigation = () => {
           </div>
 
           {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
-          <div className="block flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
             {user ? (
               isConnected ? (
@@ -229,11 +229,11 @@ const Navigation = () => {
       {isMobileMenuOpen && createPortal(
         <>
           <div
-            className="block fixed inset-0 z-40"
+            className="fixed inset-0 z-40"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="block fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            className="fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto">
