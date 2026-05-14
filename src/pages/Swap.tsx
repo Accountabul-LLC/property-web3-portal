@@ -633,7 +633,7 @@ const Swap = () => {
                         <p className="font-medium text-foreground">Swap flow</p>
                         <ol className="mt-2 space-y-2 list-decimal list-inside">
                           <li>Quote the route through XRPL order books and AMMs.</li>
-                          <li>Build a `Payment` transaction with the quoted path.</li>
+                          <li>Lock in the route as a ready-to-sign payment.</li>
                           <li>Sign and submit in Xaman.</li>
                         </ol>
                       </div>
