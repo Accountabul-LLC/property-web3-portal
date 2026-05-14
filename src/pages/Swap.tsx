@@ -113,6 +113,7 @@ const Swap = () => {
   const [loadingQuote, setLoadingQuote] = React.useState(false);
   const [signing, setSigning] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [pickerOpen, setPickerOpen] = React.useState<null | 'source' | 'destination'>(null);
   const [qrCode, setQrCode] = React.useState('');
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
