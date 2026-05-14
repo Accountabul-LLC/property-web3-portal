@@ -735,6 +735,16 @@ const Swap = () => {
       </div>
 
       <Footer />
+
+      <TokenPickerDialog
+        open={pickerOpen !== null}
+        onOpenChange={(o) => !o && setPickerOpen(null)}
+        onSelect={(sel) => pickerOpen && handlePickerSelect(pickerOpen, sel)}
+        walletTokens={walletPickerTokens}
+        xrpBalance={portfolio?.spendable_xrp ?? 0}
+        xrpUsd={xrpUsd}
+        title={pickerOpen === 'source' ? 'Send' : 'Receive'}
+      />
     </div>
   );
 };
