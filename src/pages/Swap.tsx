@@ -635,12 +635,16 @@ const Swap = () => {
 
                 <Card className="p-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <Coins className="w-4 h-4" />
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                      <img
+                        src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png"
+                        alt="Accountabul"
+                        className="w-6 h-6 object-contain"
+                      />
                     </div>
                     <div>
                       <h3 className="font-semibold">Quote preview</h3>
-                      <p className="text-xs text-muted-foreground">Powered by Ripple's native pathfinding.</p>
+                      <p className="text-xs text-muted-foreground">Powered by Accountabul.</p>
                     </div>
                   </div>
 
