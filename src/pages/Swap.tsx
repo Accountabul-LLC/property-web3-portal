@@ -548,7 +548,7 @@ const Swap = () => {
                     </div>
                     <div>
                       <h3 className="font-semibold">Quote preview</h3>
-                      <p className="text-xs text-muted-foreground">Powered by `ripple_path_find`.</p>
+                      <p className="text-xs text-muted-foreground">Powered by Ripple's native pathfinding.</p>
                     </div>
                   </div>
 
