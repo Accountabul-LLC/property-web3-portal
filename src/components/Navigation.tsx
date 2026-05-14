@@ -72,7 +72,7 @@ const Navigation = () => {
           <div className="flex items-center flex-shrink-0 mr-4">
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden text-muted-foreground hover:text-foreground transition-colors mr-3"
+              className="block text-muted-foreground hover:text-foreground transition-colors mr-3"
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -93,7 +93,7 @@ const Navigation = () => {
           </div>
 
           {/* Center: desktop nav (lg+) */}
-          <div className="hidden lg:flex items-center justify-center flex-1 min-w-0 mx-2">
+          <div className="hidden items-center justify-center flex-1 min-w-0 mx-2">
             <div className="flex items-center gap-0.5 xl:gap-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -119,7 +119,7 @@ const Navigation = () => {
           </div>
 
           {/* Right: desktop actions (lg+) */}
-          <div className="hidden lg:flex items-center gap-1.5 xl:gap-2 flex-shrink-0">
+          <div className="hidden items-center gap-1.5 xl:gap-2 flex-shrink-0">
             <ThemeToggle />
             {user && !kycApproved && (
               <button
@@ -193,7 +193,7 @@ const Navigation = () => {
           </div>
 
           {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
-          <div className="lg:hidden flex items-center gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
             {user ? (
               isConnected ? (
@@ -229,11 +229,11 @@ const Navigation = () => {
       {isMobileMenuOpen && createPortal(
         <>
           <div
-            className="lg:hidden fixed inset-0 z-40"
+            className="fixed inset-0 z-40"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="lg:hidden fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            className="fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto">
