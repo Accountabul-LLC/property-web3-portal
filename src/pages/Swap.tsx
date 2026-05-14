@@ -435,34 +435,28 @@ const Swap = () => {
 
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.20),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.14),_transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent)] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
-            <div className="max-w-2xl">
-              <Badge variant="outline" className="mb-4 gap-2 px-3 py-1">
-                <Sparkles className="w-3.5 h-3.5" />
-                XRPL Swap Engine
-              </Badge>
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
-                Route swaps through the XRPL DEX and AMM.
-              </h1>
-              <p className="mt-4 text-muted-foreground text-base sm:text-lg">
-                Live pathfinding quotes, wallet-aware balances, and Xaman signing. The swap is built as a self-payment on the XRP Ledger, so you get native routing without smart contracts.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 relative">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="gap-1.5 px-2 py-0.5 text-[11px]">
+                  <Sparkles className="w-3 h-3" />
+                  XRPL Swap Engine
+                </Badge>
+                <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+                  Exchange crypto on XRPL
+                </h1>
+              </div>
+              <p className="mt-1 text-muted-foreground text-xs sm:text-sm">
+                Live pathfinding quotes, wallet balances, and Xaman signing — no smart contracts.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:max-w-lg">
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Wallet</div>
-                <div className="mt-1 font-medium truncate">{activeWallet ? activeWallet.label : 'Not connected'}</div>
-              </Card>
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Network</div>
-                <div className="mt-1 font-medium capitalize">{activeNetwork}</div>
-              </Card>
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Trade access</div>
-                <div className="mt-1 font-medium">{compliance?.is_trade_enabled ? 'Enabled' : 'Locked'}</div>
-              </Card>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-md bg-muted/60 capitalize">{activeNetwork}</span>
+              <span className="px-2 py-1 rounded-md bg-muted/60 truncate max-w-[140px]">{activeWallet ? activeWallet.label : 'No wallet'}</span>
+              <span className={`px-2 py-1 rounded-md ${compliance?.is_trade_enabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+                {compliance?.is_trade_enabled ? 'Trade enabled' : 'Trade locked'}
+              </span>
             </div>
           </div>
 
