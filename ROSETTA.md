@@ -266,6 +266,10 @@ export function useMyData() {
 - Permission profiles seeded: TRADE_GLOBAL, PREMIUM_DEAL_ACCESS, ACCREDITED_INVESTOR
 - useActiveWallet().activeWallet must expose { address, id } — verify against ActiveWalletContext before wiring UI
 
+### 2026-05-14 | lovable
+- Localhost audit: no service worker or app-level localhost redirect found; only Vite server config bound broadly to port 8080.
+- Updated Vite dev server so Lovable sandbox still exposes `::`, while local development defaults to `127.0.0.1:5173` with non-strict port fallback and optional `PORT` override.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
