@@ -588,7 +588,7 @@ const Swap = () => {
                           Prepared for signing
                         </div>
                         <p className="text-muted-foreground mt-1">
-                          The app builds a self-payment `Payment` transaction with `SendMax`, `Amount`, and `Paths`, then hands it to Xaman.
+                          We package this as a single XRPL payment with the best route attached, then send it to Xaman for you to sign.
                         </p>
                       </div>
 
