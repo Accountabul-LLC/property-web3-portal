@@ -413,36 +413,45 @@ const Swap = () => {
 
                   <div className="space-y-5">
                     <div className="space-y-2">
-                      <Label>Pay with</Label>
+                      <div className="flex items-center justify-between">
+                        <Label>Pay with</Label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const bal = getBalance(sourceAsset);
+                            if (bal > 0) setSourceAmount(String(bal));
+                          }}
+                          className="text-xs text-primary hover:underline"
+                        >
+                          Balance: {getBalance(sourceAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })} (Max)
+                        </button>
+                      </div>
                       <Select
-                        value={sourceAsset.kind === 'xrp' ? 'xrp' : `${sourceAsset.currency}:${sourceAsset.issuer}`}
+                        value={assetKey(sourceAsset)}
                         onValueChange={(value) => {
                           if (value === 'xrp') {
                             setSourceAsset({ kind: 'xrp' });
                             return;
                           }
-                          const [currency, issuer] = value.split(':');
-                          setSourceAsset({ kind: 'token', currency, issuer });
+                          const [currency, ...rest] = value.split(':');
+                          setSourceAsset({ kind: 'token', currency, issuer: rest.join(':') });
                         }}
                       >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose source asset" />
+                        <SelectTrigger className="h-14">
+                          <SelectValue placeholder="Choose source asset">
+                            {renderAssetRow(sourceAsset, { compact: true })}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="xrp">XRP</SelectItem>
-                          {sourceOptions
-                            .filter((asset): asset is Extract<Asset, { kind: 'token' }> => asset.kind === 'token')
-                            .map((asset) => (
-                              <SelectItem key={`${asset.currency}:${asset.issuer}`} value={`${asset.currency}:${asset.issuer}`}>
-                                {formatAsset(asset)}
-                              </SelectItem>
-                            ))}
+                          {sourceOptions.map((asset) => (
+                            <SelectItem key={assetKey(asset)} value={assetKey(asset)} className="py-2">
+                              {renderAssetRow(asset)}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
-                      {sourceAsset.kind === 'token' && (
-                        <p className="text-xs text-muted-foreground">Using your wallet balance for this trustline.</p>
-                      )}
                     </div>
+
 
                     <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-end">
                       <div className="space-y-2">
