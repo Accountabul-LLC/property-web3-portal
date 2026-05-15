@@ -26,12 +26,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { TokenPickerDialog, type TokenPickerToken } from '@/components/swap/TokenPickerDialog';
+import { TokenPickerDialog, type TokenPickerToken, type PropertyPickerOption } from '@/components/swap/TokenPickerDialog';
 import { ChevronDown } from 'lucide-react';
+import { usePropertyHoldings, type PropertyHolding } from '@/hooks/usePropertyHoldings';
 
 type Asset =
   | { kind: 'xrp' }
-  | { kind: 'token'; currency: string; issuer: string };
+  | { kind: 'token'; currency: string; issuer: string }
+  | { kind: 'property'; property_id: string; symbol: string; title: string; image: string | null; per_token_usd: number; tokens_owned: number; total_tokens: number; ownership_pct: number };
 
 type SwapQuote = {
   source_asset: Asset;
