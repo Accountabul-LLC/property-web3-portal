@@ -416,6 +416,71 @@ const Swap = () => {
     }
   };
 
+  // Build property-style entries from on-chain MPT holdings so they appear in
+  // the picker as wallet assets even when there's no DB-tracked portfolio row.
+  const mptPropertyOptions = React.useMemo<PropertyPickerOption[]>(() => {
+    const issuances = portfolio?.mpt_issuances || [];
+    const holdings = portfolio?.mpt_holdings || [];
+    if (holdings.length === 0) return [];
+
+    const issuanceById = new Map<string, typeof issuances[number]>();
+    issuances.forEach((iss) => {
+      if (iss.mpt_issuance_id) issuanceById.set(iss.mpt_issuance_id, iss);
+    });
+
+    return holdings
+      .map((h): PropertyPickerOption | null => {
+        if (!h.mpt_issuance_id) return null;
+        const iss = issuanceById.get(h.mpt_issuance_id);
+        const tokensOwned = Number(h.amount || 0);
+        if (!Number.isFinite(tokensOwned) || tokensOwned <= 0) return null;
+        const totalTokens = Number(iss?.max_amount || 0) || tokensOwned;
+        const ownershipPct = totalTokens > 0 ? (tokensOwned / totalTokens) * 100 : 0;
+        const title = iss?.name || iss?.collection?.name || `MPT ${h.mpt_issuance_id.slice(0, 8)}`;
+        const symbolBase = iss?.ticker || iss?.name || 'MPT';
+        const symbol = symbolBase.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'MPT';
+        // Try to derive a per-token price from issuance attributes; fall back to $1.
+        let perTokenUsd = 1;
+        const priceAttr = iss?.attributes?.find((a) =>
+          ['price', 'price_usd', 'token_price', 'unit_price'].includes(String(a.trait_type).toLowerCase()),
+        );
+        if (priceAttr) {
+          const n = Number(priceAttr.value);
+          if (Number.isFinite(n) && n > 0) perTokenUsd = n;
+        }
+        return {
+          property_id: `mpt:${h.mpt_issuance_id}`,
+          symbol,
+          title,
+          image: iss?.image || null,
+          tokens_owned: tokensOwned,
+          total_tokens: totalTokens,
+          ownership_pct: ownershipPct,
+          per_token_usd: perTokenUsd,
+          holding_usd: perTokenUsd * tokensOwned,
+        };
+      })
+      .filter((x): x is PropertyPickerOption => x !== null);
+  }, [portfolio?.mpt_holdings, portfolio?.mpt_issuances]);
+
+  // Merge DB-tracked property holdings with on-chain MPT holdings, dedupe by title.
+  const allPropertyOptions = React.useMemo<PropertyPickerOption[]>(() => {
+    const dbList: PropertyPickerOption[] = propertyHoldings.map((p) => ({
+      property_id: p.property_id,
+      symbol: p.symbol,
+      title: p.title,
+      image: p.image,
+      tokens_owned: p.tokens_owned,
+      total_tokens: p.total_tokens,
+      ownership_pct: p.ownership_pct,
+      per_token_usd: p.per_token_usd,
+      holding_usd: p.holding_usd,
+    }));
+    const seen = new Set(dbList.map((p) => p.title.toLowerCase().trim()));
+    const mptExtras = mptPropertyOptions.filter((p) => !seen.has(p.title.toLowerCase().trim()));
+    return [...dbList, ...mptExtras];
+  }, [propertyHoldings, mptPropertyOptions]);
+
   const renderAssetButton = (asset: Asset, onClick: () => void) => {
     const meta = getMeta(asset);
     const isUnselected = asset.kind === 'token' && (!asset.currency || !asset.issuer);
