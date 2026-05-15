@@ -689,7 +689,7 @@ const Swap = () => {
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">You send</span>
                           <span className="font-medium text-right">
-                            {sourceAmount || '0'} {sourceAsset.kind === 'xrp' ? 'XRP' : decodeCurrency(sourceAsset.currency)}
+                            {sourceAmount || '0'} {assetSymbol(sourceAsset, getMeta(sourceAsset))}
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
