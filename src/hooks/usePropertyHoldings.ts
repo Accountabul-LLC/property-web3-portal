@@ -33,7 +33,7 @@ export function usePropertyHoldings(walletAddress: string | null) {
         .gt('tokens_owned', 0);
       if (error) throw error;
 
-      const list = (holdings || []) as Array<{ id: string; property_id: string; tokens_owned: number }>;
+      const list = (holdings || []) as unknown as Array<{ id: string; property_id: string; tokens_owned: number }>;
       if (list.length === 0) return [] as PropertyHolding[];
 
       const ids = list.map((h) => h.property_id);
