@@ -315,8 +315,13 @@ const Swap = () => {
 
   const renderAssetButton = (asset: Asset, onClick: () => void) => {
     const meta = getMeta(asset);
-    const symbol = assetSymbol(asset, meta);
-    const icon = asset.kind === 'xrp' ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png' : meta?.icon || null;
+    const isUnselected = asset.kind === 'token' && (!asset.currency || !asset.issuer);
+    const symbol = isUnselected ? 'Select token' : assetSymbol(asset, meta);
+    const icon = isUnselected
+      ? null
+      : asset.kind === 'xrp'
+        ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png'
+        : meta?.icon || null;
     return (
       <button
         type="button"
@@ -327,7 +332,7 @@ const Swap = () => {
           {icon ? (
             <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
           ) : (
-            symbol.slice(0, 2).toUpperCase()
+            isUnselected ? '?' : symbol.slice(0, 2).toUpperCase()
           )}
         </div>
         <span className="font-semibold text-sm">{symbol}</span>
