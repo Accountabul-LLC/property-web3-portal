@@ -199,29 +199,31 @@ export const TokenPickerDialog: React.FC<Props> = ({
                     {sym} · {t.issuer_name || t.domain || shortAddr(t.issuer)}
                   </div>
                 </div>
-                <div className="text-right text-xs">
-                  {isWallet ? (
-                    <>
-                      <div className="font-medium">
-                        {(t.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                      </div>
-                      {t.balance_usd != null && (
-                        <div className="text-muted-foreground">
-                          ${t.balance_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {!hideBalances && (
+                  <div className="text-right text-xs">
+                    {isWallet ? (
+                      <>
+                        <div className="font-medium">
+                          {(t.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {t.price_usd != null && (
-                        <div className="font-medium">${t.price_usd.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                      )}
-                      {t.trustlines != null && (
-                        <div className="text-muted-foreground">{t.trustlines.toLocaleString()} lines</div>
-                      )}
-                    </>
-                  )}
-                </div>
+                        {t.balance_usd != null && (
+                          <div className="text-muted-foreground">
+                            ${t.balance_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {t.price_usd != null && (
+                          <div className="font-medium">${t.price_usd.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                        )}
+                        {t.trustlines != null && (
+                          <div className="text-muted-foreground">{t.trustlines.toLocaleString()} lines</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </button>
             );
           })}
