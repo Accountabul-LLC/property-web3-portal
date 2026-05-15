@@ -617,9 +617,17 @@ const Swap = () => {
                       <p className="text-sm text-destructive">{error}</p>
                     )}
 
+                    {warnings.length > 0 && !loadingQuote && (
+                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+                        {warnings.map((w, i) => (
+                          <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{w}</p>
+                        ))}
+                      </div>
+                    )}
+
                     <Button
                       className="w-full h-12 text-base gap-2"
-                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount}
+                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount || insufficientBalance}
                       onClick={handleSwap}
                     >
                       {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
@@ -627,13 +635,15 @@ const Swap = () => {
                         ? 'Opening Xaman...'
                         : !sourceAmount
                           ? 'Enter an amount'
-                          : !quoteReady
-                            ? 'Quote unavailable'
-                            : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
-                                estimatedReceive
-                                  ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
-                                  : '...'
-                              } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                          : insufficientBalance
+                            ? 'Insufficient balance'
+                            : !quoteReady
+                              ? 'Quote unavailable'
+                              : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                  estimatedReceive
+                                    ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                    : '...'
+                                } ${assetSymbol(destAsset, getMeta(destAsset))}`}
                     </Button>
                   </div>
                 </Card>
