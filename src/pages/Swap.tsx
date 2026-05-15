@@ -107,6 +107,13 @@ function assetSymbol(asset: Asset, meta?: TokenMeta | null) {
   return meta?.name || decodeCurrency(asset.currency);
 }
 
+const STABLE_SYMBOLS = new Set(['RLUSD', 'USDC', 'USDT', 'USD', 'DAI', 'PYUSD', 'TUSD']);
+function isStablecoin(asset: Asset): boolean {
+  if (asset.kind !== 'token') return false;
+  const sym = decodeCurrency(asset.currency).toUpperCase();
+  return STABLE_SYMBOLS.has(sym);
+}
+
 const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
