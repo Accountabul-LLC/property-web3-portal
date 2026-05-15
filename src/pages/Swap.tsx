@@ -767,16 +767,21 @@ const Swap = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Input
-                          readOnly
-                          placeholder="0.00"
-                          value={
-                            estimatedReceive
-                              ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
-                              : ''
-                          }
-                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
-                        />
+                        <div className="flex-1 flex items-center min-w-0">
+                          {isStablecoin(destAsset) && (
+                            <span className="text-5xl font-semibold text-muted-foreground mr-1 select-none">$</span>
+                          )}
+                          <Input
+                            readOnly
+                            placeholder="0.00"
+                            value={
+                              estimatedReceive
+                                ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                                : ''
+                            }
+                            className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
+                          />
+                        </div>
                         {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
                       </div>
                       <div className="mt-1 h-4 text-xs text-muted-foreground">
