@@ -306,9 +306,7 @@ const Swap = () => {
           validated: true,
         });
         setTxJson({ __synthetic: true, kind: 'property_swap', property_id: sourceAsset.property_id });
-        setWarnings([
-          `Demo valuation based on appraisal of $${sourceAsset.per_token_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} per token (property worth $${(sourceAsset.per_token_usd * sourceAsset.total_tokens).toLocaleString(undefined, { maximumFractionDigits: 0 })}).`,
-        ]);
+        setWarnings([]);
         return;
       }
 
