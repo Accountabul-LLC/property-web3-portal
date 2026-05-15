@@ -725,15 +725,20 @@ const Swap = () => {
                         </button>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="any"
-                          placeholder="0.00"
-                          value={sourceAmount}
-                          onChange={(e) => setSourceAmount(e.target.value)}
-                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
+                        <div className="flex-1 flex items-center min-w-0">
+                          {isStablecoin(sourceAsset) && (
+                            <span className="text-5xl font-semibold text-muted-foreground mr-1 select-none">$</span>
+                          )}
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={sourceAmount}
+                            onChange={(e) => setSourceAmount(e.target.value)}
+                            className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                        </div>
                         {renderAssetButton(sourceAsset, () => setPickerOpen('source'))}
                       </div>
                       <div className="mt-1 h-4 text-xs text-muted-foreground">
