@@ -1,14 +1,24 @@
+import { useState } from 'react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
-import { ShieldCheck } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { ShieldCheck, PieChart as PieChartIcon } from 'lucide-react';
 import { TREASURY_WALLETS } from '@/config/treasuryWallets';
 import TreasuryWalletCard from '@/components/treasury/TreasuryWalletCard';
+import TreasuryPieChart from '@/components/treasury/TreasuryPieChart';
+import { useWalletValuation } from '@/hooks/useWalletValuation';
 
 const Treasury = () => {
+  const [selected, setSelected] = useState<string>(TREASURY_WALLETS[0]?.address ?? '');
+
+  // One hook call per wallet — count is fixed at module load, so order is stable
+  const valuations = TREASURY_WALLETS.map((w) => useWalletValuation(w));
+  const selectedWallet = TREASURY_WALLETS.find((w) => w.address === selected) ?? TREASURY_WALLETS[0];
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <header className="mb-8">
           <div className="flex items-center gap-2 mb-2">
             <ShieldCheck className="w-5 h-5 text-primary" />
@@ -20,16 +30,29 @@ const Treasury = () => {
             Accountabul Treasury
           </h1>
           <p className="text-muted-foreground max-w-2xl">
-            Live, on-chain view of the wallets that hold our reserves. Every balance and
-            transaction below is verifiable directly on the XRP Ledger.
+            Live, on-chain view of every wallet that holds our reserves. Click any slice
+            to inspect that wallet's purpose, holdings, and transaction history.
           </p>
         </header>
 
-        <div className="space-y-12">
-          {TREASURY_WALLETS.map((w) => (
-            <TreasuryWalletCard key={w.address} wallet={w} />
-          ))}
-        </div>
+        <Card className="p-6 mb-10">
+          <h2 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <PieChartIcon className="w-5 h-5 text-primary" />
+            Treasury Allocation
+          </h2>
+          <TreasuryPieChart
+            valuations={valuations}
+            selectedAddress={selected}
+            onSelect={setSelected}
+          />
+        </Card>
+
+        {selectedWallet && (
+          <section>
+            <h2 className="text-xl font-bold mb-4">Wallet Details</h2>
+            <TreasuryWalletCard key={selectedWallet.address} wallet={selectedWallet} />
+          </section>
+        )}
       </main>
       <Footer />
     </div>
