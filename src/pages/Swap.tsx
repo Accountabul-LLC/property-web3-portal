@@ -761,7 +761,7 @@ const Swap = () => {
                               ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
                               : ''
                           }
-                          className="border-0 bg-transparent text-3xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
+                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
                         />
                         {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
                       </div>
