@@ -295,7 +295,7 @@ const Swap = () => {
   const destinationSameAsSource =
     sourceAsset.kind === 'xrp'
       ? destAsset.kind === 'xrp'
-      : destAsset.kind === 'token' &&
+      : sourceAsset.kind === 'token' && destAsset.kind === 'token' &&
         sourceAsset.currency.trim().toUpperCase() === destAsset.currency.trim().toUpperCase() &&
         sourceAsset.issuer.trim() === destAsset.issuer.trim();
 
