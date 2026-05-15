@@ -23,7 +23,7 @@ const fmtUsd = (n: number) => {
 };
 
 const fmtUsdFull = (n: number) =>
-  `$${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const TreasuryPieChart = ({ wallets, selectedAddress, onSelect }: Props) => {
   const total = wallets.reduce((s, w) => s + w.mockUsd, 0);
@@ -82,7 +82,7 @@ export const TreasuryPieChart = ({ wallets, selectedAddress, onSelect }: Props) 
         </ResponsiveContainer>
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <p className="text-xs text-muted-foreground">Total Treasury</p>
-          <p className="text-2xl font-bold">{fmtUsd(total)}</p>
+          <p className="text-2xl font-bold tabular-nums">{fmtUsdFull(total)}</p>
         </div>
       </div>
 
