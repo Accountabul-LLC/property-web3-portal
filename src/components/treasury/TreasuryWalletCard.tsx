@@ -232,6 +232,35 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
           Token Holdings
         </h3>
         <div className="space-y-3">
+          {/* Mock Accountabul token holdings */}
+          {wallet.mockTokens?.map((t) => {
+            const usd = t.amount * t.priceUsd;
+            return (
+              <div
+                key={t.symbol}
+                className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/20"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-bold text-primary-foreground">{t.symbol}</span>
+                  </div>
+                  <div>
+                    <p className="font-semibold">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t.symbol} · ${t.priceUsd.toFixed(4)} per token
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold">
+                    {fmt(t.amount, 2)} <span className="text-xs text-muted-foreground">{t.symbol}</span>
+                  </p>
+                  <p className="text-xs text-primary font-medium">≈ {fmtUsd(usd)}</p>
+                </div>
+              </div>
+            );
+          })}
+
           {/* XRP row */}
           <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
             <div className="flex items-center gap-3">
