@@ -291,6 +291,7 @@ Deno.serve(async (req) => {
       fee_drops: feeDrops,
       fee_xrp: Number(feeDrops) / 1_000_000,
       warnings,
+      insufficient_balance: insufficientBalance,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
