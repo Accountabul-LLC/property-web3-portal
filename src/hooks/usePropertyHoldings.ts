@@ -71,9 +71,12 @@ export function usePropertyHoldings(walletAddress: string | null) {
           const totalTokens = Number(p.total_tokens) || 0;
           const estVal = Number(p.estimated_value) || 0;
           const pricePerToken = Number(p.price_per_token) || 0;
-          const perTokenUsd = totalTokens > 0 && estVal > 0
-            ? estVal / totalTokens
-            : pricePerToken;
+          // Prefer the explicit listed price-per-token (market price the
+          // owner set when tokenizing). Only fall back to appraisal-derived
+          // valuation (estimated_value / total_tokens) if no price was set.
+          const perTokenUsd = pricePerToken > 0
+            ? pricePerToken
+            : (totalTokens > 0 && estVal > 0 ? estVal / totalTokens : 0);
           const ownershipPct = totalTokens > 0 ? (h.tokens_owned / totalTokens) * 100 : 0;
           const symbol = (p.title || 'PROP').replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'PROP';
           return {
