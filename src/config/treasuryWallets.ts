@@ -1,6 +1,13 @@
 // Public, hardcoded list of treasury wallets shown on /treasury.
 // `mockUsd` is the demo allocation displayed in the pie chart — live on-chain
 // holdings still render in the wallet detail card below.
+export interface MockTokenHolding {
+  symbol: string;
+  name: string;
+  amount: number;
+  priceUsd: number;
+}
+
 export interface TreasuryWalletConfig {
   address: string;
   label: string;
@@ -8,7 +15,11 @@ export interface TreasuryWalletConfig {
   purpose: string;
   description?: string;
   mockUsd: number;
+  mockTokens?: MockTokenHolding[];
 }
+
+// Demo price for the Accountabul governance token
+const ACCT_PRICE = 0.4732;
 
 export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
   {
@@ -19,6 +30,9 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     description:
       'Primary operating treasury — funds day-to-day platform expenses, gas fees, and short-term obligations.',
     mockUsd: 1_184_372.41,
+    mockTokens: [
+      { symbol: 'ACCT', name: 'Accountabul', amount: 487_213.76, priceUsd: ACCT_PRICE },
+    ],
   },
   {
     address: 'rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh',
@@ -28,6 +42,9 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     description:
       'Holds tokenized real-estate (MPT) reserves and rental income distributions before payout to holders.',
     mockUsd: 3_472_918.07,
+    mockTokens: [
+      { symbol: 'ACCT', name: 'Accountabul', amount: 1_842_605.19, priceUsd: ACCT_PRICE },
+    ],
   },
   {
     address: 'rNRiQJzLHEjt6KdCBjK4ttjTxBhrAm7vRz',
@@ -37,6 +54,9 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     description:
       'Funds the yield-bearing financial product — interest accrual, lending positions, and liquidity provision.',
     mockUsd: 1_213_604.88,
+    mockTokens: [
+      { symbol: 'ACCT', name: 'Accountabul', amount: 612_489.03, priceUsd: ACCT_PRICE },
+    ],
   },
   {
     address: 'rNixerUVPwrhxGDt4UooDu6FJ7zuofvjCF',
@@ -46,6 +66,9 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     description:
       'Member rewards & ecosystem incentives — referrals, loyalty, and quarterly buyback distributions.',
     mockUsd: 793_146.52,
+    mockTokens: [
+      { symbol: 'ACCT', name: 'Accountabul', amount: 358_927.44, priceUsd: ACCT_PRICE },
+    ],
   },
   {
     address: 'rJb5KsHsDHF1YS5B5DU6QCkH5NsPaKQTcy',
@@ -55,5 +78,8 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     description:
       'Long-term cold reserve — multi-sig protected, used only for strategic acquisitions and emergencies.',
     mockUsd: 574_986.08,
+    mockTokens: [
+      { symbol: 'ACCT', name: 'Accountabul', amount: 247_851.92, priceUsd: ACCT_PRICE },
+    ],
   },
 ];
