@@ -117,18 +117,21 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
     );
   }
 
-  if (error) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-destructive font-medium mb-1">Failed to load treasury data</p>
-        <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-      </Card>
-    );
-  }
+  // Fall back to an empty on-chain shape so demo wallets without a live XRPL
+  // account still render their mock token holdings instead of an error card.
+  const safeData: XRPLPortfolioData = data ?? {
+    xrp_balance: 0,
+    reserve_xrp: 0,
+    spendable_xrp: 0,
+    owner_count: 0,
+    token_holdings: [],
+    transactions: [],
+    mpt_issuances: [],
+    mpt_holdings: [],
+    account: address,
+  };
 
-  if (!data) return null;
-
-  const sortedTokens = [...data.token_holdings].sort((a, b) => {
+  const sortedTokens = [...safeData.token_holdings].sort((a, b) => {
     const ma = tokenMap?.get(`${a.currency}:${a.issuer}`);
     const mb = tokenMap?.get(`${b.currency}:${b.issuer}`);
     const va = (ma?.price ?? 0) * Number(a.balance);
