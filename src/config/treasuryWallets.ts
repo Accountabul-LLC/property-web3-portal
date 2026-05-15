@@ -6,6 +6,7 @@ export interface MockTokenHolding {
   name: string;
   amount: number;
   priceUsd: number;
+  logo?: string;
 }
 
 export interface TreasuryWalletConfig {
@@ -18,8 +19,16 @@ export interface TreasuryWalletConfig {
   mockTokens?: MockTokenHolding[];
 }
 
-// Demo price for the Accountabul governance token
-const ACCT_PRICE = 0.4732;
+// Demo price for the Accountabul (ABUL) governance token
+const ABUL_PRICE = 0.4732;
+const ABUL_LOGO = '/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png';
+const abul = (amount: number): MockTokenHolding => ({
+  symbol: 'ABUL',
+  name: 'Accountabul Token',
+  amount,
+  priceUsd: ABUL_PRICE,
+  logo: ABUL_LOGO,
+});
 
 export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
   {
