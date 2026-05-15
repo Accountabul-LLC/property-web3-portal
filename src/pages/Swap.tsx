@@ -203,15 +203,9 @@ const Swap = () => {
     return () => clearTimeout(timer);
   }, [sourceAmount]);
 
-  React.useEffect(() => {
-    if (destinationKind === 'token' && !destinationIssuer && portfolio?.token_holdings?.length) {
-      const first = portfolio.token_holdings.find((t) => t.balance > 0) || portfolio.token_holdings[0];
-      if (first) {
-        setDestinationCurrency(first.currency);
-        setDestinationIssuer(first.issuer);
-      }
-    }
-  }, [destinationKind, destinationIssuer, portfolio?.token_holdings]);
+  // Note: destination intentionally starts unselected so the user picks what to swap INTO,
+  // rather than defaulting to a token they already hold (which felt like "swapping into themselves").
+
 
 
   React.useEffect(() => {
