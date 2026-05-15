@@ -28,9 +28,11 @@ Deno.serve(async (req) => {
     const params = new URLSearchParams({
       sort_by: 'trustlines',
       limit: String(limit),
-      trust_level: '1',
       include_changes: 'false',
     });
+    params.append('trust_level[]', '1');
+    params.append('trust_level[]', '2');
+    params.append('trust_level[]', '3');
     if (query) params.set('name_like', query);
 
     const url = `https://s1.xrplmeta.org/tokens?${params.toString()}`;
