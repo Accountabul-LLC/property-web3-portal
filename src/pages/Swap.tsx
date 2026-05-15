@@ -183,6 +183,8 @@ const Swap = () => {
     (asset: Asset, balance: number): number | null => {
       if (asset.kind === 'xrp') return xrpUsd ? balance * xrpUsd : null;
       if (asset.kind === 'property') return balance * asset.per_token_usd;
+      // Treat known stablecoins as 1:1 USD even when the meta API has no price.
+      if (isStablecoin(asset)) return balance;
       const meta = getMeta(asset);
       if (!meta?.price || !xrpUsd) return null;
       // token meta price is in XRP per token
