@@ -498,6 +498,23 @@ const Swap = () => {
     setQrCode('');
     setTxHash('');
 
+    // Synthetic property swap — simulate execution for demo purposes.
+    if ((txJson as any).__synthetic && sourceAsset.kind === 'property') {
+      try {
+        await new Promise((r) => setTimeout(r, 1200));
+        const fakeHash = 'DEMO' + Math.random().toString(16).slice(2, 10).toUpperCase().padEnd(60, '0');
+        setTxHash(fakeHash);
+        toast.success(
+          `Simulated: sold ${sourceAmount} ${sourceAsset.symbol} for ${
+            estimatedReceive ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'
+          } ${assetSymbol(destAsset, getMeta(destAsset))}`,
+        );
+      } finally {
+        setSigning(false);
+      }
+      return;
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('xaman-send-payment', {
         body: { tx_json: txJson },
