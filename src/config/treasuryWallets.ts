@@ -1,6 +1,13 @@
 // Public, hardcoded list of treasury wallets shown on /treasury.
 // `mockUsd` is the demo allocation displayed in the pie chart — live on-chain
 // holdings still render in the wallet detail card below.
+export interface MockTokenHolding {
+  symbol: string;
+  name: string;
+  amount: number;
+  priceUsd: number;
+}
+
 export interface TreasuryWalletConfig {
   address: string;
   label: string;
@@ -8,7 +15,11 @@ export interface TreasuryWalletConfig {
   purpose: string;
   description?: string;
   mockUsd: number;
+  mockTokens?: MockTokenHolding[];
 }
+
+// Demo price for the Accountabul governance token
+const ACCT_PRICE = 0.4732;
 
 export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
   {
