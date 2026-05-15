@@ -256,6 +256,8 @@ const Swap = () => {
 
         setQuote(data.quote as SwapQuote);
         setTxJson(data.tx_json as Record<string, unknown>);
+        setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
+        setInsufficientBalance(!!data.insufficient_balance);
       } catch (err: any) {
         setError(err?.message || 'Unable to build swap quote');
       } finally {
