@@ -747,9 +747,10 @@ const Swap = () => {
         open={pickerOpen !== null}
         onOpenChange={(o) => !o && setPickerOpen(null)}
         onSelect={(sel) => pickerOpen && handlePickerSelect(pickerOpen, sel)}
-        walletTokens={walletPickerTokens}
+        walletTokens={pickerOpen === 'source' ? walletPickerTokens : []}
         xrpBalance={portfolio?.spendable_xrp ?? 0}
         xrpUsd={xrpUsd}
+        hideBalances={pickerOpen === 'destination'}
         title={pickerOpen === 'source' ? 'Send' : 'Receive'}
       />
     </div>
