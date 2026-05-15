@@ -255,6 +255,63 @@ const Swap = () => {
         return;
       }
 
+      // ── Synthetic quote path for real-estate property tokens ──
+      // Property MPTs don't have on-chain liquidity yet, so we compute a
+      // valuation-based quote client-side using estimated_value / total_tokens.
+      if (sourceAsset.kind === 'property') {
+        const amt = Number(debouncedAmount);
+        if (!Number.isFinite(amt) || amt <= 0) return;
+        if (amt > sourceAsset.tokens_owned) {
+          setInsufficientBalance(true);
+          setWarnings([`You only own ${sourceAsset.tokens_owned} tokens of ${sourceAsset.title}.`]);
+          return;
+        }
+        const sourceUsd = amt * sourceAsset.per_token_usd;
+        const destAssetLocal: Asset = destinationKind === 'xrp'
+          ? { kind: 'xrp' }
+          : { kind: 'token', currency: destinationCurrency.trim().toUpperCase(), issuer: destinationIssuer.trim() };
+
+        // Resolve dest unit price in USD
+        let destUnitUsd = 0;
+        if (destAssetLocal.kind === 'xrp') {
+          destUnitUsd = xrpUsd;
+        } else {
+          const sym = decodeCurrency(destAssetLocal.currency).toUpperCase();
+          if (sym === 'RLUSD' || sym === 'USDC' || sym === 'USDT' || sym === 'USD') {
+            destUnitUsd = 1; // stablecoin assumption
+          } else {
+            const meta = tokenMap?.get(`${destAssetLocal.currency}:${destAssetLocal.issuer}`);
+            destUnitUsd = meta?.price && xrpUsd ? meta.price * xrpUsd : 0;
+          }
+        }
+
+        if (!destUnitUsd) {
+          setError('Unable to price the destination asset for this real-estate quote.');
+          return;
+        }
+
+        const destAmount = sourceUsd / destUnitUsd;
+        const destAmountStr = destAmount.toFixed(6);
+
+        setQuote({
+          source_asset: sourceAsset,
+          destination_asset: destAssetLocal,
+          source_amount: debouncedAmount,
+          quoted_source_amount: debouncedAmount,
+          quoted_destination_amount: destAssetLocal.kind === 'xrp'
+            ? String(Math.floor(destAmount * 1_000_000))
+            : { currency: destAssetLocal.currency, issuer: destAssetLocal.issuer, value: destAmountStr },
+          alternative_count: 1,
+          full_reply: true,
+          validated: true,
+        });
+        setTxJson({ __synthetic: true, kind: 'property_swap', property_id: sourceAsset.property_id });
+        setWarnings([
+          `Demo valuation based on appraisal of $${sourceAsset.per_token_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })} per token (property worth $${(sourceAsset.per_token_usd * sourceAsset.total_tokens).toLocaleString(undefined, { maximumFractionDigits: 0 })}).`,
+        ]);
+        return;
+      }
+
       setLoadingQuote(true);
       try {
         const destinationAsset: Asset = destinationKind === 'xrp'
@@ -286,7 +343,7 @@ const Swap = () => {
     };
 
     run();
-  }, [activeAddress, activeNetwork, debouncedAmount, destinationCurrency, destinationIssuer, destinationKind, sourceAsset]);
+  }, [activeAddress, activeNetwork, debouncedAmount, destinationCurrency, destinationIssuer, destinationKind, sourceAsset, xrpUsd, tokenMap, activeWallet, compliance?.is_trade_enabled]);
 
   const destAsset: Asset = destinationKind === 'xrp'
     ? { kind: 'xrp' }
