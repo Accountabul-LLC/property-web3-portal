@@ -107,6 +107,13 @@ function assetSymbol(asset: Asset, meta?: TokenMeta | null) {
   return meta?.name || decodeCurrency(asset.currency);
 }
 
+const STABLE_SYMBOLS = new Set(['RLUSD', 'USDC', 'USDT', 'USD', 'DAI', 'PYUSD', 'TUSD']);
+function isStablecoin(asset: Asset): boolean {
+  if (asset.kind !== 'token') return false;
+  const sym = decodeCurrency(asset.currency).toUpperCase();
+  return STABLE_SYMBOLS.has(sym);
+}
+
 const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
@@ -176,6 +183,8 @@ const Swap = () => {
     (asset: Asset, balance: number): number | null => {
       if (asset.kind === 'xrp') return xrpUsd ? balance * xrpUsd : null;
       if (asset.kind === 'property') return balance * asset.per_token_usd;
+      // Treat known stablecoins as 1:1 USD even when the meta API has no price.
+      if (isStablecoin(asset)) return balance;
       const meta = getMeta(asset);
       if (!meta?.price || !xrpUsd) return null;
       // token meta price is in XRP per token
@@ -716,15 +725,20 @@ const Swap = () => {
                         </button>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="any"
-                          placeholder="0.00"
-                          value={sourceAmount}
-                          onChange={(e) => setSourceAmount(e.target.value)}
-                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
-                        />
+                        <div className="flex-1 flex items-center min-w-0">
+                          {isStablecoin(sourceAsset) && (
+                            <span className="text-5xl font-semibold text-muted-foreground mr-1 select-none">$</span>
+                          )}
+                          <Input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={sourceAmount}
+                            onChange={(e) => setSourceAmount(e.target.value)}
+                            className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                        </div>
                         {renderAssetButton(sourceAsset, () => setPickerOpen('source'))}
                       </div>
                       <div className="mt-1 h-4 text-xs text-muted-foreground">
@@ -753,16 +767,21 @@ const Swap = () => {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Input
-                          readOnly
-                          placeholder="0.00"
-                          value={
-                            estimatedReceive
-                              ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
-                              : ''
-                          }
-                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
-                        />
+                        <div className="flex-1 flex items-center min-w-0">
+                          {isStablecoin(destAsset) && (
+                            <span className="text-5xl font-semibold text-muted-foreground mr-1 select-none">$</span>
+                          )}
+                          <Input
+                            readOnly
+                            placeholder="0.00"
+                            value={
+                              estimatedReceive
+                                ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                                : ''
+                            }
+                            className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
+                          />
+                        </div>
                         {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
                       </div>
                       <div className="mt-1 h-4 text-xs text-muted-foreground">
