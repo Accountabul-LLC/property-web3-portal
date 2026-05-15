@@ -120,10 +120,21 @@ const Swap = () => {
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
 
-  const tokenQueries = React.useMemo(
-    () => (portfolio?.token_holdings || []).map((t) => ({ currency: t.currency, issuer: t.issuer })),
-    [portfolio?.token_holdings],
-  );
+  const tokenQueries = React.useMemo(() => {
+    const list: Array<{ currency: string; issuer: string }> = (portfolio?.token_holdings || []).map(
+      (t) => ({ currency: t.currency, issuer: t.issuer }),
+    );
+    const seen = new Set(list.map((t) => `${t.currency}:${t.issuer}`));
+    if (sourceAsset.kind === 'token' && sourceAsset.currency && sourceAsset.issuer) {
+      const k = `${sourceAsset.currency}:${sourceAsset.issuer}`;
+      if (!seen.has(k)) { list.push({ currency: sourceAsset.currency, issuer: sourceAsset.issuer }); seen.add(k); }
+    }
+    if (destinationKind === 'token' && destinationCurrency && destinationIssuer) {
+      const k = `${destinationCurrency}:${destinationIssuer}`;
+      if (!seen.has(k)) list.push({ currency: destinationCurrency, issuer: destinationIssuer });
+    }
+    return list;
+  }, [portfolio?.token_holdings, sourceAsset, destinationKind, destinationCurrency, destinationIssuer]);
   const { data: tokenMetaData } = useTokenMeta(tokenQueries);
   const tokenMap = tokenMetaData?.tokenMap;
   const xrpUsd = tokenMetaData?.xrpUsd ?? 0;
