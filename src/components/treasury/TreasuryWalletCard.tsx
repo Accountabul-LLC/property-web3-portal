@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ExternalLink, Copy, Check, DollarSign, Clock, Coins, FlaskConical, ArrowUpRight, ArrowDownLeft, Building2 } from 'lucide-react';
-import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
+import { useXRPLPortfolio, type XRPLPortfolioData } from '@/hooks/useXRPLPortfolio';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import type { TreasuryWalletConfig } from '@/config/treasuryWallets';
 import { toast } from 'sonner';
@@ -117,18 +117,21 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
     );
   }
 
-  if (error) {
-    return (
-      <Card className="p-8 text-center">
-        <p className="text-destructive font-medium mb-1">Failed to load treasury data</p>
-        <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
-      </Card>
-    );
-  }
+  // Fall back to an empty on-chain shape so demo wallets without a live XRPL
+  // account still render their mock token holdings instead of an error card.
+  const safeData: XRPLPortfolioData = data ?? {
+    xrp_balance: 0,
+    reserve_xrp: 0,
+    spendable_xrp: 0,
+    owner_count: 0,
+    token_holdings: [],
+    transactions: [],
+    mpt_issuances: [],
+    mpt_holdings: [],
+    account: address,
+  };
 
-  if (!data) return null;
-
-  const sortedTokens = [...data.token_holdings].sort((a, b) => {
+  const sortedTokens = [...safeData.token_holdings].sort((a, b) => {
     const ma = tokenMap?.get(`${a.currency}:${a.issuer}`);
     const mb = tokenMap?.get(`${b.currency}:${b.issuer}`);
     const va = (ma?.price ?? 0) * Number(a.balance);
@@ -137,7 +140,7 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
   });
 
   const allMpts = [
-    ...(data.mpt_issuances || []).map((m) => ({
+    ...(safeData.mpt_issuances || []).map((m) => ({
       id: m.mpt_issuance_id,
       name: m.name || m.ticker || 'Unnamed Token',
       image: m.image,
@@ -145,8 +148,8 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
       amount: m.outstanding_amount || '0',
       label: 'Issued',
     })),
-    ...(data.mpt_holdings || []).map((h) => {
-      const issuance = data.mpt_issuances?.find((i) => i.mpt_issuance_id === h.mpt_issuance_id);
+    ...(safeData.mpt_holdings || []).map((h) => {
+      const issuance = safeData.mpt_issuances?.find((i) => i.mpt_issuance_id === h.mpt_issuance_id);
       return {
         id: h.mpt_issuance_id,
         name: issuance?.name || issuance?.ticker || 'MPT Asset',
@@ -158,7 +161,7 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
     }),
   ];
 
-  const txs = (data.transactions || []).slice(0, 15);
+  const txs = (safeData.transactions || []).slice(0, 15);
 
   return (
     <div className="space-y-6">
@@ -241,9 +244,17 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
                 className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/20"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-bold text-primary-foreground">{t.symbol}</span>
-                  </div>
+                  {t.logo ? (
+                    <img
+                      src={t.logo}
+                      alt={t.name}
+                      className="w-10 h-10 rounded-full object-contain bg-background border border-primary/20 flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center flex-shrink-0">
+                      <span className="text-xs font-bold text-primary-foreground">{t.symbol}</span>
+                    </div>
+                  )}
                   <div>
                     <p className="font-semibold">{t.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -272,11 +283,11 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
             </div>
             <div className="text-right">
               <p className="font-semibold">
-                {fmt(data.xrp_balance ?? 0)} <span className="text-xs text-muted-foreground">XRP</span>
+                {fmt(safeData.xrp_balance ?? 0)} <span className="text-xs text-muted-foreground">XRP</span>
               </p>
               {xrpUsd > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  ≈ {fmtUsd((data.xrp_balance ?? 0) * xrpUsd)}
+                  ≈ {fmtUsd((safeData.xrp_balance ?? 0) * xrpUsd)}
                 </p>
               )}
             </div>
