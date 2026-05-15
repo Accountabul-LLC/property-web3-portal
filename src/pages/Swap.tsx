@@ -869,6 +869,17 @@ const Swap = () => {
         onOpenChange={(o) => !o && setPickerOpen(null)}
         onSelect={(sel) => pickerOpen && handlePickerSelect(pickerOpen, sel)}
         walletTokens={pickerOpen === 'source' ? walletPickerTokens : []}
+        propertyHoldings={pickerOpen === 'source' ? propertyHoldings.map((p) => ({
+          property_id: p.property_id,
+          symbol: p.symbol,
+          title: p.title,
+          image: p.image,
+          tokens_owned: p.tokens_owned,
+          total_tokens: p.total_tokens,
+          ownership_pct: p.ownership_pct,
+          per_token_usd: p.per_token_usd,
+          holding_usd: p.holding_usd,
+        })) : []}
         xrpBalance={portfolio?.spendable_xrp ?? 0}
         xrpUsd={xrpUsd}
         hideBalances={pickerOpen === 'destination'}
