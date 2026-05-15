@@ -723,7 +723,7 @@ const Swap = () => {
                           placeholder="0.00"
                           value={sourceAmount}
                           onChange={(e) => setSourceAmount(e.target.value)}
-                          className="border-0 bg-transparent text-3xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
                         {renderAssetButton(sourceAsset, () => setPickerOpen('source'))}
                       </div>
