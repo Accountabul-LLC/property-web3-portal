@@ -398,7 +398,7 @@ const Swap = () => {
 
   const flipAssets = () => {
     if (destAsset.kind === 'xrp' && sourceAsset.kind === 'xrp') return;
-    if (sourceAsset.kind === 'property' || destAsset.kind === 'property') return; // property only on send-side
+    if (sourceAsset.kind === 'property') return; // property only on send-side
     const newSource = destAsset;
     if (sourceAsset.kind === 'xrp') {
       setDestinationKind('xrp');
