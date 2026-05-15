@@ -28,6 +28,7 @@ interface Props {
   xrpBalance: number;
   xrpUsd: number;
   showXrp?: boolean;
+  hideBalances?: boolean;
   title?: string;
 }
 
@@ -59,6 +60,7 @@ export const TokenPickerDialog: React.FC<Props> = ({
   xrpBalance,
   xrpUsd,
   showXrp = true,
+  hideBalances = false,
   title = 'Select a token',
 }) => {
   const [query, setQuery] = React.useState('');
@@ -150,14 +152,16 @@ export const TokenPickerDialog: React.FC<Props> = ({
                 <div className="font-medium">XRP</div>
                 <div className="text-xs text-muted-foreground">Native XRPL asset</div>
               </div>
-              <div className="text-right text-xs">
-                <div className="font-medium">{xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                {xrpUsd > 0 && (
-                  <div className="text-muted-foreground">
-                    ${(xrpBalance * xrpUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  </div>
-                )}
-              </div>
+              {!hideBalances && (
+                <div className="text-right text-xs">
+                  <div className="font-medium">{xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                  {xrpUsd > 0 && (
+                    <div className="text-muted-foreground">
+                      ${(xrpBalance * xrpUsd).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    </div>
+                  )}
+                </div>
+              )}
             </button>
           )}
 
@@ -195,29 +199,31 @@ export const TokenPickerDialog: React.FC<Props> = ({
                     {sym} · {t.issuer_name || t.domain || shortAddr(t.issuer)}
                   </div>
                 </div>
-                <div className="text-right text-xs">
-                  {isWallet ? (
-                    <>
-                      <div className="font-medium">
-                        {(t.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}
-                      </div>
-                      {t.balance_usd != null && (
-                        <div className="text-muted-foreground">
-                          ${t.balance_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                {!hideBalances && (
+                  <div className="text-right text-xs">
+                    {isWallet ? (
+                      <>
+                        <div className="font-medium">
+                          {(t.balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                         </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {t.price_usd != null && (
-                        <div className="font-medium">${t.price_usd.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
-                      )}
-                      {t.trustlines != null && (
-                        <div className="text-muted-foreground">{t.trustlines.toLocaleString()} lines</div>
-                      )}
-                    </>
-                  )}
-                </div>
+                        {t.balance_usd != null && (
+                          <div className="text-muted-foreground">
+                            ${t.balance_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {t.price_usd != null && (
+                          <div className="font-medium">${t.price_usd.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+                        )}
+                        {t.trustlines != null && (
+                          <div className="text-muted-foreground">{t.trustlines.toLocaleString()} lines</div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
               </button>
             );
           })}
