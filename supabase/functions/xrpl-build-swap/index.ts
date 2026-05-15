@@ -192,23 +192,29 @@ Deno.serve(async (req) => {
     const accountData = accountInfoRes.result?.account_data;
     if (!accountData) return jsonError("Could not fetch wallet account data", 500);
 
+    let insufficientBalance = false;
     if (source_asset.kind === "xrp") {
       const balanceXrp = Number(accountData.Balance) / 1_000_000;
       const reserveXrp = 1 + (Number(accountData.OwnerCount || 0) * 0.2);
       const spendable = balanceXrp - reserveXrp;
       if (Number(source_amount) > spendable) {
-        return jsonError(`Insufficient spendable XRP. You have ${spendable.toFixed(6)} XRP available.`);
-      }
-      if (spendable - Number(source_amount) < 1) {
+        insufficientBalance = true;
+        warnings.push(`Insufficient spendable XRP. You have ${spendable.toFixed(6)} XRP available.`);
+      } else if (spendable - Number(source_amount) < 1) {
         warnings.push("This swap will leave your spendable XRP very low.");
       }
     } else {
       const sourceLines = sourceLinesRes?.result?.lines || [];
       const sourceLine = sourceLines.find((line: any) => line.currency === source_asset.currency && line.account === source_asset.issuer);
-      if (!sourceLine) return jsonError("You do not have a trustline for the source token.");
-      if (sourceLine.freeze_peer) return jsonError("The source token is frozen by the issuer.");
-      if (Number(source_amount) > Number(sourceLine.balance)) {
-        return jsonError(`Insufficient token balance. You have ${sourceLine.balance} ${source_asset.currency} available.`);
+      if (!sourceLine) {
+        insufficientBalance = true;
+        warnings.push("You do not have a trustline for the source token.");
+      } else if (sourceLine.freeze_peer) {
+        insufficientBalance = true;
+        warnings.push("The source token is frozen by the issuer.");
+      } else if (Number(source_amount) > Number(sourceLine.balance)) {
+        insufficientBalance = true;
+        warnings.push(`Insufficient token balance. You have ${sourceLine.balance} ${source_asset.currency} available.`);
       }
     }
 
@@ -285,6 +291,7 @@ Deno.serve(async (req) => {
       fee_drops: feeDrops,
       fee_xrp: Number(feeDrops) / 1_000_000,
       warnings,
+      insufficient_balance: insufficientBalance,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

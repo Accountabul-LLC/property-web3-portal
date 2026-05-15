@@ -110,6 +110,8 @@ const Swap = () => {
   const [debouncedAmount, setDebouncedAmount] = React.useState('');
   const [quote, setQuote] = React.useState<SwapQuote | null>(null);
   const [txJson, setTxJson] = React.useState<Record<string, unknown> | null>(null);
+  const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [insufficientBalance, setInsufficientBalance] = React.useState(false);
   const [loadingQuote, setLoadingQuote] = React.useState(false);
   const [signing, setSigning] = React.useState(false);
   const [error, setError] = React.useState('');
@@ -217,6 +219,8 @@ const Swap = () => {
       setError('');
       setQuote(null);
       setTxJson(null);
+      setWarnings([]);
+      setInsufficientBalance(false);
 
       if (!activeAddress || !debouncedAmount) return;
       if (!activeWallet || !compliance?.is_trade_enabled) return;
@@ -252,6 +256,8 @@ const Swap = () => {
 
         setQuote(data.quote as SwapQuote);
         setTxJson(data.tx_json as Record<string, unknown>);
+        setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
+        setInsufficientBalance(!!data.insufficient_balance);
       } catch (err: any) {
         setError(err?.message || 'Unable to build swap quote');
       } finally {
@@ -611,9 +617,17 @@ const Swap = () => {
                       <p className="text-sm text-destructive">{error}</p>
                     )}
 
+                    {warnings.length > 0 && !loadingQuote && (
+                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+                        {warnings.map((w, i) => (
+                          <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{w}</p>
+                        ))}
+                      </div>
+                    )}
+
                     <Button
                       className="w-full h-12 text-base gap-2"
-                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount}
+                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount || insufficientBalance}
                       onClick={handleSwap}
                     >
                       {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
@@ -621,13 +635,15 @@ const Swap = () => {
                         ? 'Opening Xaman...'
                         : !sourceAmount
                           ? 'Enter an amount'
-                          : !quoteReady
-                            ? 'Quote unavailable'
-                            : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
-                                estimatedReceive
-                                  ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
-                                  : '...'
-                              } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                          : insufficientBalance
+                            ? 'Insufficient balance'
+                            : !quoteReady
+                              ? 'Quote unavailable'
+                              : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                  estimatedReceive
+                                    ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                    : '...'
+                                } ${assetSymbol(destAsset, getMeta(destAsset))}`}
                     </Button>
                   </div>
                 </Card>
