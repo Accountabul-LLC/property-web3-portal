@@ -26,14 +26,32 @@ export function usePropertyHoldings(walletAddress: string | null) {
     queryFn: async () => {
       if (!walletAddress) return [] as PropertyHolding[];
 
-      const { data: holdings, error } = await supabase
+      // 1) DB-tracked fractional holdings
+      const { data: holdings } = await supabase
         .from('portfolio_holdings' as any)
         .select('id, property_id, tokens_owned')
         .eq('wallet_address', walletAddress)
         .gt('tokens_owned', 0);
-      if (error) throw error;
 
-      const list = (holdings || []) as unknown as Array<{ id: string; property_id: string; tokens_owned: number }>;
+      const holdingList = (holdings || []) as unknown as Array<{ id: string; property_id: string; tokens_owned: number }>;
+
+      // 2) Properties whose owner_wallet matches (treat as fully owned).
+      // Critical for users who tokenized properties but have no portfolio_holdings rows yet.
+      const { data: ownedProps } = await supabase
+        .from('properties' as any)
+        .select('id, title, images, estimated_value, total_tokens, price_per_token')
+        .eq('owner_wallet', walletAddress);
+
+      const heldIds = new Set(holdingList.map((h) => h.property_id));
+      const syntheticHoldings = ((ownedProps || []) as any[])
+        .filter((p) => !heldIds.has(p.id))
+        .map((p) => ({
+          id: `owned:${p.id}`,
+          property_id: p.id,
+          tokens_owned: Number(p.total_tokens) || 0,
+        }));
+
+      const list = [...holdingList, ...syntheticHoldings];
       if (list.length === 0) return [] as PropertyHolding[];
 
       const ids = list.map((h) => h.property_id);
