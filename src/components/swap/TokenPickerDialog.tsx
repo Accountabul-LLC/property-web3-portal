@@ -162,7 +162,11 @@ export const TokenPickerDialog: React.FC<Props> = ({
                 .filter((p) => {
                   if (!debounced) return true;
                   const q = debounced.toLowerCase();
-                  return p.title.toLowerCase().includes(q) || p.symbol.toLowerCase().includes(q);
+                  return (
+                    p.title.toLowerCase().includes(q) ||
+                    p.symbol.toLowerCase().includes(q) ||
+                    p.property_id.toLowerCase().includes(q)
+                  );
                 })
                 .map((p) => (
                   <button
