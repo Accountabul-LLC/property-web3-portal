@@ -444,17 +444,11 @@ const Swap = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 relative">
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-4">
             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="gap-1.5 px-2 py-0.5 text-[11px]">
-                  <Sparkles className="w-3 h-3" />
-                  XRPL Swap Engine
-                </Badge>
-                <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
-                  Exchange crypto on XRPL
-                </h1>
-              </div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+                Exchange crypto on XRPL
+              </h1>
               <p className="mt-1 text-muted-foreground text-xs sm:text-sm">
-                Live pathfinding quotes, wallet balances, and Xaman signing — no smart contracts.
+                Swap your crypto assets here.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs">
