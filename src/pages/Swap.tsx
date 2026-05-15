@@ -424,7 +424,9 @@ const Swap = () => {
       ? null
       : asset.kind === 'xrp'
         ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png'
-        : meta?.icon || null;
+        : asset.kind === 'property'
+          ? asset.image
+          : meta?.icon || null;
     return (
       <button
         type="button"
