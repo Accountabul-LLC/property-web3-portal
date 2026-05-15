@@ -210,19 +210,16 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
           <div className="md:text-right">
             <div className="flex md:justify-end items-center gap-2 mb-1">
               <DollarSign className="w-4 h-4 text-primary" />
-              <p className="text-sm text-muted-foreground font-medium">Total Treasury Value</p>
+              <p className="text-sm text-muted-foreground font-medium">Total Wallet Value</p>
             </div>
-            <p className="text-4xl font-bold tracking-tight">
-              {valuation ? fmtUsd(valuation.totalUsd) : '—'}
+            <p className="text-4xl font-bold tracking-tight tabular-nums">
+              {fmtUsd(wallet.mockUsd)}
             </p>
             <div className="flex md:justify-end items-center gap-3 mt-1 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 Updated {updatedAgo || 'now'}
               </span>
-              {valuation && valuation.unpriced > 0 && (
-                <span>{valuation.unpriced} without USD price</span>
-              )}
             </div>
           </div>
         </div>
