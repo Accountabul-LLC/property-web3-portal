@@ -174,16 +174,19 @@ export const TokenPickerDialog: React.FC<Props> = ({
                 onClick={() => handleSelect(t)}
                 className="w-full flex items-center gap-3 p-3 hover:bg-muted/60 transition-colors text-left"
               >
-                <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
-                  {t.icon ? (
+                <div className="h-8 w-8 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground relative">
+                  <span className="absolute inset-0 flex items-center justify-center">
+                    {sym.slice(0, 2).toUpperCase()}
+                  </span>
+                  {t.icon && (
                     <img
                       src={t.icon}
                       alt={sym}
-                      className="h-full w-full object-cover"
+                      referrerPolicy="no-referrer"
+                      loading="lazy"
+                      className="relative h-full w-full object-cover"
                       onError={(e) => ((e.currentTarget.style.display = 'none'))}
                     />
-                  ) : (
-                    sym.slice(0, 2).toUpperCase()
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
