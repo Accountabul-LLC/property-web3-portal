@@ -6,14 +6,11 @@ import { ShieldCheck, PieChart as PieChartIcon } from 'lucide-react';
 import { TREASURY_WALLETS } from '@/config/treasuryWallets';
 import TreasuryWalletCard from '@/components/treasury/TreasuryWalletCard';
 import TreasuryPieChart from '@/components/treasury/TreasuryPieChart';
-import { useWalletValuation } from '@/hooks/useWalletValuation';
 
 const Treasury = () => {
   const [selected, setSelected] = useState<string>(TREASURY_WALLETS[0]?.address ?? '');
-
-  // One hook call per wallet — count is fixed at module load, so order is stable
-  const valuations = TREASURY_WALLETS.map((w) => useWalletValuation(w));
-  const selectedWallet = TREASURY_WALLETS.find((w) => w.address === selected) ?? TREASURY_WALLETS[0];
+  const selectedWallet =
+    TREASURY_WALLETS.find((w) => w.address === selected) ?? TREASURY_WALLETS[0];
 
   return (
     <div className="min-h-screen bg-background">
@@ -41,7 +38,7 @@ const Treasury = () => {
             Treasury Allocation
           </h2>
           <TreasuryPieChart
-            valuations={valuations}
+            wallets={TREASURY_WALLETS}
             selectedAddress={selected}
             onSelect={setSelected}
           />
