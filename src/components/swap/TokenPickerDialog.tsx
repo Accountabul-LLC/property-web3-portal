@@ -70,6 +70,7 @@ export const TokenPickerDialog: React.FC<Props> = ({
   onOpenChange,
   onSelect,
   walletTokens,
+  propertyHoldings = [],
   xrpBalance,
   xrpUsd,
   showXrp = true,
