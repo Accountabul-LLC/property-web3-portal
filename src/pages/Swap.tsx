@@ -219,6 +219,8 @@ const Swap = () => {
       setError('');
       setQuote(null);
       setTxJson(null);
+      setWarnings([]);
+      setInsufficientBalance(false);
 
       if (!activeAddress || !debouncedAmount) return;
       if (!activeWallet || !compliance?.is_trade_enabled) return;
