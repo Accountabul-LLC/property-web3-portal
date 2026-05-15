@@ -140,7 +140,7 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
   });
 
   const allMpts = [
-    ...(data.mpt_issuances || []).map((m) => ({
+    ...(safeData.mpt_issuances || []).map((m) => ({
       id: m.mpt_issuance_id,
       name: m.name || m.ticker || 'Unnamed Token',
       image: m.image,
@@ -148,8 +148,8 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
       amount: m.outstanding_amount || '0',
       label: 'Issued',
     })),
-    ...(data.mpt_holdings || []).map((h) => {
-      const issuance = data.mpt_issuances?.find((i) => i.mpt_issuance_id === h.mpt_issuance_id);
+    ...(safeData.mpt_holdings || []).map((h) => {
+      const issuance = safeData.mpt_issuances?.find((i) => i.mpt_issuance_id === h.mpt_issuance_id);
       return {
         id: h.mpt_issuance_id,
         name: issuance?.name || issuance?.ticker || 'MPT Asset',
@@ -161,7 +161,7 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
     }),
   ];
 
-  const txs = (data.transactions || []).slice(0, 15);
+  const txs = (safeData.transactions || []).slice(0, 15);
 
   return (
     <div className="space-y-6">
@@ -275,11 +275,11 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
             </div>
             <div className="text-right">
               <p className="font-semibold">
-                {fmt(data.xrp_balance ?? 0)} <span className="text-xs text-muted-foreground">XRP</span>
+                {fmt(safeData.xrp_balance ?? 0)} <span className="text-xs text-muted-foreground">XRP</span>
               </p>
               {xrpUsd > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  ≈ {fmtUsd((data.xrp_balance ?? 0) * xrpUsd)}
+                  ≈ {fmtUsd((safeData.xrp_balance ?? 0) * xrpUsd)}
                 </p>
               )}
             </div>
