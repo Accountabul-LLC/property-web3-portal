@@ -20,11 +20,24 @@ export interface TokenPickerToken {
   source?: 'wallet' | 'ledger' | 'xrp';
 }
 
+export interface PropertyPickerOption {
+  property_id: string;
+  symbol: string;
+  title: string;
+  image: string | null;
+  tokens_owned: number;
+  total_tokens: number;
+  ownership_pct: number;
+  per_token_usd: number;
+  holding_usd: number;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (token: TokenPickerToken | { kind: 'xrp' }) => void;
+  onSelect: (token: TokenPickerToken | { kind: 'xrp' } | { kind: 'property'; property: PropertyPickerOption }) => void;
   walletTokens: TokenPickerToken[];
+  propertyHoldings?: PropertyPickerOption[];
   xrpBalance: number;
   xrpUsd: number;
   showXrp?: boolean;
@@ -57,6 +70,7 @@ export const TokenPickerDialog: React.FC<Props> = ({
   onOpenChange,
   onSelect,
   walletTokens,
+  propertyHoldings = [],
   xrpBalance,
   xrpUsd,
   showXrp = true,
@@ -139,6 +153,59 @@ export const TokenPickerDialog: React.FC<Props> = ({
           </div>
         </div>
         <div className="max-h-[420px] overflow-y-auto">
+          {propertyHoldings.length > 0 && (
+            <>
+              <div className="px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Your real estate
+              </div>
+              {propertyHoldings
+                .filter((p) => {
+                  if (!debounced) return true;
+                  const q = debounced.toLowerCase();
+                  return p.title.toLowerCase().includes(q) || p.symbol.toLowerCase().includes(q);
+                })
+                .map((p) => (
+                  <button
+                    key={p.property_id}
+                    onClick={() => {
+                      onSelect({ kind: 'property', property: p });
+                      onOpenChange(false);
+                    }}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-muted/60 transition-colors text-left"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+                      {p.image ? (
+                        <img src={p.image} alt={p.title} className="h-full w-full object-cover" />
+                      ) : (
+                        p.symbol.slice(0, 2)
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">{p.title}</span>
+                        <span className="text-[10px] uppercase tracking-wide text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          Real Estate
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {p.symbol} · {p.ownership_pct.toFixed(2)}% ownership
+                      </div>
+                    </div>
+                    {!hideBalances && (
+                      <div className="text-right text-xs">
+                        <div className="font-medium">
+                          {p.tokens_owned.toLocaleString()} tok
+                        </div>
+                        <div className="text-muted-foreground">
+                          ${p.holding_usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        </div>
+                      </div>
+                    )}
+                  </button>
+                ))}
+              <div className="border-b" />
+            </>
+          )}
           {showXrp && xrpMatchesQuery && (
             <button
               onClick={() => {
