@@ -60,6 +60,7 @@ export const TokenPickerDialog: React.FC<Props> = ({
   xrpBalance,
   xrpUsd,
   showXrp = true,
+  hideBalances = false,
   title = 'Select a token',
 }) => {
   const [query, setQuery] = React.useState('');
