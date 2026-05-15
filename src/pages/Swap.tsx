@@ -113,6 +113,7 @@ const Swap = () => {
   const { data: compliance } = useWalletCompliance(activeAddress);
   const portfolioNetwork = activeNetwork === 'devnet' ? 'testnet' : activeNetwork;
   const { data: portfolio } = useXRPLPortfolio(activeAddress, portfolioNetwork);
+  const { data: propertyHoldings = [] } = usePropertyHoldings(activeAddress);
 
   const [sourceAsset, setSourceAsset] = React.useState<Asset>({ kind: 'xrp' });
   const [destinationKind, setDestinationKind] = React.useState<'xrp' | 'token'>('token');
