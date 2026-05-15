@@ -20,11 +20,24 @@ export interface TokenPickerToken {
   source?: 'wallet' | 'ledger' | 'xrp';
 }
 
+export interface PropertyPickerOption {
+  property_id: string;
+  symbol: string;
+  title: string;
+  image: string | null;
+  tokens_owned: number;
+  total_tokens: number;
+  ownership_pct: number;
+  per_token_usd: number;
+  holding_usd: number;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (token: TokenPickerToken | { kind: 'xrp' }) => void;
+  onSelect: (token: TokenPickerToken | { kind: 'xrp' } | { kind: 'property'; property: PropertyPickerOption }) => void;
   walletTokens: TokenPickerToken[];
+  propertyHoldings?: PropertyPickerOption[];
   xrpBalance: number;
   xrpUsd: number;
   showXrp?: boolean;
