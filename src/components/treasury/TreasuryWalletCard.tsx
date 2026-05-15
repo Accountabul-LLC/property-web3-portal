@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, ExternalLink, Copy, Check, DollarSign, Clock, Coins, FlaskConical, ArrowUpRight, ArrowDownLeft, Building2 } from 'lucide-react';
-import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
+import { useXRPLPortfolio, type XRPLPortfolioData } from '@/hooks/useXRPLPortfolio';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import type { TreasuryWalletConfig } from '@/config/treasuryWallets';
 import { toast } from 'sonner';
