@@ -65,7 +65,9 @@ function formatAddress(addr: string) {
 }
 
 function formatAsset(asset: Asset) {
-  return asset.kind === 'xrp' ? 'XRP' : `${decodeCurrency(asset.currency)} - ${formatAddress(asset.issuer)}`;
+  if (asset.kind === 'xrp') return 'XRP';
+  if (asset.kind === 'property') return `${asset.symbol} (${asset.title})`;
+  return `${decodeCurrency(asset.currency)} - ${formatAddress(asset.issuer)}`;
 }
 
 function formatAmount(value: unknown, asset: Asset) {
@@ -73,14 +75,19 @@ function formatAmount(value: unknown, asset: Asset) {
     if (asset.kind === 'xrp' && /^\d+$/.test(value)) {
       return `${(Number(value) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP`;
     }
-    return asset.kind === 'token'
-      ? `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${decodeCurrency(asset.currency)}`
-      : value;
+    if (asset.kind === 'token') {
+      return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${decodeCurrency(asset.currency)}`;
+    }
+    if (asset.kind === 'property') {
+      return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${asset.symbol}`;
+    }
+    return value;
   }
 
   if (value && typeof value === 'object' && 'value' in value) {
     const obj = value as Record<string, string>;
-    return `${obj.value} ${asset.kind === 'token' ? decodeCurrency(asset.currency) : 'XRP'}`;
+    const sym = asset.kind === 'token' ? decodeCurrency(asset.currency) : asset.kind === 'property' ? asset.symbol : 'XRP';
+    return `${obj.value} ${sym}`;
   }
 
   return '-';
@@ -89,11 +96,14 @@ function formatAmount(value: unknown, asset: Asset) {
 const XRP_LOGO = 'https://cryptologos.cc/logos/xrp-xrp-logo.png';
 
 function assetKey(asset: Asset) {
-  return asset.kind === 'xrp' ? 'xrp' : `${asset.currency}:${asset.issuer}`;
+  if (asset.kind === 'xrp') return 'xrp';
+  if (asset.kind === 'property') return `prop:${asset.property_id}`;
+  return `${asset.currency}:${asset.issuer}`;
 }
 
 function assetSymbol(asset: Asset, meta?: TokenMeta | null) {
   if (asset.kind === 'xrp') return 'XRP';
+  if (asset.kind === 'property') return asset.symbol;
   return meta?.name || decodeCurrency(asset.currency);
 }
 
