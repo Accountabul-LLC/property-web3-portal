@@ -38,7 +38,7 @@ export const TreasuryPieChart = ({ wallets, selectedAddress, onSelect }: Props) 
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-      <div className="h-80 relative">
+      <div className="h-80 relative [&_svg]:outline-none [&_*:focus]:outline-none [&_*]:!outline-none">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
