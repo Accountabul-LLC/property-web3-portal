@@ -28,6 +28,7 @@ interface Props {
   xrpBalance: number;
   xrpUsd: number;
   showXrp?: boolean;
+  hideBalances?: boolean;
   title?: string;
 }
 
