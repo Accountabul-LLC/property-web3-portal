@@ -153,7 +153,7 @@ const Swap = () => {
 
   const getMeta = React.useCallback(
     (asset: Asset): TokenMeta | null => {
-      if (asset.kind === 'xrp') return null;
+      if (asset.kind !== 'token') return null;
       return tokenMap?.get(`${asset.currency}:${asset.issuer}`) || null;
     },
     [tokenMap],
@@ -162,6 +162,7 @@ const Swap = () => {
   const getBalance = React.useCallback(
     (asset: Asset): number => {
       if (asset.kind === 'xrp') return portfolio?.spendable_xrp ?? 0;
+      if (asset.kind === 'property') return asset.tokens_owned;
       const h = portfolio?.token_holdings?.find(
         (t) => t.currency === asset.currency && t.issuer === asset.issuer,
       );
@@ -173,6 +174,7 @@ const Swap = () => {
   const getUsdValue = React.useCallback(
     (asset: Asset, balance: number): number | null => {
       if (asset.kind === 'xrp') return xrpUsd ? balance * xrpUsd : null;
+      if (asset.kind === 'property') return balance * asset.per_token_usd;
       const meta = getMeta(asset);
       if (!meta?.price || !xrpUsd) return null;
       // token meta price is in XRP per token
