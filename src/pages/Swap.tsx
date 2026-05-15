@@ -322,11 +322,31 @@ const Swap = () => {
 
   const handlePickerSelect = (
     side: 'source' | 'destination',
-    selection: TokenPickerToken | { kind: 'xrp' },
+    selection: TokenPickerToken | { kind: 'xrp' } | { kind: 'property'; property: PropertyPickerOption },
   ) => {
     if ('kind' in selection && selection.kind === 'xrp') {
       if (side === 'source') setSourceAsset({ kind: 'xrp' });
       else setDestinationKind('xrp');
+      return;
+    }
+    if ('kind' in selection && selection.kind === 'property') {
+      // Property tokens are only valid as the source (sell) side.
+      if (side === 'source') {
+        const p = selection.property;
+        setSourceAsset({
+          kind: 'property',
+          property_id: p.property_id,
+          symbol: p.symbol,
+          title: p.title,
+          image: p.image,
+          per_token_usd: p.per_token_usd,
+          tokens_owned: p.tokens_owned,
+          total_tokens: p.total_tokens,
+          ownership_pct: p.ownership_pct,
+        });
+      } else {
+        toast.error('Real estate assets can only be sold (send), not received.');
+      }
       return;
     }
     const t = selection as TokenPickerToken;
