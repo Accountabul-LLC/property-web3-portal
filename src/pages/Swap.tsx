@@ -104,7 +104,7 @@ const Swap = () => {
 
   const [sourceAsset, setSourceAsset] = React.useState<Asset>({ kind: 'xrp' });
   const [destinationKind, setDestinationKind] = React.useState<'xrp' | 'token'>('token');
-  const [destinationCurrency, setDestinationCurrency] = React.useState('USD');
+  const [destinationCurrency, setDestinationCurrency] = React.useState('');
   const [destinationIssuer, setDestinationIssuer] = React.useState('');
   const [sourceAmount, setSourceAmount] = React.useState('');
   const [debouncedAmount, setDebouncedAmount] = React.useState('');
