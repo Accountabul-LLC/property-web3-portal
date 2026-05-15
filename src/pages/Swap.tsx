@@ -104,7 +104,7 @@ const Swap = () => {
 
   const [sourceAsset, setSourceAsset] = React.useState<Asset>({ kind: 'xrp' });
   const [destinationKind, setDestinationKind] = React.useState<'xrp' | 'token'>('token');
-  const [destinationCurrency, setDestinationCurrency] = React.useState('USD');
+  const [destinationCurrency, setDestinationCurrency] = React.useState('');
   const [destinationIssuer, setDestinationIssuer] = React.useState('');
   const [sourceAmount, setSourceAmount] = React.useState('');
   const [debouncedAmount, setDebouncedAmount] = React.useState('');
@@ -203,15 +203,9 @@ const Swap = () => {
     return () => clearTimeout(timer);
   }, [sourceAmount]);
 
-  React.useEffect(() => {
-    if (destinationKind === 'token' && !destinationIssuer && portfolio?.token_holdings?.length) {
-      const first = portfolio.token_holdings.find((t) => t.balance > 0) || portfolio.token_holdings[0];
-      if (first) {
-        setDestinationCurrency(first.currency);
-        setDestinationIssuer(first.issuer);
-      }
-    }
-  }, [destinationKind, destinationIssuer, portfolio?.token_holdings]);
+  // Note: destination intentionally starts unselected so the user picks what to swap INTO,
+  // rather than defaulting to a token they already hold (which felt like "swapping into themselves").
+
 
 
   React.useEffect(() => {
@@ -321,8 +315,13 @@ const Swap = () => {
 
   const renderAssetButton = (asset: Asset, onClick: () => void) => {
     const meta = getMeta(asset);
-    const symbol = assetSymbol(asset, meta);
-    const icon = asset.kind === 'xrp' ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png' : meta?.icon || null;
+    const isUnselected = asset.kind === 'token' && (!asset.currency || !asset.issuer);
+    const symbol = isUnselected ? 'Select token' : assetSymbol(asset, meta);
+    const icon = isUnselected
+      ? null
+      : asset.kind === 'xrp'
+        ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png'
+        : meta?.icon || null;
     return (
       <button
         type="button"
@@ -333,7 +332,7 @@ const Swap = () => {
           {icon ? (
             <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
           ) : (
-            symbol.slice(0, 2).toUpperCase()
+            isUnselected ? '?' : symbol.slice(0, 2).toUpperCase()
           )}
         </div>
         <span className="font-semibold text-sm">{symbol}</span>
