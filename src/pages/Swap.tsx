@@ -110,6 +110,8 @@ const Swap = () => {
   const [debouncedAmount, setDebouncedAmount] = React.useState('');
   const [quote, setQuote] = React.useState<SwapQuote | null>(null);
   const [txJson, setTxJson] = React.useState<Record<string, unknown> | null>(null);
+  const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [insufficientBalance, setInsufficientBalance] = React.useState(false);
   const [loadingQuote, setLoadingQuote] = React.useState(false);
   const [signing, setSigning] = React.useState(false);
   const [error, setError] = React.useState('');
