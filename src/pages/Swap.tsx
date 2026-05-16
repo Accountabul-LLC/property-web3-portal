@@ -139,6 +139,8 @@ const Swap = () => {
   const [qrCode, setQrCode] = React.useState('');
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
+  const [trustlineRequired, setTrustlineRequired] = React.useState<{ currency: string; issuer: string } | null>(null);
+  const [sponsoringTrustline, setSponsoringTrustline] = React.useState(false);
 
   const tokenQueries = React.useMemo(() => {
     const list: Array<{ currency: string; issuer: string }> = (portfolio?.token_holdings || []).map(
@@ -250,6 +252,7 @@ const Swap = () => {
       setTxJson(null);
       setWarnings([]);
       setInsufficientBalance(false);
+      setTrustlineRequired(null);
 
       if (!activeAddress || !debouncedAmount) return;
       if (!activeWallet || !compliance?.is_trade_enabled) return;
@@ -344,12 +347,13 @@ const Swap = () => {
         setInsufficientBalance(!!data.insufficient_balance);
       } catch (err: any) {
         let msg = err?.message || 'Unable to build swap quote';
+        let body: any = null;
         // supabase-js wraps non-2xx responses; the real error JSON lives on err.context
         const ctx = err?.context;
         if (ctx && typeof ctx.json === 'function') {
           try {
-            const body = await ctx.json();
-            if (body?.error) msg = body.error;
+            body = await ctx.json();
+            if (body?.error) msg = body.message || body.error;
           } catch {
             try {
               const text = await ctx.text();
@@ -357,7 +361,12 @@ const Swap = () => {
             } catch {}
           }
         }
-        setError(msg);
+        if (body?.error === 'trustline_required' && body.trustline) {
+          setTrustlineRequired({ currency: body.trustline.currency, issuer: body.trustline.issuer });
+          setError('');
+        } else {
+          setError(msg);
+        }
       } finally {
         setLoadingQuote(false);
       }
