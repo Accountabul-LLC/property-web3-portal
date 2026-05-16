@@ -620,8 +620,8 @@ const Swap = () => {
     if (!trustlineRequired || !activeAddress) return;
     setSponsoringTrustline(true);
     setError('');
+    const tokenLabel = decodeCurrency(trustlineRequired.currency);
     try {
-      toast.info('Funding trustline reserve from the Accountabul treasury...');
       const { data, error: invokeError } = await supabase.functions.invoke('xrpl-sponsor-trustline', {
         body: {
           wallet_address: activeAddress,
@@ -631,22 +631,21 @@ const Swap = () => {
         },
       });
       if (invokeError) throw invokeError;
-      if (!data?.success) throw new Error(data?.error || 'Sponsor request failed');
+      if (!data?.success) throw new Error(data?.error || 'Unable to enable token');
 
       if (data.already_trusted) {
-        toast.success(data.sponsored ? 'Trustline added — reserve covered by Accountabul.' : 'Trustline already in place.');
         setTrustlineRequired(null);
         retriggerQuote();
         return;
       }
 
       if (data.requires_signature && data.tx_json) {
-        toast.info('Confirm the trustline in Xaman — Accountabul covers the 0.2 XRP reserve.');
+        toast.info(`Confirm ${tokenLabel} in Xaman to continue`);
         const { data: xData, error: xErr } = await supabase.functions.invoke('xaman-send-payment', {
           body: { tx_json: data.tx_json },
         });
         if (xErr) throw xErr;
-        if (!xData?.success) throw new Error(xData?.error || 'Failed to create Xaman trustline payload');
+        if (!xData?.success) throw new Error(xData?.error || 'Unable to open Xaman');
 
         await new Promise<void>((resolve, reject) => {
           const poll = setInterval(async () => {
@@ -660,28 +659,39 @@ const Swap = () => {
                 resolve();
               } else if (checkData?.cancelled || checkData?.expired) {
                 clearInterval(poll);
-                reject(new Error(checkData.cancelled ? 'Trustline was rejected in Xaman' : 'Trustline signing expired'));
+                reject(new Error(checkData.cancelled ? 'Cancelled in Xaman' : 'Timed out — try again'));
               }
             } catch (pErr: any) {
               clearInterval(poll);
               reject(pErr);
             }
           }, 2000);
-          setTimeout(() => { clearInterval(poll); reject(new Error('Trustline signing timed out')); }, 300000);
+          setTimeout(() => { clearInterval(poll); reject(new Error('Timed out — try again')); }, 300000);
         });
 
-        toast.success('Trustline confirmed — preparing your swap...');
         setTrustlineRequired(null);
         retriggerQuote();
       }
     } catch (err: any) {
-      const msg = err?.message || 'Trustline sponsorship failed';
+      const msg = err?.message || 'Unable to enable token';
       setError(msg);
       toast.error(msg);
     } finally {
       setSponsoringTrustline(false);
     }
   };
+
+  // Auto-fire trustline setup the moment a quote reports it's needed —
+  // user never sees a "sponsor" prompt, it just happens.
+  const autoSponsorRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!trustlineRequired || sponsoringTrustline) return;
+    const key = `${trustlineRequired.currency}:${trustlineRequired.issuer}`;
+    if (autoSponsorRef.current === key) return;
+    autoSponsorRef.current = key;
+    handleSponsorTrustline();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trustlineRequired]);
 
   const handleSwap = async () => {
     if (!quoteReady || !txJson) return;
