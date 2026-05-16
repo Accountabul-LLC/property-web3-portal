@@ -569,18 +569,6 @@ const Swap = () => {
     return meta.price * xrpUsd;
   }, [sourceAsset, getMeta, xrpUsd]);
 
-  const assetSymbol = React.useCallback((asset: SwapAsset): string => {
-    if (asset.kind === 'xrp') return 'XRP';
-    if (asset.kind === 'property') return asset.symbol;
-    const sym = asset.currency;
-    if (sym.length <= 3) return sym;
-    if (!/^[0-9A-F]+$/i.test(sym) || sym.length % 2 !== 0) return sym;
-    try {
-      return (sym.match(/.{1,2}/g) || []).map((p) => String.fromCharCode(parseInt(p, 16))).join('').replace(/\0+$/g, '').trim() || sym;
-    } catch {
-      return sym;
-    }
-  }, []);
 
   const flipAssets = () => {
     if (destAsset.kind === 'xrp' && sourceAsset.kind === 'xrp') return;
