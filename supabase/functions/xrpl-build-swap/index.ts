@@ -222,7 +222,15 @@ Deno.serve(async (req) => {
       const destinationLines = destinationLinesRes?.result?.lines || [];
       const destinationLine = destinationLines.find((line: any) => line.currency === destination_asset.currency && line.account === destination_asset.issuer);
       if (!destinationLine) {
-        return jsonError("You need a trustline for the destination token before swapping into it.");
+        return new Response(JSON.stringify({
+          success: false,
+          error: "trustline_required",
+          message: "You need a trustline for the destination token before swapping into it.",
+          trustline: {
+            currency: destination_asset.currency,
+            issuer: destination_asset.issuer,
+          },
+        }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 

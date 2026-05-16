@@ -139,6 +139,8 @@ const Swap = () => {
   const [qrCode, setQrCode] = React.useState('');
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
+  const [trustlineRequired, setTrustlineRequired] = React.useState<{ currency: string; issuer: string } | null>(null);
+  const [sponsoringTrustline, setSponsoringTrustline] = React.useState(false);
 
   const tokenQueries = React.useMemo(() => {
     const list: Array<{ currency: string; issuer: string }> = (portfolio?.token_holdings || []).map(
@@ -250,6 +252,7 @@ const Swap = () => {
       setTxJson(null);
       setWarnings([]);
       setInsufficientBalance(false);
+      setTrustlineRequired(null);
 
       if (!activeAddress || !debouncedAmount) return;
       if (!activeWallet || !compliance?.is_trade_enabled) return;
@@ -344,12 +347,13 @@ const Swap = () => {
         setInsufficientBalance(!!data.insufficient_balance);
       } catch (err: any) {
         let msg = err?.message || 'Unable to build swap quote';
+        let body: any = null;
         // supabase-js wraps non-2xx responses; the real error JSON lives on err.context
         const ctx = err?.context;
         if (ctx && typeof ctx.json === 'function') {
           try {
-            const body = await ctx.json();
-            if (body?.error) msg = body.error;
+            body = await ctx.json();
+            if (body?.error) msg = body.message || body.error;
           } catch {
             try {
               const text = await ctx.text();
@@ -357,7 +361,12 @@ const Swap = () => {
             } catch {}
           }
         }
-        setError(msg);
+        if (body?.error === 'trustline_required' && body.trustline) {
+          setTrustlineRequired({ currency: body.trustline.currency, issuer: body.trustline.issuer });
+          setError('');
+        } else {
+          setError(msg);
+        }
       } finally {
         setLoadingQuote(false);
       }
@@ -599,6 +608,80 @@ const Swap = () => {
     setSourceAmount('');
   };
 
+
+  const retriggerQuote = () => {
+    // bump debounced amount to force the quote effect to re-run
+    const current = sourceAmount.trim();
+    setDebouncedAmount('');
+    setTimeout(() => setDebouncedAmount(current), 50);
+  };
+
+  const handleSponsorTrustline = async () => {
+    if (!trustlineRequired || !activeAddress) return;
+    setSponsoringTrustline(true);
+    setError('');
+    try {
+      toast.info('Funding trustline reserve from the Accountabul treasury...');
+      const { data, error: invokeError } = await supabase.functions.invoke('xrpl-sponsor-trustline', {
+        body: {
+          wallet_address: activeAddress,
+          currency: trustlineRequired.currency,
+          issuer: trustlineRequired.issuer,
+          network: activeNetwork,
+        },
+      });
+      if (invokeError) throw invokeError;
+      if (!data?.success) throw new Error(data?.error || 'Sponsor request failed');
+
+      if (data.already_trusted) {
+        toast.success(data.sponsored ? 'Trustline added — reserve covered by Accountabul.' : 'Trustline already in place.');
+        setTrustlineRequired(null);
+        retriggerQuote();
+        return;
+      }
+
+      if (data.requires_signature && data.tx_json) {
+        toast.info('Confirm the trustline in Xaman — Accountabul covers the 0.2 XRP reserve.');
+        const { data: xData, error: xErr } = await supabase.functions.invoke('xaman-send-payment', {
+          body: { tx_json: data.tx_json },
+        });
+        if (xErr) throw xErr;
+        if (!xData?.success) throw new Error(xData?.error || 'Failed to create Xaman trustline payload');
+
+        await new Promise<void>((resolve, reject) => {
+          const poll = setInterval(async () => {
+            try {
+              const { data: checkData, error: checkError } = await supabase.functions.invoke('xaman-check-payload', {
+                body: { uuid: xData.uuid },
+              });
+              if (checkError) throw checkError;
+              if (checkData?.signed) {
+                clearInterval(poll);
+                resolve();
+              } else if (checkData?.cancelled || checkData?.expired) {
+                clearInterval(poll);
+                reject(new Error(checkData.cancelled ? 'Trustline was rejected in Xaman' : 'Trustline signing expired'));
+              }
+            } catch (pErr: any) {
+              clearInterval(poll);
+              reject(pErr);
+            }
+          }, 2000);
+          setTimeout(() => { clearInterval(poll); reject(new Error('Trustline signing timed out')); }, 300000);
+        });
+
+        toast.success('Trustline confirmed — preparing your swap...');
+        setTrustlineRequired(null);
+        retriggerQuote();
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Trustline sponsorship failed';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSponsoringTrustline(false);
+    }
+  };
 
   const handleSwap = async () => {
     if (!quoteReady || !txJson) return;
@@ -852,6 +935,30 @@ const Swap = () => {
 
                     {error && !loadingQuote && (
                       <p className="text-sm text-destructive">{error}</p>
+                    )}
+
+                    {trustlineRequired && !loadingQuote && (
+                      <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3">
+                        <div className="flex items-start gap-3">
+                          <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+                          <div className="text-sm">
+                            <p className="font-semibold text-foreground">First-time trade for this token</p>
+                            <p className="text-muted-foreground mt-1">
+                              You need a trustline to receive <span className="font-medium text-foreground">{decodeCurrency(trustlineRequired.currency)}</span>.
+                              Accountabul will cover the 0.2 XRP reserve from the treasury — you just sign the trustline in Xaman, then your swap continues automatically.
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="w-full gap-2"
+                          onClick={handleSponsorTrustline}
+                          disabled={sponsoringTrustline}
+                        >
+                          {sponsoringTrustline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                          {sponsoringTrustline ? 'Setting up trustline...' : 'Set up trustline & continue'}
+                        </Button>
+                      </div>
                     )}
 
                     {warnings.length > 0 && !loadingQuote && (

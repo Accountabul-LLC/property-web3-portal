@@ -1238,6 +1238,51 @@ export type Database = {
           },
         ]
       }
+      trustline_sponsorships: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          currency: string
+          funded_amount_xrp: number
+          funding_tx_hash: string | null
+          id: string
+          issuer: string
+          network: string
+          status: string
+          trustline_tx_hash: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          currency: string
+          funded_amount_xrp?: number
+          funding_tx_hash?: string | null
+          id?: string
+          issuer: string
+          network: string
+          status?: string
+          trustline_tx_hash?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          funded_amount_xrp?: number
+          funding_tx_hash?: string | null
+          id?: string
+          issuer?: string
+          network?: string
+          status?: string
+          trustline_tx_hash?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
