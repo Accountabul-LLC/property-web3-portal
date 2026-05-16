@@ -860,13 +860,27 @@ const Swap = () => {
                       <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">You send</span>
-                          <span className="font-medium text-right">
-                            {sourceAmount || '0'} {assetSymbol(sourceAsset, getMeta(sourceAsset))}
-                          </span>
+                          <div className="text-right">
+                            <div className="font-medium">
+                              {sourceAmount || '0'} {assetSymbol(sourceAsset, getMeta(sourceAsset))}
+                            </div>
+                            {sourceUsdValue !== null && (
+                              <div className="text-xs text-muted-foreground">
+                                ≈ ${sourceUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">You receive</span>
-                          <span className="font-semibold text-right">{formatAmount(quote.quoted_destination_amount, destAsset)}</span>
+                          <div className="text-right">
+                            <div className="font-semibold text-lg">{formatAmount(quote.quoted_destination_amount, destAsset)}</div>
+                            {destUsdValue !== null && (
+                              <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                ≈ ${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD in cash value
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">Source path cost</span>
