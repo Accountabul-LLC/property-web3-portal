@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
             currency: destination_asset.currency,
             issuer: destination_asset.issuer,
           },
-        }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
 
