@@ -350,6 +350,14 @@ const Swap = () => {
         setTxJson(data.tx_json as Record<string, unknown>);
         setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
         setInsufficientBalance(!!data.insufficient_balance);
+        if (data.trustline_required) {
+          setTrustlineRequired({
+            currency: data.trustline_required.currency,
+            issuer: data.trustline_required.issuer,
+          });
+        } else {
+          setTrustlineRequired(null);
+        }
       } catch (err: any) {
         let msg = err?.message || 'Unable to build swap quote';
         let body: any = null;
