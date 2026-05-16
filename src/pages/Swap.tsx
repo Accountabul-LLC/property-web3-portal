@@ -534,6 +534,8 @@ const Swap = () => {
     const amt = Number(sourceAmount);
     if (!amt) return null;
     if (sourceAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    if (sourceAsset.kind === 'property') return amt * sourceAsset.per_token_usd;
+    if (isStablecoin(sourceAsset)) return amt;
     const meta = getMeta(sourceAsset);
     if (!meta?.price || !xrpUsd) return null;
     return amt * meta.price * xrpUsd;
@@ -543,6 +545,7 @@ const Swap = () => {
     const amt = Number(estimatedReceive);
     if (!amt) return null;
     if (destAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    if (isStablecoin(destAsset)) return amt;
     const meta = getMeta(destAsset);
     if (!meta?.price || !xrpUsd) return null;
     return amt * meta.price * xrpUsd;
