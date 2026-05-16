@@ -245,12 +245,24 @@ Deno.serve(async (req) => {
     }]);
 
     if (pathFind.result?.error) {
-      return jsonError(`Path finding failed: ${pathFind.result.error_message || pathFind.result.error}`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: "no_route",
+        message: `Path finding failed: ${pathFind.result.error_message || pathFind.result.error}`,
+        warnings,
+        trustline_required: trustlineMissing,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const alternatives = pathFind.result?.alternatives || [];
     if (alternatives.length === 0) {
-      return jsonError("No swap route found for this pair.");
+      return new Response(JSON.stringify({
+        success: false,
+        error: "no_route",
+        message: "No swap route found for this pair.",
+        warnings,
+        trustline_required: trustlineMissing,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const best = alternatives[0];
