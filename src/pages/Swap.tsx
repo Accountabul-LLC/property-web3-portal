@@ -681,17 +681,10 @@ const Swap = () => {
     }
   };
 
-  // Auto-fire trustline setup the moment a quote reports it's needed —
-  // user never sees a "sponsor" prompt, it just happens.
-  const autoSponsorRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (!trustlineRequired || sponsoringTrustline) return;
-    const key = `${trustlineRequired.currency}:${trustlineRequired.issuer}`;
-    if (autoSponsorRef.current === key) return;
-    autoSponsorRef.current = key;
-    handleSponsorTrustline();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trustlineRequired]);
+  // Trustline is only set up when the user actually commits to swap.
+  // If a swap click finds a missing trustline, we sponsor it, then auto-execute
+  // the swap as soon as the fresh quote arrives.
+  const pendingAutoSwapRef = React.useRef(false);
 
   const handleSwap = async () => {
     if (!quoteReady || !txJson) return;
