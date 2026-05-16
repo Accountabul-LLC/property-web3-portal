@@ -796,8 +796,21 @@ const Swap = () => {
                         />
                         {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
                       </div>
-                      <div className="mt-1 h-4 text-xs text-muted-foreground font-medium">
-                        {destUsdValue !== null && `≈ $${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`}
+                      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          {destUsdValue !== null && `≈ $${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`}
+                        </span>
+                        {destUnitUsd !== null && destAsset.kind !== 'xrp' && !isStablecoin(destAsset) && (
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                            </span>
+                            <span>
+                              Live: <span className="font-semibold text-foreground">${destUnitUsd.toLocaleString(undefined, { maximumFractionDigits: destUnitUsd < 1 ? 6 : 4 })}</span> / {assetSymbol(destAsset, getMeta(destAsset))}
+                            </span>
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
