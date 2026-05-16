@@ -339,6 +339,11 @@ const Swap = () => {
         });
 
         if (invokeError) throw invokeError;
+        if (data?.error === 'trustline_required' && data.trustline) {
+          setTrustlineRequired({ currency: data.trustline.currency, issuer: data.trustline.issuer });
+          setError('');
+          return;
+        }
         if (!data?.success) throw new Error(data?.error || 'Failed to build swap quote');
 
         setQuote(data.quote as SwapQuote);
