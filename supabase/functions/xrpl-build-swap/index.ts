@@ -218,19 +218,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    let trustlineMissing: { currency: string; issuer: string } | null = null;
     if (destination_asset.kind === "token") {
       const destinationLines = destinationLinesRes?.result?.lines || [];
       const destinationLine = destinationLines.find((line: any) => line.currency === destination_asset.currency && line.account === destination_asset.issuer);
       if (!destinationLine) {
-        return new Response(JSON.stringify({
-          success: false,
-          error: "trustline_required",
-          message: "You need a trustline for the destination token before swapping into it.",
-          trustline: {
-            currency: destination_asset.currency,
-            issuer: destination_asset.issuer,
-          },
-        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        trustlineMissing = {
+          currency: destination_asset.currency,
+          issuer: destination_asset.issuer,
+        };
+        warnings.push("You'll need a trustline before this swap can execute.");
       }
     }
 
