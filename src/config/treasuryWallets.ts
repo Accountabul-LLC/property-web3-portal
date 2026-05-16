@@ -82,12 +82,12 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     mockTokens: [abul(358_927.44)],
   },
   {
-    address: 'rTRUSTLINESPONSORWa11etDemoXXXXXXX',
+    address: 'rE7VrsvX9EcH8TbEHK8Upie6gtQZ4tjbek',
     label: 'Trustline Sponsor Wallet',
     network: 'mainnet',
     purpose: 'User trustline subsidies',
     description:
-      'Funds the 0.2 XRP reserve required for new trustlines so members can swap into any IOU token without holding extra XRP. Replenished from the Operating Wallet.',
+      'Covers the 0.2 XRP reserve required for new trustlines so members can swap into any IOU token without holding extra XRP. Replenished from the Operating Wallet.',
     mockUsd: 124_500.00,
     mockTokens: [abul(82_417.55)],
   },
