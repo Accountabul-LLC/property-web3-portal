@@ -975,23 +975,34 @@ const Swap = () => {
 
                     <Button
                       className="w-full h-12 text-base gap-2"
-                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount || insufficientBalance}
+                      disabled={
+                        signing ||
+                        sponsoringTrustline ||
+                        loadingQuote ||
+                        !sourceAmount ||
+                        insufficientBalance ||
+                        (!quoteReady && !trustlineRequired)
+                      }
                       onClick={handleSwap}
                     >
-                      {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
-                      {signing
-                        ? 'Opening Xaman...'
-                        : !sourceAmount
-                          ? 'Enter an amount'
-                          : insufficientBalance
-                            ? 'Insufficient balance'
-                            : !quoteReady
-                              ? 'Quote unavailable'
-                              : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
-                                  estimatedReceive
-                                    ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
-                                    : '...'
-                                } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                      {(signing || sponsoringTrustline) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+                      {sponsoringTrustline
+                        ? 'Preparing swap...'
+                        : signing
+                          ? 'Opening Xaman...'
+                          : !sourceAmount
+                            ? 'Enter an amount'
+                            : insufficientBalance
+                              ? 'Insufficient balance'
+                              : trustlineRequired
+                                ? `Swap for ${decodeCurrency(trustlineRequired.currency)}`
+                                : !quoteReady
+                                  ? 'Quote unavailable'
+                                  : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                      estimatedReceive
+                                        ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                        : '...'
+                                    } ${assetSymbol(destAsset, getMeta(destAsset))}`}
                     </Button>
                   </div>
                 </Card>
