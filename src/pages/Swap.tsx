@@ -344,7 +344,21 @@ const Swap = () => {
           setError('');
           return;
         }
-        if (!data?.success) throw new Error(data?.error || 'Failed to build swap quote');
+        if (!data?.success) {
+          if (data?.error === 'no_route') {
+            setQuote(null);
+            setTxJson(null);
+            if (data.trustline_required) {
+              setTrustlineRequired({
+                currency: data.trustline_required.currency,
+                issuer: data.trustline_required.issuer,
+              });
+            }
+            setError(data.message || 'No swap route found for this pair.');
+            return;
+          }
+          throw new Error(data?.error || 'Failed to build swap quote');
+        }
 
         setQuote(data.quote as SwapQuote);
         setTxJson(data.tx_json as Record<string, unknown>);
