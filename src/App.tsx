@@ -49,6 +49,7 @@ const App = () => (
               <Route path="/ai-agents" element={<AIAgents />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/swap" element={<Swap />} />
+              <Route path="/pools" element={<Pools />} />
               <Route path="/treasury" element={<Treasury />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
               <Route path="/mint" element={<KycGate><Mint /></KycGate>} />
