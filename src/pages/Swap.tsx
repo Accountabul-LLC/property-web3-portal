@@ -948,26 +948,9 @@ const Swap = () => {
                     )}
 
                     {trustlineRequired && !loadingQuote && (
-                      <div className="rounded-lg border border-primary/40 bg-primary/5 p-4 space-y-3">
-                        <div className="flex items-start gap-3">
-                          <Sparkles className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                          <div className="text-sm">
-                            <p className="font-semibold text-foreground">First-time trade for this token</p>
-                            <p className="text-muted-foreground mt-1">
-                              You need a trustline to receive <span className="font-medium text-foreground">{decodeCurrency(trustlineRequired.currency)}</span>.
-                              Accountabul will cover the 0.2 XRP reserve from the treasury — you just sign the trustline in Xaman, then your swap continues automatically.
-                            </p>
-                          </div>
-                        </div>
-                        <Button
-                          size="sm"
-                          className="w-full gap-2"
-                          onClick={handleSponsorTrustline}
-                          disabled={sponsoringTrustline}
-                        >
-                          {sponsoringTrustline ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                          {sponsoringTrustline ? 'Setting up trustline...' : 'Set up trustline & continue'}
-                        </Button>
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Preparing {decodeCurrency(trustlineRequired.currency)}…</span>
                       </div>
                     )}
 
