@@ -55,11 +55,10 @@ const Navigation = () => {
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },
     { path: '/professionals', label: 'Professionals', shortLabel: 'Pros',  icon: Users },
     { path: '/ai-agents',   label: 'AI Agents',    shortLabel: 'Agents',  icon: Bot },
-    { path: '/mint',         label: 'Mint',          icon: Coins },
     { path: '/swap',         label: 'Swap',          icon: ArrowLeftRight },
+    { path: '/pools',        label: 'Liquidity',     shortLabel: 'Pools',  icon: Droplets },
     { path: '/portfolio',    label: 'Portfolio',     icon: Wallet },
     { path: '/treasury',     label: 'Treasury',      icon: Landmark },
-    { path: '/credentials',  label: 'Credentials',   shortLabel: 'Creds',  icon: ShieldCheck },
   ];
 
   const currentPath = location.pathname;
