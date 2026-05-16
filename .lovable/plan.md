@@ -1,72 +1,84 @@
-## Treasury Tracker
+## Goal
 
-A public, no-login transparency page that mirrors the REI treasury wallet live from the XRPL.
+When a user tries to swap into a token they don't yet trust, Accountabul auto-handles the trustline behind the scenes — sponsoring the XRP reserve from a dedicated treasury wallet so the user only pays gas. The sponsor wallet shows up in `/treasury` like every other treasury wallet.
 
-**Tracked wallet (hardcoded):**
-- `rPZdYatVHP4YegTp3qQzkdojCAihb8DmAx` — "REI Wallet" (testnet)
+## XRPL constraints (important context)
 
-Easy to extend later by adding more entries to a single config array.
+A few hard rules from the ledger that shape this design — please read before approving:
 
-### Page layout (`/treasury`)
+1. **A `TrustSet` must be signed by the holder account.** No XRPL transaction lets wallet A create a trustline on wallet B. Since users sign with Xaman (we don't hold their secret on mainnet), they will need to **sign one extra Xaman push** the first time they swap into a new token. There is no way around this on mainnet.
+2. **The 0.2 XRP trustline reserve is locked on the holder's account, not the sponsor's.** Accountabul can't pay it directly — but we *can* send the user ~0.5 XRP from a sponsor wallet first so their account has the reserve + fee headroom to add the trustline. Net cost to the user: ≈ 0 XRP.
+3. **On testnet**, the user's wallet secret is stored server-side (faucet wallets), so we can sign the `TrustSet` automatically — no second Xaman push needed there.
+
+## Flow (mainnet)
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│  Accountabul Treasury                                │
-│  Live, on-chain transparency for our reserves.       │
-├──────────────────────────────────────────────────────┤
-│  ┌──── Total Treasury Value ────┐  Network: Testnet  │
-│  │  $XX,XXX.XX                  │  Updated 12s ago   │
-│  │  REI Wallet · rPZd…8DmAx ↗   │                    │
-│  └──────────────────────────────┘                    │
-├──────────────────────────────────────────────────────┤
-│  Token Holdings                                      │
-│  [logo] XRP        1,234.5  ≈ $XXX                   │
-│  [logo] RLUSD        500.0  ≈ $500                   │
-│  ...                                                 │
-├──────────────────────────────────────────────────────┤
-│  Property / RWA Holdings (MPT)                       │
-│  [img] Coral Reef Property   25 units                │
-│  ...                                                 │
-├──────────────────────────────────────────────────────┤
-│  Recent Activity                                     │
-│  ↗ Sent 100 XRP · 2h ago · view on explorer ↗        │
-│  ↙ Received Coral Reef MPT · 1d ago · ...            │
-└──────────────────────────────────────────────────────┘
+User clicks Swap → backend detects missing trustline
+    │
+    ├─ Sponsor wallet sends 0.5 XRP to user (server-signed, single ledger tx)
+    │
+    ├─ Xaman push #1: TrustSet (user signs)   ← unavoidable on mainnet
+    │
+    └─ Xaman push #2: Payment swap (user signs, existing flow)
 ```
 
-Sections, top to bottom:
-1. **Header** — title, one-line transparency blurb, network badge, "last updated" timestamp.
-2. **Total value card** — big USD number, wallet label + truncated address with copy + Bithomp explorer link.
-3. **Token holdings list** — XRP, IOUs (RLUSD, etc.) with logos, balance, USD value. Sorted by USD descending.
-4. **MPT / property holdings grid** — cards with image, name, units held, issuer link.
-5. **Recent activity** — last ~15 transactions with direction, amount, age, explorer link.
+The UI presents this as a single "Swap" action with a small inline notice: *"First time trading SOLO — we'll cover the trustline reserve. You'll see two signature requests in Xaman."*
 
-Auto-refresh every 30s. Public — no auth required.
+On testnet the middle step is server-signed, so it stays a single Xaman push.
 
-### Navigation
-- Add "Treasury" link to top nav (`Navigation.tsx`), visible to all visitors.
+## Changes
 
-### Technical details
+### 1. New treasury wallet: Trustline Sponsor
 
-**New files:**
-- `src/pages/Treasury.tsx` — public page, wraps `Navigation` + treasury content + `Footer`.
-- `src/components/treasury/TreasuryTracker.tsx` — main view; reads the tracked-wallets config and renders one section per wallet (forward-compatible with multiple).
-- `src/components/treasury/TreasuryHoldingsList.tsx` — token + MPT lists with logos via existing `useTokenMeta` hook.
-- `src/components/treasury/TreasuryActivity.tsx` — recent tx list.
-- `src/config/treasuryWallets.ts` — `[{ address, label, network }]` array, hardcoded with the REI wallet. Single source of truth for adding/removing tracked wallets.
+- Generate a fresh XRPL wallet (mainnet + testnet).
+- Add it to `xrpl_issuer_wallets` so its secret is stored server-side, encrypted, and reusable by edge functions.
+- Add a row to `src/config/treasuryWallets.ts` so it appears in the `/treasury` pie chart and wallet list with label **"Trustline Sponsor Wallet"** and purpose **"User trustline subsidies"**.
+- Seed it with XRP (manual one-time fund from another treasury wallet; the plan will document the address so you can fund it).
 
-**Reused (no changes needed):**
-- `useXRPLPortfolio(address, network)` — already returns balances, MPT issuances/holdings, and transactions. Works for any address; ownership isn't enforced at the data layer.
-- `xrpl-account-data` edge function — already public (no auth required).
-- `useTokenMeta` — token logos / names from XRPL Meta.
-- USD valuation logic from `PortfolioSection` (XRPL Meta + CoinGecko) — extracted into a small shared hook `useTokenUsdValues` if not already shared, otherwise mirrored.
+### 2. New edge function: `xrpl-sponsor-trustline`
 
-**Routing:**
-- Add `<Route path="/treasury" element={<Treasury />} />` in `App.tsx`.
+Input: `{ wallet_address, currency, issuer, network }`
 
-**No backend changes.** No new tables, no migrations, no edge function changes — the tracker is read-only and uses the existing public XRPL data path.
+Behavior:
+- Verify the caller owns `wallet_address` (same auth pattern as `xrpl-build-swap`).
+- Re-check that the trustline really is missing (idempotent — if it already exists, return `{ already_trusted: true }` and do nothing).
+- Load the sponsor wallet secret for the active network from `xrpl_issuer_wallets`.
+- Build + sign + submit a `Payment` of 0.5 XRP from sponsor → user. Wait for validation.
+- Build an unsigned `TrustSet` tx for the user's account with a sane limit (e.g. `999999999999`).
+- **Testnet/devnet:** also sign + submit the `TrustSet` server-side using the user's stored faucet secret, then return `{ already_trusted: true, sponsored: true }`.
+- **Mainnet:** return the unsigned `TrustSet` JSON so the client can push it through Xaman.
+- Log both the funding payment and the trustline action to `wallet_audit_log` with metadata `{ kind: 'trustline_sponsor', currency, issuer, tx_hash }`.
 
-### Out of scope (call out for later)
-- Historical treasury value chart over time (would need a daily snapshot job).
-- Admin-managed wallet list (currently hardcoded as requested).
-- Mainnet wallet (REI is testnet today; flipping later is a one-line config change).
+### 3. Update `xrpl-build-swap`
+
+Replace the hard error at line 225 with a structured response:
+
+```json
+{ "success": false, "error": "trustline_required",
+  "trustline": { "currency": "534F4C4F00…", "issuer": "rsoLo…" } }
+```
+
+Status stays 400 so the existing client error handling still triggers, but the body now carries machine-readable info.
+
+### 4. Wire it into the Swap page
+
+In `src/pages/Swap.tsx`:
+
+- When the build-swap call returns `error: "trustline_required"`, surface a banner under the quote area: *"You'll need a trustline for {SYMBOL}. Accountabul will cover the 0.2 XRP reserve — confirm to continue."* with a primary button **"Set up trustline & swap"**.
+- Clicking it:
+  1. Calls `xrpl-sponsor-trustline`.
+  2. If mainnet, pushes the returned `TrustSet` to Xaman (reuse `xaman-create-payload` / `xaman-check-payload`).
+  3. Once signed/validated, re-runs the existing swap quote → Xaman swap flow automatically.
+- Toast progress at each step ("Funding trustline reserve…", "Confirm trustline in Xaman…", "Confirm swap in Xaman…").
+
+### 5. Treasury surfacing
+
+- `TREASURY_WALLETS` array gets the new sponsor entry with a `mockUsd` placeholder until live balances are wired.
+- No schema change needed — the `/treasury` page already iterates `TREASURY_WALLETS` and pulls live balances from `xrpl-account-data`. The new wallet just appears.
+
+## Open questions before I build
+
+1. **Funding amount per sponsorship** — propose **0.5 XRP** (covers 0.2 reserve + ~0.000012 fee + buffer for a future second trustline). OK or different number?
+2. **Limit value on the `TrustSet`** — propose the XRPL max (`999999999999`) so the user isn't capped. Acceptable, or do you want per-token limits?
+3. **Abuse protection** — should we cap the sponsorship to *N trustlines per wallet per 24h* (e.g. 3) so a bad actor can't drain the sponsor wallet by trust-setting and un-trust-setting? I'd recommend yes, enforced via a small `trustline_sponsorships` table.
+4. **Mainnet sponsor wallet** — do you want me to generate a fresh address now and you fund it after, or will you provide an existing address?
