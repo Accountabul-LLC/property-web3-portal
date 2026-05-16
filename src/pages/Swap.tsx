@@ -560,7 +560,7 @@ const Swap = () => {
     return meta.price * xrpUsd;
   }, [destAsset, getMeta, xrpUsd]);
 
-  const sourceUnitUsd = React.useMemo(() => {
+  const _sourceUnitUsd = React.useMemo(() => {
     if (sourceAsset.kind === 'xrp') return xrpUsd || null;
     if (sourceAsset.kind === 'property') return sourceAsset.per_token_usd;
     if (isStablecoin(sourceAsset)) return 1;
