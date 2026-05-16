@@ -681,19 +681,19 @@ const Swap = () => {
     }
   };
 
-  // Auto-fire trustline setup the moment a quote reports it's needed —
-  // user never sees a "sponsor" prompt, it just happens.
-  const autoSponsorRef = React.useRef<string | null>(null);
-  React.useEffect(() => {
-    if (!trustlineRequired || sponsoringTrustline) return;
-    const key = `${trustlineRequired.currency}:${trustlineRequired.issuer}`;
-    if (autoSponsorRef.current === key) return;
-    autoSponsorRef.current = key;
-    handleSponsorTrustline();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trustlineRequired]);
+  // Trustline is only set up when the user actually commits to swap.
+  // If a swap click finds a missing trustline, we sponsor it, then auto-execute
+  // the swap as soon as the fresh quote arrives.
+  const pendingAutoSwapRef = React.useRef(false);
 
   const handleSwap = async () => {
+    // If the destination requires a trustline, set it up first (only now,
+    // not on token select). Then re-quote and auto-execute the swap.
+    if (trustlineRequired) {
+      pendingAutoSwapRef.current = true;
+      await handleSponsorTrustline();
+      return;
+    }
     if (!quoteReady || !txJson) return;
     setSigning(true);
     setError('');
@@ -757,6 +757,17 @@ const Swap = () => {
       setSigning(false);
     }
   };
+
+  // After a trustline was set up via the Swap click, auto-fire the swap once
+  // the fresh quote arrives — so the user only ever clicks "Swap" once.
+  React.useEffect(() => {
+    if (!pendingAutoSwapRef.current) return;
+    if (trustlineRequired || sponsoringTrustline || loadingQuote) return;
+    if (!quoteReady || !txJson || signing) return;
+    pendingAutoSwapRef.current = false;
+    handleSwap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteReady, txJson, trustlineRequired, sponsoringTrustline, loadingQuote, signing]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -947,12 +958,6 @@ const Swap = () => {
                       <p className="text-sm text-destructive">{error}</p>
                     )}
 
-                    {trustlineRequired && !loadingQuote && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Preparing {decodeCurrency(trustlineRequired.currency)}…</span>
-                      </div>
-                    )}
 
                     {warnings.length > 0 && !loadingQuote && (
                       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
@@ -964,23 +969,34 @@ const Swap = () => {
 
                     <Button
                       className="w-full h-12 text-base gap-2"
-                      disabled={!quoteReady || signing || loadingQuote || !sourceAmount || insufficientBalance}
+                      disabled={
+                        signing ||
+                        sponsoringTrustline ||
+                        loadingQuote ||
+                        !sourceAmount ||
+                        insufficientBalance ||
+                        (!quoteReady && !trustlineRequired)
+                      }
                       onClick={handleSwap}
                     >
-                      {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
-                      {signing
-                        ? 'Opening Xaman...'
-                        : !sourceAmount
-                          ? 'Enter an amount'
-                          : insufficientBalance
-                            ? 'Insufficient balance'
-                            : !quoteReady
-                              ? 'Quote unavailable'
-                              : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
-                                  estimatedReceive
-                                    ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
-                                    : '...'
-                                } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                      {(signing || sponsoringTrustline) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+                      {sponsoringTrustline
+                        ? 'Preparing swap...'
+                        : signing
+                          ? 'Opening Xaman...'
+                          : !sourceAmount
+                            ? 'Enter an amount'
+                            : insufficientBalance
+                              ? 'Insufficient balance'
+                              : trustlineRequired
+                                ? `Swap for ${decodeCurrency(trustlineRequired.currency)}`
+                                : !quoteReady
+                                  ? 'Quote unavailable'
+                                  : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                      estimatedReceive
+                                        ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                        : '...'
+                                    } ${assetSymbol(destAsset, getMeta(destAsset))}`}
                     </Button>
                   </div>
                 </Card>
