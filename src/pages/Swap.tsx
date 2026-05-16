@@ -758,6 +758,17 @@ const Swap = () => {
     }
   };
 
+  // After a trustline was set up via the Swap click, auto-fire the swap once
+  // the fresh quote arrives — so the user only ever clicks "Swap" once.
+  React.useEffect(() => {
+    if (!pendingAutoSwapRef.current) return;
+    if (trustlineRequired || sponsoringTrustline || loadingQuote) return;
+    if (!quoteReady || !txJson || signing) return;
+    pendingAutoSwapRef.current = false;
+    handleSwap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteReady, txJson, trustlineRequired, sponsoringTrustline, loadingQuote, signing]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
