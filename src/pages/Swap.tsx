@@ -551,6 +551,37 @@ const Swap = () => {
     return amt * meta.price * xrpUsd;
   }, [estimatedReceive, destAsset, getMeta, xrpUsd]);
 
+  // Live unit price (USD per 1 token) for the destination asset
+  const destUnitUsd = React.useMemo(() => {
+    if (destAsset.kind === 'xrp') return xrpUsd || null;
+    if (isStablecoin(destAsset)) return 1;
+    const meta = getMeta(destAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return meta.price * xrpUsd;
+  }, [destAsset, getMeta, xrpUsd]);
+
+  const sourceUnitUsd = React.useMemo(() => {
+    if (sourceAsset.kind === 'xrp') return xrpUsd || null;
+    if (sourceAsset.kind === 'property') return sourceAsset.per_token_usd;
+    if (isStablecoin(sourceAsset)) return 1;
+    const meta = getMeta(sourceAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return meta.price * xrpUsd;
+  }, [sourceAsset, getMeta, xrpUsd]);
+
+  const assetSymbol = React.useCallback((asset: SwapAsset): string => {
+    if (asset.kind === 'xrp') return 'XRP';
+    if (asset.kind === 'property') return asset.symbol;
+    const sym = asset.currency;
+    if (sym.length <= 3) return sym;
+    if (!/^[0-9A-F]+$/i.test(sym) || sym.length % 2 !== 0) return sym;
+    try {
+      return (sym.match(/.{1,2}/g) || []).map((p) => String.fromCharCode(parseInt(p, 16))).join('').replace(/\0+$/g, '').trim() || sym;
+    } catch {
+      return sym;
+    }
+  }, []);
+
   const flipAssets = () => {
     if (destAsset.kind === 'xrp' && sourceAsset.kind === 'xrp') return;
     if (sourceAsset.kind === 'property') return; // property only on send-side
