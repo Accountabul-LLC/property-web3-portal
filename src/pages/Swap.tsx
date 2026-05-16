@@ -343,7 +343,21 @@ const Swap = () => {
         setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
         setInsufficientBalance(!!data.insufficient_balance);
       } catch (err: any) {
-        setError(err?.message || 'Unable to build swap quote');
+        let msg = err?.message || 'Unable to build swap quote';
+        // supabase-js wraps non-2xx responses; the real error JSON lives on err.context
+        const ctx = err?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            const body = await ctx.json();
+            if (body?.error) msg = body.error;
+          } catch {
+            try {
+              const text = await ctx.text();
+              if (text) msg = text;
+            } catch {}
+          }
+        }
+        setError(msg);
       } finally {
         setLoadingQuote(false);
       }
