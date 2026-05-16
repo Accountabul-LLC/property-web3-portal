@@ -16,6 +16,7 @@ import Portfolio from "./pages/Portfolio";
 import PropertyDetail from "./pages/PropertyDetail";
 import Mint from "./pages/Mint";
 import Swap from "./pages/Swap";
+import Pools from "./pages/Pools";
 import Treasury from "./pages/Treasury";
 import Kyc from "./pages/Kyc";
 import KycStatus from "./pages/KycStatus";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/ai-agents" element={<AIAgents />} />
               <Route path="/portfolio" element={<Portfolio />} />
               <Route path="/swap" element={<Swap />} />
+              <Route path="/pools" element={<Pools />} />
               <Route path="/treasury" element={<Treasury />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
               <Route path="/mint" element={<KycGate><Mint /></KycGate>} />
