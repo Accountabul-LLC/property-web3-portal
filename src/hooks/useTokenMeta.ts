@@ -62,7 +62,9 @@ export function useTokenMeta(tokens: TokenQuery[] | undefined) {
       return { tokenMap: map, xrpUsd: data.xrp_usd || 0 };
     },
     enabled: Array.isArray(tokens),
-    staleTime: 5 * 60_000,
-    gcTime: 30 * 60_000,
+    staleTime: 8_000,
+    gcTime: 5 * 60_000,
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: false,
   });
 }
