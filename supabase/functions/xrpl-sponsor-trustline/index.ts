@@ -17,7 +17,9 @@ const NODES: Record<string, string> = {
   devnet: "wss://s.devnet.rippletest.net:51233",
 };
 
-const SPONSOR_AMOUNT_XRP = "0.5";
+// Exactly the owner reserve (0.2 XRP) for one TrustLine object + a tiny buffer
+// to cover the user's TrustSet network fee (~12 drops). No extra XRP given.
+const SPONSOR_AMOUNT_XRP = "0.2001";
 const TRUSTLINE_LIMIT = "999999999999";
 const DAILY_LIMIT_PER_WALLET = 3;
 
