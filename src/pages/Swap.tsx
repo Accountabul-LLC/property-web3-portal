@@ -687,6 +687,13 @@ const Swap = () => {
   const pendingAutoSwapRef = React.useRef(false);
 
   const handleSwap = async () => {
+    // If the destination requires a trustline, set it up first (only now,
+    // not on token select). Then re-quote and auto-execute the swap.
+    if (trustlineRequired) {
+      pendingAutoSwapRef.current = true;
+      await handleSponsorTrustline();
+      return;
+    }
     if (!quoteReady || !txJson) return;
     setSigning(true);
     setError('');
