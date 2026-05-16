@@ -958,12 +958,6 @@ const Swap = () => {
                       <p className="text-sm text-destructive">{error}</p>
                     )}
 
-                    {trustlineRequired && !loadingQuote && (
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-2">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Preparing {decodeCurrency(trustlineRequired.currency)}…</span>
-                      </div>
-                    )}
 
                     {warnings.length > 0 && !loadingQuote && (
                       <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
