@@ -426,6 +426,9 @@ export type Database = {
           reviewed_at: string | null
           reviewer_id: string | null
           status: string
+          stripe_last_event_at: string | null
+          stripe_verification_session_id: string | null
+          stripe_verification_status: string | null
           submitted_at: string | null
           updated_at: string
           user_id: string
@@ -438,6 +441,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
+          stripe_last_event_at?: string | null
+          stripe_verification_session_id?: string | null
+          stripe_verification_status?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id: string
@@ -450,6 +456,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
+          stripe_last_event_at?: string | null
+          stripe_verification_session_id?: string | null
+          stripe_verification_status?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id?: string
