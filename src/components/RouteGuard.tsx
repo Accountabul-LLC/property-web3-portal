@@ -3,9 +3,10 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Loader2, ShieldAlert, Lock } from 'lucide-react'
 
 interface RouteGuardProps {
   children: React.ReactNode
@@ -13,6 +14,7 @@ interface RouteGuardProps {
   requiresWallet?: boolean
   credentialKey?: string
   allowedAccountTypes?: string[]
+  adminOnly?: boolean
 }
 
 export function RouteGuard({
