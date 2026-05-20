@@ -1,84 +1,71 @@
 ## Goal
 
-When a user tries to swap into a token they don't yet trust, Accountabul auto-handles the trustline behind the scenes — sponsoring the XRP reserve from a dedicated treasury wallet so the user only pays gas. The sponsor wallet shows up in `/treasury` like every other treasury wallet.
+1. Block public access to **Tokenize, AI Agents, Swap, Liquidity Pools** — visitors can still see them in the hamburger menu, but opening them redirects to `/auth` unless logged in.
+2. Confirm the site is safe to publish: every new sign-up (email or Google) creates an independent account — no one can land in your account.
 
-## XRPL constraints (important context)
+---
 
-A few hard rules from the ledger that shape this design — please read before approving:
+## Part 1 — Lock down the pages
 
-1. **A `TrustSet` must be signed by the holder account.** No XRPL transaction lets wallet A create a trustline on wallet B. Since users sign with Xaman (we don't hold their secret on mainnet), they will need to **sign one extra Xaman push** the first time they swap into a new token. There is no way around this on mainnet.
-2. **The 0.2 XRP trustline reserve is locked on the holder's account, not the sponsor's.** Accountabul can't pay it directly — but we *can* send the user ~0.5 XRP from a sponsor wallet first so their account has the reserve + fee headroom to add the trustline. Net cost to the user: ≈ 0 XRP.
-3. **On testnet**, the user's wallet secret is stored server-side (faucet wallets), so we can sign the `TrustSet` automatically — no second Xaman push needed there.
+We already have a working `RouteGuard` component (`src/components/RouteGuard.tsx`) that handles auth/wallet/credential gating with a loading spinner and a clean redirect to `/auth`. We'll reuse it instead of writing one-off checks in each page.
 
-## Flow (mainnet)
+**Edit `src/App.tsx`** — wrap four routes:
 
-```text
-User clicks Swap → backend detects missing trustline
-    │
-    ├─ Sponsor wallet sends 0.5 XRP to user (server-signed, single ledger tx)
-    │
-    ├─ Xaman push #1: TrustSet (user signs)   ← unavoidable on mainnet
-    │
-    └─ Xaman push #2: Payment swap (user signs, existing flow)
+```tsx
+<Route path="/tokenize" element={
+  <RouteGuard><KycGate><Tokenize /></KycGate></RouteGuard>
+} />
+<Route path="/ai-agents" element={
+  <RouteGuard><AIAgents /></RouteGuard>
+} />
+<Route path="/swap" element={
+  <RouteGuard><Swap /></RouteGuard>
+} />
+<Route path="/pools" element={
+  <RouteGuard><Pools /></RouteGuard>
+} />
 ```
-
-The UI presents this as a single "Swap" action with a small inline notice: *"First time trading SOLO — we'll cover the trustline reserve. You'll see two signature requests in Xaman."*
-
-On testnet the middle step is server-signed, so it stays a single Xaman push.
-
-## Changes
-
-### 1. New treasury wallet: Trustline Sponsor
-
-- Generate a fresh XRPL wallet (mainnet + testnet).
-- Add it to `xrpl_issuer_wallets` so its secret is stored server-side, encrypted, and reusable by edge functions.
-- Add a row to `src/config/treasuryWallets.ts` so it appears in the `/treasury` pie chart and wallet list with label **"Trustline Sponsor Wallet"** and purpose **"User trustline subsidies"**.
-- Seed it with XRP (manual one-time fund from another treasury wallet; the plan will document the address so you can fund it).
-
-### 2. New edge function: `xrpl-sponsor-trustline`
-
-Input: `{ wallet_address, currency, issuer, network }`
 
 Behavior:
-- Verify the caller owns `wallet_address` (same auth pattern as `xrpl-build-swap`).
-- Re-check that the trustline really is missing (idempotent — if it already exists, return `{ already_trusted: true }` and do nothing).
-- Load the sponsor wallet secret for the active network from `xrpl_issuer_wallets`.
-- Build + sign + submit a `Payment` of 0.5 XRP from sponsor → user. Wait for validation.
-- Build an unsigned `TrustSet` tx for the user's account with a sane limit (e.g. `999999999999`).
-- **Testnet/devnet:** also sign + submit the `TrustSet` server-side using the user's stored faucet secret, then return `{ already_trusted: true, sponsored: true }`.
-- **Mainnet:** return the unsigned `TrustSet` JSON so the client can push it through Xaman.
-- Log both the funding payment and the trustline action to `wallet_audit_log` with metadata `{ kind: 'trustline_sponsor', currency, issuer, tx_hash }`.
+- Not logged in → redirected to `/auth`.
+- Logged in → page loads normally (KYC gate still applies on `/tokenize` as today).
+- Menu links remain visible to everyone (no nav changes).
 
-### 3. Update `xrpl-build-swap`
+Notes:
+- `Mint` is already auth-gated inside the page; we can leave it or also wrap it with `RouteGuard` for consistency (recommend wrapping).
+- The inline `useAuth` redirect inside `Tokenize.tsx` becomes redundant once wrapped — can be removed in a small cleanup.
 
-Replace the hard error at line 225 with a structured response:
+---
 
-```json
-{ "success": false, "error": "trustline_required",
-  "trustline": { "currency": "534F4C4F00…", "issuer": "rsoLo…" } }
-```
+## Part 2 — Public-launch auth sanity check
 
-Status stays 400 so the existing client error handling still triggers, but the body now carries machine-readable info.
+Your concern: "if someone signs in through Google, it doesn't sign into my account."
 
-### 4. Wire it into the Swap page
+Good news — this is already handled correctly:
 
-In `src/pages/Swap.tsx`:
+- **Google sign-in** uses Lovable's managed OAuth (`lovable.auth.signInWithOAuth("google", …)` in `src/pages/Auth.tsx`). Each Google account creates its own `auth.users` row keyed by that Google email. There is no shared session — your account is tied to *your* Google email only.
+- **Email/password sign-up** uses `supabase.auth.signUp`, which also creates a fresh `auth.users` row per email.
+- Sessions are stored per-browser in localStorage via the Supabase client. Another person signing in on their own device gets their own JWT; they cannot reach your data.
+- RLS policies on user-owned tables (`profiles`, `user_wallets`, `kyc_cases`, etc.) already scope rows by `auth.uid()`, so even if someone signed in, they only see their own data.
 
-- When the build-swap call returns `error: "trustline_required"`, surface a banner under the quote area: *"You'll need a trustline for {SYMBOL}. Accountabul will cover the 0.2 XRP reserve — confirm to continue."* with a primary button **"Set up trustline & swap"**.
-- Clicking it:
-  1. Calls `xrpl-sponsor-trustline`.
-  2. If mainnet, pushes the returned `TrustSet` to Xaman (reuse `xaman-create-payload` / `xaman-check-payload`).
-  3. Once signed/validated, re-runs the existing swap quote → Xaman swap flow automatically.
-- Toast progress at each step ("Funding trustline reserve…", "Confirm trustline in Xaman…", "Confirm swap in Xaman…").
+**Recommended pre-launch hardening** (small, low-risk):
 
-### 5. Treasury surfacing
+1. **Email confirmation ON** — verify in Cloud → Users → Auth Settings that "Auto-confirm email" is **disabled** so new users must click the verification link before signing in. (Currently the signup flow already shows "Check your email to verify your account," which implies it's off — we'll just confirm.)
+2. **Leaked-password protection (HIBP)** — enable via `configure_auth` so weak/compromised passwords are rejected at sign-up.
+3. **Run the Supabase linter** once to flag any RLS gaps before publish.
 
-- `TREASURY_WALLETS` array gets the new sponsor entry with a `mockUsd` placeholder until live balances are wired.
-- No schema change needed — the `/treasury` page already iterates `TREASURY_WALLETS` and pulls live balances from `xrpl-account-data`. The new wallet just appears.
+These three are quick toggles, not code changes. I'll run them as part of the implementation pass.
 
-## Open questions before I build
+---
 
-1. **Funding amount per sponsorship** — propose **0.5 XRP** (covers 0.2 reserve + ~0.000012 fee + buffer for a future second trustline). OK or different number?
-2. **Limit value on the `TrustSet`** — propose the XRPL max (`999999999999`) so the user isn't capped. Acceptable, or do you want per-token limits?
-3. **Abuse protection** — should we cap the sponsorship to *N trustlines per wallet per 24h* (e.g. 3) so a bad actor can't drain the sponsor wallet by trust-setting and un-trust-setting? I'd recommend yes, enforced via a small `trustline_sponsorships` table.
-4. **Mainnet sponsor wallet** — do you want me to generate a fresh address now and you fund it after, or will you provide an existing address?
+## Files touched
+
+- `src/App.tsx` — wrap 4 (or 5 incl. Mint) routes with `<RouteGuard>`.
+- `src/pages/Tokenize.tsx` *(optional cleanup)* — remove now-redundant inline auth redirect.
+- No DB migrations, no nav changes, no new components.
+
+## Out of scope
+
+- Changing what's visible in the hamburger menu (you explicitly want it to stay visible).
+- Wallet/KYC/credential gating beyond what each page already enforces.
+- Any change to RLS policies (already correct).
