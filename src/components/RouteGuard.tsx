@@ -3,9 +3,10 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Loader2, ShieldAlert } from 'lucide-react'
+import { Loader2, ShieldAlert, Lock } from 'lucide-react'
 
 interface RouteGuardProps {
   children: React.ReactNode
@@ -13,6 +14,7 @@ interface RouteGuardProps {
   requiresWallet?: boolean
   credentialKey?: string
   allowedAccountTypes?: string[]
+  adminOnly?: boolean
 }
 
 export function RouteGuard({
@@ -21,16 +23,18 @@ export function RouteGuard({
   requiresWallet = false,
   credentialKey,
   allowedAccountTypes,
+  adminOnly = false,
 }: RouteGuardProps) {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const { activeAddress, walletsLoading } = useActiveWallet()
+  const { hasAccess: isAdmin, loading: adminLoading } = useTeamAccess()
   const { data: gate, isLoading: gateLoading } = useFeatureGate(
     credentialKey ? activeAddress : null,
     credentialKey ?? null
   )
 
-  if (authLoading || walletsLoading || (credentialKey && gateLoading)) {
+  if (authLoading || walletsLoading || (credentialKey && gateLoading) || (adminOnly && adminLoading)) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -41,6 +45,24 @@ export function RouteGuard({
   if (requiresLogin && !user) {
     return <Navigate to="/auth" replace />
   }
+
+  if (adminOnly && !isAdmin) {
+    return (
+      <div className="max-w-md mx-auto mt-16 px-4">
+        <Card>
+          <CardContent className="pt-6 text-center space-y-4">
+            <Lock className="w-10 h-10 text-muted-foreground mx-auto" />
+            <p className="font-medium">Coming Soon</p>
+            <p className="text-sm text-muted-foreground">
+              This feature isn't available yet. Check back soon.
+            </p>
+            <Button onClick={() => navigate('/dashboard')}>Back to Dashboard</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
 
   if (requiresWallet && !activeAddress) {
     return (

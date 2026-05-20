@@ -45,15 +45,16 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/tokenize" element={<RouteGuard><KycGate><Tokenize /></KycGate></RouteGuard>} />
+              <Route path="/tokenize" element={<RouteGuard adminOnly><KycGate><Tokenize /></KycGate></RouteGuard>} />
               <Route path="/professionals" element={<Professionals />} />
-              <Route path="/ai-agents" element={<RouteGuard><AIAgents /></RouteGuard>} />
+              <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
               <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/swap" element={<RouteGuard><Swap /></RouteGuard>} />
-              <Route path="/pools" element={<RouteGuard><Pools /></RouteGuard>} />
+              <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
+              <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
               <Route path="/treasury" element={<Treasury />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
-              <Route path="/mint" element={<RouteGuard><KycGate><Mint /></KycGate></RouteGuard>} />
+              <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
+
               <Route path="/kyc" element={<Kyc />} />
               <Route path="/kyc/status" element={<KycStatus />} />
               <Route path="/admin" element={<Admin />} />
