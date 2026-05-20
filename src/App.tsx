@@ -27,6 +27,7 @@ import AdminCredentials from "./pages/AdminCredentials";
 import ActionItems from "./pages/ActionItems";
 import Credentials from "./pages/Credentials";
 import KycGate from "./components/KycGate";
+import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,15 +45,15 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/tokenize" element={<KycGate><Tokenize /></KycGate>} />
+              <Route path="/tokenize" element={<RouteGuard><KycGate><Tokenize /></KycGate></RouteGuard>} />
               <Route path="/professionals" element={<Professionals />} />
-              <Route path="/ai-agents" element={<AIAgents />} />
+              <Route path="/ai-agents" element={<RouteGuard><AIAgents /></RouteGuard>} />
               <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/swap" element={<Swap />} />
-              <Route path="/pools" element={<Pools />} />
+              <Route path="/swap" element={<RouteGuard><Swap /></RouteGuard>} />
+              <Route path="/pools" element={<RouteGuard><Pools /></RouteGuard>} />
               <Route path="/treasury" element={<Treasury />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
-              <Route path="/mint" element={<KycGate><Mint /></KycGate>} />
+              <Route path="/mint" element={<RouteGuard><KycGate><Mint /></KycGate></RouteGuard>} />
               <Route path="/kyc" element={<Kyc />} />
               <Route path="/kyc/status" element={<KycStatus />} />
               <Route path="/admin" element={<Admin />} />
