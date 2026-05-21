@@ -39,7 +39,7 @@ src/integrations/supabase/types.ts — auto-generated DB types (never edit)
 
 ## DB Tables (project: bmxcjxtjujhwreduwtvz)
 auth.users + profiles, user_roles (admin|moderator|user), user_wallets
-wallet_profiles, wallet_audit_log
+wallet_audit_log
 properties, property_documents, property_reviews, saved_properties
 portfolio_holdings, portfolio_transactions
 token_mints, token_orders, token_price_history
@@ -63,7 +63,7 @@ ai-debate (this function — streams Claude + GPT)
 - Never call XRPL from browser
 
 ## Gotchas
-- wallet_secret in user_wallets is plaintext (testnet only, security issue C1)
+- testnet wallet seeds are session-only; do not persist them in the database
 - types.ts and components/ui/ are auto-generated — do not edit
 - Lovable auto-commits to GitHub — pull before pushing
 - ai_agents table is empty (marketplace needs seeding)

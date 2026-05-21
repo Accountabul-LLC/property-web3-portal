@@ -13,9 +13,6 @@ Deno.serve(async (req) => {
   try {
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
     if (!xamanApiKey || !xamanApiSecret) {
       throw new Error('Xaman API credentials not configured');
     }
@@ -29,16 +26,20 @@ Deno.serve(async (req) => {
     const senderAddress = tx_json.Account;
     console.log('Creating Xaman payment payload for', senderAddress, '→', tx_json.Destination);
 
-    // Look up the user_token for push notifications
+    // Look up the user_token for push notifications from the canonical wallet table.
     let userToken: string | null = null;
     if (senderAddress) {
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      const { data: profile } = await supabase
-        .from('wallet_profiles')
+      const supabase = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+      );
+      const { data: wallet } = await supabase
+        .from('user_wallets')
         .select('xaman_user_token')
         .eq('wallet_address', senderAddress)
-        .single();
-      userToken = profile?.xaman_user_token || null;
+        .eq('status', 'active')
+        .maybeSingle();
+      userToken = wallet?.xaman_user_token || null;
     }
 
     console.log('User token present:', !!userToken);

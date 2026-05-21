@@ -3,11 +3,10 @@ import { useQueryClient } from '@tanstack/react-query';
 
 const MAINNET_WS = ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com'];
 const TESTNET_WS = ['wss://s.altnet.rippletest.net:51233'];
-const DEVNET_WS = ['wss://s.devnet.rippletest.net:51233'];
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 
-export function useXRPLSubscription(walletAddress: string | null, network: 'mainnet' | 'testnet' | 'devnet' = 'mainnet') {
+export function useXRPLSubscription(walletAddress: string | null, network: 'mainnet' | 'testnet' = 'mainnet') {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempt = useRef(0);
@@ -20,7 +19,7 @@ export function useXRPLSubscription(walletAddress: string | null, network: 'main
     if (!walletAddress) return;
 
     let disposed = false;
-    const endpoints = network === 'devnet' ? DEVNET_WS : network === 'testnet' ? TESTNET_WS : MAINNET_WS;
+    const endpoints = network === 'testnet' ? TESTNET_WS : MAINNET_WS;
 
     const connect = () => {
       if (disposed) return;

@@ -6,7 +6,6 @@ const corsHeaders = {
 };
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
-const DEVNET_NODES = ['https://s.devnet.rippletest.net:51234'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
@@ -121,11 +120,9 @@ Deno.serve(async (req) => {
       throw new Error('This wallet does not support server-side signing');
     }
 
-    const secret = walletRow.wallet_secret;
-
     const { Wallet } = await import('npm:xrpl@3.1.0');
     
-    const wallet = Wallet.fromSeed(secret);
+    const wallet = Wallet.fromSeed(walletRow.wallet_secret);
     console.log('Derived wallet address:', wallet.address);
 
     // Get account info for sequence with failover

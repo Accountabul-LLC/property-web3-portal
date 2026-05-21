@@ -5,8 +5,9 @@
  * A credential is only valid after both CredentialCreate (by issuer) AND
  * CredentialAccept (by subject) have been submitted to XRPL.
  *
- * Testnet wallets (provider = 'testnet_faucet', wallet_secret set):
- *   Auto-signs the CredentialAccept tx and submits.
+ * Testnet wallets:
+ *   Auto-signs the CredentialAccept tx when the browser supplies the
+ *   ephemeral testnet seed for the current session.
  *
  * Mainnet wallets (Xaman):
  *   Creates a Xaman payload for the user to sign in the Xaman app.
@@ -65,7 +66,7 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {

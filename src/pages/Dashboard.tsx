@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
@@ -43,6 +44,7 @@ const Dashboard = () => {
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
+  const { data: savedPropertyIds = [] } = useSavedPropertyIds();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
@@ -633,6 +635,31 @@ const Dashboard = () => {
         <div className="mb-8">
           <WalletHistoryPanel />
         </div>
+
+        {/* Saved Homes */}
+        <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold">
+            {savedPropertyIds.length}
+          </span>
+          Saved Homes
+        </h2>
+
+        <Card className="p-6 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p className="font-medium">Your saved homes list</p>
+              <p className="text-sm text-muted-foreground">
+                Saved properties are available without KYC and stay tied to your account and active wallet.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary">{savedPropertyIds.length} saved</Badge>
+              <Button variant="outline" onClick={() => navigate('/marketplace?tab=saved')}>
+                Open Saved List
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Properties */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

@@ -43,18 +43,26 @@ Deno.serve(async (req) => {
       throw new Error('Xaman API credentials not configured');
     }
 
-    // Authenticate the calling user (optional — wallet connect requires auth)
-    let userId: string | null = null;
     const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } }
-      });
-      const { data: { user } } = await userClient.auth.getUser();
-      if (user) {
-        userId = user.id;
-      }
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user?.id) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const userId = user.id;
 
     console.log('Checking Xaman payload status:', uuid, 'userId:', userId);
 
@@ -109,33 +117,6 @@ Deno.serve(async (req) => {
           signed_at: new Date().toISOString()
         })
         .eq('uuid', uuid);
-
-      // Backward compat: update wallet_profiles
-      const { data: existingProfile } = await supabase
-        .from('wallet_profiles')
-        .select('*')
-        .eq('wallet_address', wallet_address)
-        .single();
-
-      if (!existingProfile) {
-        await supabase
-          .from('wallet_profiles')
-          .insert({
-            wallet_address,
-            created_at: new Date().toISOString(),
-            last_login: new Date().toISOString(),
-            xaman_user_token: userToken,
-            xaman_account_name: account_name,
-          });
-      } else {
-        const updateData: Record<string, unknown> = { last_login: new Date().toISOString() };
-        if (userToken) updateData.xaman_user_token = userToken;
-        if (account_name) updateData.xaman_account_name = account_name;
-        await supabase
-          .from('wallet_profiles')
-          .update(updateData)
-          .eq('wallet_address', wallet_address);
-      }
 
       // SEC-004: Link wallet to user — enforce intended_user_id binding
       if (userId) {

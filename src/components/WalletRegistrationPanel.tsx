@@ -139,7 +139,7 @@ function StepIcon({ status }: { status: StepStatus }) {
 }
 
 export function WalletRegistrationPanel() {
-  const { activeWallet } = useActiveWallet()
+  const { activeWallet, getWalletSecret } = useActiveWallet()
   const { data: compliance, isLoading, refetch } = useWalletCompliance(activeWallet?.address)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
@@ -189,8 +189,10 @@ export function WalletRegistrationPanel() {
     if (!compliance?.credential_id) return
     setActionLoading('credential_accept')
     try {
+      const walletSecret = activeWallet?.address ? getWalletSecret(activeWallet.address) : null
       const result = await callEdgeFunction('credential-accept', {
         credential_id: compliance.credential_id,
+        wallet_secret: walletSecret,
       })
       if (result.ledger_status === 'accepted') {
         toast.success('Credential accepted. Your wallet is now trade-enabled.')

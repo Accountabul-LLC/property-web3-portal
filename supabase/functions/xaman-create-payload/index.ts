@@ -34,17 +34,32 @@ Deno.serve(async (req) => {
       throw new Error('Xaman API credentials not configured');
     }
 
-    // SEC-004: Resolve calling user (if authenticated).
-    // Binding intended_user_id to the payload prevents an attacker from submitting
-    // another user's signed QR response under their own auth token.
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    let intendedUserId: string | null = null;
+    // Require auth so anonymous callers cannot create or persist payload rows.
     const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-      const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-      if (user?.id) intendedUserId = user.id;
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      );
     }
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (!user?.id) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 401,
+        }
+      );
+    }
+
+    // SEC-004: Bind payloads to the signed-in caller.
+    // This prevents an attacker from submitting another user's signed QR response under their own auth token.
+    const intendedUserId = user.id;
 
     const { network } = await req.json().catch(() => ({ network: undefined }));
     const resolvedNetwork = network || 'mainnet';

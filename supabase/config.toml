@@ -7,7 +7,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xaman-check-payload]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-build-payment]
 verify_jwt = false
@@ -25,7 +25,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xrpl-testnet-faucet]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-submit-signed]
 verify_jwt = false
@@ -85,7 +85,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xaman-create-payload]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-account-data]
 verify_jwt = false
@@ -94,7 +94,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.wallet-audit-log]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tokenization-pipeline]
 verify_jwt = false
