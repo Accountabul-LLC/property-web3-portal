@@ -1,0 +1,1 @@
+UPDATE public.wallet_credentials SET ledger_status='accepted', accepted_at=now(), updated_at=now() WHERE wallet_id='b098d899-c3e8-452f-9091-64259518c008';

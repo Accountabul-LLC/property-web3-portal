@@ -1,5 +1,9 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
-import { createCorsHeaders } from '../_shared/cors.ts';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
 const MAX_RETRIES = 2;
@@ -39,11 +43,8 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
 }
 
 Deno.serve(async (req) => {
-  const origin = req.headers.get('Origin');
-  const headers = createCorsHeaders(origin);
-
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers });
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ success: false, error: 'Missing authorization' }), {
-        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid authentication' }), {
-        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     const userId = user.id;
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     const { data: kycStatus, error: kycError } = await supabaseAdmin.rpc('get_kyc_status', { p_user_id: userId });
     if (kycError) {
       return new Response(JSON.stringify({ success: false, error: 'Unable to verify identity status' }), {
-        status: 500, headers: { ...headers, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
     if (kycStatus !== 'approved') {
@@ -86,26 +87,26 @@ Deno.serve(async (req) => {
         error: 'Identity verification required',
         kyc_status: kycStatus,
       }), {
-        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    const { tx_json, wallet_address, network, wallet_secret } = await req.json();
+    const { tx_json, wallet_address, network } = await req.json();
 
-    if (network !== 'testnet') {
-      throw new Error('Server-side signing is only supported on testnet');
+    if (network !== 'testnet' && network !== 'devnet') {
+      throw new Error('Server-side signing is only supported on testnet and devnet');
     }
 
     if (!tx_json || !wallet_address) {
       throw new Error('Missing tx_json or wallet_address');
     }
 
-    const nodes = TESTNET_NODES;
+    const nodes = network === 'devnet' ? DEVNET_NODES : TESTNET_NODES;
 
     // Ownership check: wallet must belong to the authenticated user
     const { data: walletRow, error: walletError } = await supabaseAdmin
       .from('user_wallets')
-      .select('provider')
+      .select('wallet_secret, provider')
       .eq('wallet_address', wallet_address)
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -115,19 +116,13 @@ Deno.serve(async (req) => {
       throw new Error('Wallet not found');
     }
 
-    if (!wallet_secret) {
-      throw new Error('This testnet wallet requires the ephemeral seed from the current browser session');
-    }
-    if (walletRow.provider !== 'testnet_faucet') {
+    if (walletRow.provider !== 'testnet_faucet' || !walletRow.wallet_secret) {
       throw new Error('This wallet does not support server-side signing');
     }
 
     const { Wallet } = await import('npm:xrpl@3.1.0');
     
-    const wallet = Wallet.fromSeed(wallet_secret);
-    if (wallet.address !== wallet_address) {
-      throw new Error('Provided seed does not match the selected wallet');
-    }
+    const wallet = Wallet.fromSeed(walletRow.wallet_secret);
     console.log('Derived wallet address:', wallet.address);
 
     // Get account info for sequence with failover
@@ -169,7 +164,7 @@ Deno.serve(async (req) => {
       engine_result: engineResult,
       engine_result_message: submitData.result?.engine_result_message,
     }), {
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -179,7 +174,7 @@ Deno.serve(async (req) => {
       error: error.message,
     }), {
       status: 500,
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

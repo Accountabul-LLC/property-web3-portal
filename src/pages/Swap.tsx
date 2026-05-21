@@ -6,6 +6,7 @@ import { TradeGuard } from '@/components/TradeGuard';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useWalletCompliance } from '@/hooks/useWalletCompliance';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
+import { useTokenMeta, type TokenMeta } from '@/hooks/useTokenMeta';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -25,10 +26,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { TokenPickerDialog, type TokenPickerToken, type PropertyPickerOption } from '@/components/swap/TokenPickerDialog';
+import { ChevronDown } from 'lucide-react';
+import { usePropertyHoldings, type PropertyHolding } from '@/hooks/usePropertyHoldings';
 
 type Asset =
   | { kind: 'xrp' }
-  | { kind: 'token'; currency: string; issuer: string };
+  | { kind: 'token'; currency: string; issuer: string }
+  | { kind: 'property'; property_id: string; symbol: string; title: string; image: string | null; per_token_usd: number; tokens_owned: number; total_tokens: number; ownership_pct: number };
 
 type SwapQuote = {
   source_asset: Asset;
@@ -60,7 +65,9 @@ function formatAddress(addr: string) {
 }
 
 function formatAsset(asset: Asset) {
-  return asset.kind === 'xrp' ? 'XRP' : `${decodeCurrency(asset.currency)} - ${formatAddress(asset.issuer)}`;
+  if (asset.kind === 'xrp') return 'XRP';
+  if (asset.kind === 'property') return `${asset.symbol} (${asset.title})`;
+  return `${decodeCurrency(asset.currency)} - ${formatAddress(asset.issuer)}`;
 }
 
 function formatAmount(value: unknown, asset: Asset) {
@@ -68,17 +75,43 @@ function formatAmount(value: unknown, asset: Asset) {
     if (asset.kind === 'xrp' && /^\d+$/.test(value)) {
       return `${(Number(value) / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP`;
     }
-    return asset.kind === 'token'
-      ? `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${decodeCurrency(asset.currency)}`
-      : value;
+    if (asset.kind === 'token') {
+      return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${decodeCurrency(asset.currency)}`;
+    }
+    if (asset.kind === 'property') {
+      return `${Number(value).toLocaleString(undefined, { maximumFractionDigits: 6 })} ${asset.symbol}`;
+    }
+    return value;
   }
 
   if (value && typeof value === 'object' && 'value' in value) {
     const obj = value as Record<string, string>;
-    return `${obj.value} ${asset.kind === 'token' ? decodeCurrency(asset.currency) : 'XRP'}`;
+    const sym = asset.kind === 'token' ? decodeCurrency(asset.currency) : asset.kind === 'property' ? asset.symbol : 'XRP';
+    return `${obj.value} ${sym}`;
   }
 
   return '-';
+}
+
+const XRP_LOGO = 'https://cryptologos.cc/logos/xrp-xrp-logo.png';
+
+function assetKey(asset: Asset) {
+  if (asset.kind === 'xrp') return 'xrp';
+  if (asset.kind === 'property') return `prop:${asset.property_id}`;
+  return `${asset.currency}:${asset.issuer}`;
+}
+
+function assetSymbol(asset: Asset, meta?: TokenMeta | null) {
+  if (asset.kind === 'xrp') return 'XRP';
+  if (asset.kind === 'property') return asset.symbol;
+  return meta?.name || decodeCurrency(asset.currency);
+}
+
+const STABLE_SYMBOLS = new Set(['RLUSD', 'USDC', 'USDT', 'USD', 'DAI', 'PYUSD', 'TUSD']);
+function isStablecoin(asset: Asset): boolean {
+  if (asset.kind !== 'token') return false;
+  const sym = decodeCurrency(asset.currency).toUpperCase();
+  return STABLE_SYMBOLS.has(sym);
 }
 
 const Swap = () => {
@@ -87,21 +120,80 @@ const Swap = () => {
   const { data: compliance } = useWalletCompliance(activeAddress);
   const portfolioNetwork = activeNetwork;
   const { data: portfolio } = useXRPLPortfolio(activeAddress, portfolioNetwork);
+  const { data: propertyHoldings = [] } = usePropertyHoldings(activeAddress);
 
   const [sourceAsset, setSourceAsset] = React.useState<Asset>({ kind: 'xrp' });
   const [destinationKind, setDestinationKind] = React.useState<'xrp' | 'token'>('token');
-  const [destinationCurrency, setDestinationCurrency] = React.useState('USD');
+  const [destinationCurrency, setDestinationCurrency] = React.useState('');
   const [destinationIssuer, setDestinationIssuer] = React.useState('');
   const [sourceAmount, setSourceAmount] = React.useState('');
   const [debouncedAmount, setDebouncedAmount] = React.useState('');
   const [quote, setQuote] = React.useState<SwapQuote | null>(null);
   const [txJson, setTxJson] = React.useState<Record<string, unknown> | null>(null);
+  const [warnings, setWarnings] = React.useState<string[]>([]);
+  const [insufficientBalance, setInsufficientBalance] = React.useState(false);
   const [loadingQuote, setLoadingQuote] = React.useState(false);
   const [signing, setSigning] = React.useState(false);
   const [error, setError] = React.useState('');
+  const [pickerOpen, setPickerOpen] = React.useState<null | 'source' | 'destination'>(null);
   const [qrCode, setQrCode] = React.useState('');
   const [payloadUuid, setPayloadUuid] = React.useState('');
   const [txHash, setTxHash] = React.useState('');
+  const [trustlineRequired, setTrustlineRequired] = React.useState<{ currency: string; issuer: string } | null>(null);
+  const [sponsoringTrustline, setSponsoringTrustline] = React.useState(false);
+
+  const tokenQueries = React.useMemo(() => {
+    const list: Array<{ currency: string; issuer: string }> = (portfolio?.token_holdings || []).map(
+      (t) => ({ currency: t.currency, issuer: t.issuer }),
+    );
+    const seen = new Set(list.map((t) => `${t.currency}:${t.issuer}`));
+    if (sourceAsset.kind === 'token' && sourceAsset.currency && sourceAsset.issuer) {
+      const k = `${sourceAsset.currency}:${sourceAsset.issuer}`;
+      if (!seen.has(k)) { list.push({ currency: sourceAsset.currency, issuer: sourceAsset.issuer }); seen.add(k); }
+    }
+    if (destinationKind === 'token' && destinationCurrency && destinationIssuer) {
+      const k = `${destinationCurrency}:${destinationIssuer}`;
+      if (!seen.has(k)) list.push({ currency: destinationCurrency, issuer: destinationIssuer });
+    }
+    return list;
+  }, [portfolio?.token_holdings, sourceAsset, destinationKind, destinationCurrency, destinationIssuer]);
+  const { data: tokenMetaData } = useTokenMeta(tokenQueries);
+  const tokenMap = tokenMetaData?.tokenMap;
+  const xrpUsd = tokenMetaData?.xrpUsd ?? 0;
+
+  const getMeta = React.useCallback(
+    (asset: Asset): TokenMeta | null => {
+      if (asset.kind !== 'token') return null;
+      return tokenMap?.get(`${asset.currency}:${asset.issuer}`) || null;
+    },
+    [tokenMap],
+  );
+
+  const getBalance = React.useCallback(
+    (asset: Asset): number => {
+      if (asset.kind === 'xrp') return portfolio?.spendable_xrp ?? 0;
+      if (asset.kind === 'property') return asset.tokens_owned;
+      const h = portfolio?.token_holdings?.find(
+        (t) => t.currency === asset.currency && t.issuer === asset.issuer,
+      );
+      return h?.balance ?? 0;
+    },
+    [portfolio],
+  );
+
+  const getUsdValue = React.useCallback(
+    (asset: Asset, balance: number): number | null => {
+      if (asset.kind === 'xrp') return xrpUsd ? balance * xrpUsd : null;
+      if (asset.kind === 'property') return balance * asset.per_token_usd;
+      // Treat known stablecoins as 1:1 USD even when the meta API has no price.
+      if (isStablecoin(asset)) return balance;
+      const meta = getMeta(asset);
+      if (!meta?.price || !xrpUsd) return null;
+      // token meta price is in XRP per token
+      return balance * meta.price * xrpUsd;
+    },
+    [getMeta, xrpUsd],
+  );
 
   const sourceOptions = React.useMemo<Asset[]>(() => {
     const holdings = (portfolio?.token_holdings || [])
@@ -114,26 +206,53 @@ const Swap = () => {
     return [{ kind: 'xrp' }, ...holdings];
   }, [portfolio?.token_holdings]);
 
+  const renderAssetRow = (asset: Asset, opts?: { compact?: boolean }) => {
+    const meta = getMeta(asset);
+    const symbol = assetSymbol(asset, meta);
+    const balance = getBalance(asset);
+    const usd = getUsdValue(asset, balance);
+    const icon = asset.kind === 'xrp' ? XRP_LOGO : meta?.icon || null;
+    return (
+      <div className="flex items-center gap-3 w-full min-w-0">
+        <div className="h-7 w-7 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+          {icon ? (
+            <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
+          ) : (
+            symbol.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-medium truncate">{symbol}</div>
+          {!opts?.compact && asset.kind === 'token' && (
+            <div className="text-[11px] text-muted-foreground truncate">{formatAddress(asset.issuer)}</div>
+          )}
+        </div>
+        <div className="text-right text-xs text-muted-foreground flex-shrink-0">
+          <div className="text-foreground font-medium">{balance.toLocaleString(undefined, { maximumFractionDigits: 4 })}</div>
+          {usd !== null && <div>${usd.toLocaleString(undefined, { maximumFractionDigits: 2 })}</div>}
+        </div>
+      </div>
+    );
+  };
+
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedAmount(sourceAmount.trim()), 400);
     return () => clearTimeout(timer);
   }, [sourceAmount]);
 
-  React.useEffect(() => {
-    if (destinationKind === 'token' && !destinationIssuer && portfolio?.token_holdings?.length) {
-      const first = portfolio.token_holdings.find((t) => t.balance > 0) || portfolio.token_holdings[0];
-      if (first) {
-        setDestinationCurrency(first.currency);
-        setDestinationIssuer(first.issuer);
-      }
-    }
-  }, [destinationKind, destinationIssuer, portfolio?.token_holdings]);
+  // Note: destination intentionally starts unselected so the user picks what to swap INTO,
+  // rather than defaulting to a token they already hold (which felt like "swapping into themselves").
+
+
 
   React.useEffect(() => {
     const run = async () => {
       setError('');
       setQuote(null);
       setTxJson(null);
+      setWarnings([]);
+      setInsufficientBalance(false);
+      setTrustlineRequired(null);
 
       if (!activeAddress || !debouncedAmount) return;
       if (!activeWallet || !compliance?.is_trade_enabled) return;
@@ -145,6 +264,61 @@ const Swap = () => {
         sourceAsset.currency.trim().toUpperCase() === destinationCurrency.trim().toUpperCase() &&
         sourceAsset.issuer.trim() === destinationIssuer.trim()
       ) {
+        return;
+      }
+
+      // ── Synthetic quote path for real-estate property tokens ──
+      // Property MPTs don't have on-chain liquidity yet, so we compute a
+      // valuation-based quote client-side using estimated_value / total_tokens.
+      if (sourceAsset.kind === 'property') {
+        const amt = Number(debouncedAmount);
+        if (!Number.isFinite(amt) || amt <= 0) return;
+        if (amt > sourceAsset.tokens_owned) {
+          setInsufficientBalance(true);
+          setWarnings([`You only own ${sourceAsset.tokens_owned} tokens of ${sourceAsset.title}.`]);
+          return;
+        }
+        const sourceUsd = amt * sourceAsset.per_token_usd;
+        const destAssetLocal: Asset = destinationKind === 'xrp'
+          ? { kind: 'xrp' }
+          : { kind: 'token', currency: destinationCurrency.trim().toUpperCase(), issuer: destinationIssuer.trim() };
+
+        // Resolve dest unit price in USD
+        let destUnitUsd = 0;
+        if (destAssetLocal.kind === 'xrp') {
+          destUnitUsd = xrpUsd;
+        } else {
+          const sym = decodeCurrency(destAssetLocal.currency).toUpperCase();
+          if (sym === 'RLUSD' || sym === 'USDC' || sym === 'USDT' || sym === 'USD') {
+            destUnitUsd = 1; // stablecoin assumption
+          } else {
+            const meta = tokenMap?.get(`${destAssetLocal.currency}:${destAssetLocal.issuer}`);
+            destUnitUsd = meta?.price && xrpUsd ? meta.price * xrpUsd : 0;
+          }
+        }
+
+        if (!destUnitUsd) {
+          setError('Unable to price the destination asset for this real-estate quote.');
+          return;
+        }
+
+        const destAmount = sourceUsd / destUnitUsd;
+        const destAmountStr = destAmount.toFixed(6);
+
+        setQuote({
+          source_asset: sourceAsset,
+          destination_asset: destAssetLocal,
+          source_amount: debouncedAmount,
+          quoted_source_amount: debouncedAmount,
+          quoted_destination_amount: destAssetLocal.kind === 'xrp'
+            ? String(Math.floor(destAmount * 1_000_000))
+            : { currency: destAssetLocal.currency, issuer: destAssetLocal.issuer, value: destAmountStr },
+          alternative_count: 1,
+          full_reply: true,
+          validated: true,
+        });
+        setTxJson({ __synthetic: true, kind: 'property_swap', property_id: sourceAsset.property_id });
+        setWarnings([]);
         return;
       }
 
@@ -165,19 +339,68 @@ const Swap = () => {
         });
 
         if (invokeError) throw invokeError;
-        if (!data?.success) throw new Error(data?.error || 'Failed to build swap quote');
+        if (data?.error === 'trustline_required' && data.trustline) {
+          setTrustlineRequired({ currency: data.trustline.currency, issuer: data.trustline.issuer });
+          setError('');
+          return;
+        }
+        if (!data?.success) {
+          if (data?.error === 'no_route') {
+            setQuote(null);
+            setTxJson(null);
+            if (data.trustline_required) {
+              setTrustlineRequired({
+                currency: data.trustline_required.currency,
+                issuer: data.trustline_required.issuer,
+              });
+            }
+            setError(data.message || 'No swap route found for this pair.');
+            return;
+          }
+          throw new Error(data?.error || 'Failed to build swap quote');
+        }
 
         setQuote(data.quote as SwapQuote);
         setTxJson(data.tx_json as Record<string, unknown>);
+        setWarnings(Array.isArray(data.warnings) ? data.warnings : []);
+        setInsufficientBalance(!!data.insufficient_balance);
+        if (data.trustline_required) {
+          setTrustlineRequired({
+            currency: data.trustline_required.currency,
+            issuer: data.trustline_required.issuer,
+          });
+        } else {
+          setTrustlineRequired(null);
+        }
       } catch (err: any) {
-        setError(err?.message || 'Unable to build swap quote');
+        let msg = err?.message || 'Unable to build swap quote';
+        let body: any = null;
+        // supabase-js wraps non-2xx responses; the real error JSON lives on err.context
+        const ctx = err?.context;
+        if (ctx && typeof ctx.json === 'function') {
+          try {
+            body = await ctx.json();
+            if (body?.error) msg = body.message || body.error;
+          } catch {
+            try {
+              const text = await ctx.text();
+              if (text) msg = text;
+            } catch {}
+          }
+        }
+        if (body?.error === 'trustline_required' && body.trustline) {
+          setTrustlineRequired({ currency: body.trustline.currency, issuer: body.trustline.issuer });
+          setError('');
+        } else {
+          setError(msg);
+        }
       } finally {
         setLoadingQuote(false);
       }
     };
 
     run();
-  }, [activeAddress, activeNetwork, debouncedAmount, destinationCurrency, destinationIssuer, destinationKind, sourceAsset]);
+  }, [activeAddress, activeNetwork, debouncedAmount, destinationCurrency, destinationIssuer, destinationKind, sourceAsset, xrpUsd, tokenMap, activeWallet, compliance?.is_trade_enabled]);
 
   const destAsset: Asset = destinationKind === 'xrp'
     ? { kind: 'xrp' }
@@ -187,19 +410,340 @@ const Swap = () => {
   const destinationSameAsSource =
     sourceAsset.kind === 'xrp'
       ? destAsset.kind === 'xrp'
-      : destAsset.kind === 'token' &&
+      : sourceAsset.kind === 'token' && destAsset.kind === 'token' &&
         sourceAsset.currency.trim().toUpperCase() === destAsset.currency.trim().toUpperCase() &&
         sourceAsset.issuer.trim() === destAsset.issuer.trim();
 
   const quoteReady = !!quote && !!txJson && !destinationSameAsSource && !sourceDisabled;
 
+  // Build wallet token list for picker
+  const walletPickerTokens = React.useMemo<TokenPickerToken[]>(() => {
+    return (portfolio?.token_holdings || []).map((h) => {
+      const meta = tokenMap?.get(`${h.currency}:${h.issuer}`);
+      const usd = meta?.price && xrpUsd ? h.balance * meta.price * xrpUsd : null;
+      return {
+        currency: h.currency,
+        issuer: h.issuer,
+        name: meta?.name || null,
+        icon: meta?.icon || null,
+        issuer_name: meta?.issuer_name || null,
+        domain: meta?.domain || null,
+        balance: h.balance,
+        balance_usd: usd,
+      };
+    });
+  }, [portfolio?.token_holdings, tokenMap, xrpUsd]);
+
+  const handlePickerSelect = (
+    side: 'source' | 'destination',
+    selection: TokenPickerToken | { kind: 'xrp' } | { kind: 'property'; property: PropertyPickerOption },
+  ) => {
+    if ('kind' in selection && selection.kind === 'xrp') {
+      if (side === 'source') setSourceAsset({ kind: 'xrp' });
+      else setDestinationKind('xrp');
+      return;
+    }
+    if ('kind' in selection && selection.kind === 'property') {
+      // Property tokens are only valid as the source (sell) side.
+      if (side === 'source') {
+        const p = selection.property;
+        setSourceAsset({
+          kind: 'property',
+          property_id: p.property_id,
+          symbol: p.symbol,
+          title: p.title,
+          image: p.image,
+          per_token_usd: p.per_token_usd,
+          tokens_owned: p.tokens_owned,
+          total_tokens: p.total_tokens,
+          ownership_pct: p.ownership_pct,
+        });
+      } else {
+        toast.error('Real estate assets can only be sold (send), not received.');
+      }
+      return;
+    }
+    const t = selection as TokenPickerToken;
+    if (side === 'source') {
+      setSourceAsset({ kind: 'token', currency: t.currency, issuer: t.issuer });
+    } else {
+      setDestinationKind('token');
+      setDestinationCurrency(t.currency);
+      setDestinationIssuer(t.issuer);
+    }
+  };
+
+  // Build property-style entries from on-chain MPT holdings so they appear in
+  // the picker as wallet assets even when there's no DB-tracked portfolio row.
+  const mptPropertyOptions = React.useMemo<PropertyPickerOption[]>(() => {
+    const issuances = portfolio?.mpt_issuances || [];
+    const holdings = portfolio?.mpt_holdings || [];
+    if (holdings.length === 0) return [];
+
+    const issuanceById = new Map<string, typeof issuances[number]>();
+    issuances.forEach((iss) => {
+      if (iss.mpt_issuance_id) issuanceById.set(iss.mpt_issuance_id, iss);
+    });
+
+    return holdings
+      .map((h): PropertyPickerOption | null => {
+        if (!h.mpt_issuance_id) return null;
+        const iss = issuanceById.get(h.mpt_issuance_id);
+        const tokensOwned = Number(h.amount || 0);
+        if (!Number.isFinite(tokensOwned) || tokensOwned <= 0) return null;
+        const totalTokens = Number(iss?.max_amount || 0) || tokensOwned;
+        const ownershipPct = totalTokens > 0 ? (tokensOwned / totalTokens) * 100 : 0;
+        const title = iss?.name || iss?.collection?.name || `MPT ${h.mpt_issuance_id.slice(0, 8)}`;
+        const symbolBase = iss?.ticker || iss?.name || 'MPT';
+        const symbol = symbolBase.replace(/[^A-Za-z0-9]/g, '').slice(0, 6).toUpperCase() || 'MPT';
+        // Try to derive a per-token price from issuance attributes; fall back to $1.
+        let perTokenUsd = 1;
+        const priceAttr = iss?.attributes?.find((a) =>
+          ['price', 'price_usd', 'token_price', 'unit_price'].includes(String(a.trait_type).toLowerCase()),
+        );
+        if (priceAttr) {
+          const n = Number(priceAttr.value);
+          if (Number.isFinite(n) && n > 0) perTokenUsd = n;
+        }
+        return {
+          property_id: `mpt:${h.mpt_issuance_id}`,
+          symbol,
+          title,
+          image: iss?.image || null,
+          tokens_owned: tokensOwned,
+          total_tokens: totalTokens,
+          ownership_pct: ownershipPct,
+          per_token_usd: perTokenUsd,
+          holding_usd: perTokenUsd * tokensOwned,
+        };
+      })
+      .filter((x): x is PropertyPickerOption => x !== null);
+  }, [portfolio?.mpt_holdings, portfolio?.mpt_issuances]);
+
+  // Merge DB-tracked property holdings with on-chain MPT holdings, dedupe by title.
+  const allPropertyOptions = React.useMemo<PropertyPickerOption[]>(() => {
+    const dbList: PropertyPickerOption[] = propertyHoldings.map((p) => ({
+      property_id: p.property_id,
+      symbol: p.symbol,
+      title: p.title,
+      image: p.image,
+      tokens_owned: p.tokens_owned,
+      total_tokens: p.total_tokens,
+      ownership_pct: p.ownership_pct,
+      per_token_usd: p.per_token_usd,
+      holding_usd: p.holding_usd,
+    }));
+    const seen = new Set(dbList.map((p) => p.title.toLowerCase().trim()));
+    const mptExtras = mptPropertyOptions.filter((p) => !seen.has(p.title.toLowerCase().trim()));
+    return [...dbList, ...mptExtras];
+  }, [propertyHoldings, mptPropertyOptions]);
+
+  const renderAssetButton = (asset: Asset, onClick: () => void) => {
+    const meta = getMeta(asset);
+    const isUnselected = asset.kind === 'token' && (!asset.currency || !asset.issuer);
+    const symbol = isUnselected ? 'Select token' : assetSymbol(asset, meta);
+    const icon = isUnselected
+      ? null
+      : asset.kind === 'xrp'
+        ? 'https://cryptologos.cc/logos/xrp-xrp-logo.png'
+        : asset.kind === 'property'
+          ? asset.image
+          : meta?.icon || null;
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="flex items-center gap-2 bg-background hover:bg-muted/80 border border-border rounded-full pl-1.5 pr-3 py-1.5 transition-colors shadow-sm"
+      >
+        <div className="h-7 w-7 rounded-full bg-muted overflow-hidden flex-shrink-0 flex items-center justify-center text-[10px] font-semibold text-muted-foreground">
+          {icon ? (
+            <img src={icon} alt={symbol} className="h-full w-full object-cover" onError={(e) => ((e.currentTarget.style.display = 'none'))} />
+          ) : (
+            isUnselected ? '?' : symbol.slice(0, 2).toUpperCase()
+          )}
+        </div>
+        <span className="font-semibold text-sm">{symbol}</span>
+        <ChevronDown className="w-4 h-4 text-muted-foreground" />
+      </button>
+    );
+  };
+
+  // Estimated destination amount as a number (for display in receive box)
+  const estimatedReceive = React.useMemo(() => {
+    if (!quote) return '';
+    const v = quote.quoted_destination_amount;
+    if (typeof v === 'string') {
+      if (destAsset.kind === 'xrp' && /^\d+$/.test(v)) return (Number(v) / 1_000_000).toString();
+      return v;
+    }
+    if (v && typeof v === 'object' && 'value' in v) return String((v as Record<string, string>).value);
+    return '';
+  }, [quote, destAsset]);
+
+  const sourceUsdValue = React.useMemo(() => {
+    const amt = Number(sourceAmount);
+    if (!amt) return null;
+    if (sourceAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    if (sourceAsset.kind === 'property') return amt * sourceAsset.per_token_usd;
+    if (isStablecoin(sourceAsset)) return amt;
+    const meta = getMeta(sourceAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return amt * meta.price * xrpUsd;
+  }, [sourceAmount, sourceAsset, getMeta, xrpUsd]);
+
+  const destUsdValue = React.useMemo(() => {
+    const amt = Number(estimatedReceive);
+    if (!amt) return null;
+    if (destAsset.kind === 'xrp') return xrpUsd ? amt * xrpUsd : null;
+    if (isStablecoin(destAsset)) return amt;
+    const meta = getMeta(destAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return amt * meta.price * xrpUsd;
+  }, [estimatedReceive, destAsset, getMeta, xrpUsd]);
+
+  // Live unit price (USD per 1 token) for the destination asset
+  const destUnitUsd = React.useMemo(() => {
+    if (destAsset.kind === 'xrp') return xrpUsd || null;
+    if (isStablecoin(destAsset)) return 1;
+    const meta = getMeta(destAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return meta.price * xrpUsd;
+  }, [destAsset, getMeta, xrpUsd]);
+
+  const _sourceUnitUsd = React.useMemo(() => {
+    if (sourceAsset.kind === 'xrp') return xrpUsd || null;
+    if (sourceAsset.kind === 'property') return sourceAsset.per_token_usd;
+    if (isStablecoin(sourceAsset)) return 1;
+    const meta = getMeta(sourceAsset);
+    if (!meta?.price || !xrpUsd) return null;
+    return meta.price * xrpUsd;
+  }, [sourceAsset, getMeta, xrpUsd]);
+
+
+  const flipAssets = () => {
+    if (destAsset.kind === 'xrp' && sourceAsset.kind === 'xrp') return;
+    if (sourceAsset.kind === 'property') return; // property only on send-side
+    const newSource = destAsset;
+    if (sourceAsset.kind === 'xrp') {
+      setDestinationKind('xrp');
+    } else if (sourceAsset.kind === 'token') {
+      setDestinationKind('token');
+      setDestinationCurrency(sourceAsset.currency);
+      setDestinationIssuer(sourceAsset.issuer);
+    }
+    setSourceAsset(newSource);
+    setSourceAmount('');
+  };
+
+
+  const retriggerQuote = () => {
+    // bump debounced amount to force the quote effect to re-run
+    const current = sourceAmount.trim();
+    setDebouncedAmount('');
+    setTimeout(() => setDebouncedAmount(current), 50);
+  };
+
+  const handleSponsorTrustline = async () => {
+    if (!trustlineRequired || !activeAddress) return;
+    setSponsoringTrustline(true);
+    setError('');
+    const tokenLabel = decodeCurrency(trustlineRequired.currency);
+    try {
+      const { data, error: invokeError } = await supabase.functions.invoke('xrpl-sponsor-trustline', {
+        body: {
+          wallet_address: activeAddress,
+          currency: trustlineRequired.currency,
+          issuer: trustlineRequired.issuer,
+          network: activeNetwork,
+        },
+      });
+      if (invokeError) throw invokeError;
+      if (!data?.success) throw new Error(data?.error || 'Unable to enable token');
+
+      if (data.already_trusted) {
+        setTrustlineRequired(null);
+        retriggerQuote();
+        return;
+      }
+
+      if (data.requires_signature && data.tx_json) {
+        toast.info(`Confirm ${tokenLabel} in Xaman to continue`);
+        const { data: xData, error: xErr } = await supabase.functions.invoke('xaman-send-payment', {
+          body: { tx_json: data.tx_json },
+        });
+        if (xErr) throw xErr;
+        if (!xData?.success) throw new Error(xData?.error || 'Unable to open Xaman');
+
+        await new Promise<void>((resolve, reject) => {
+          const poll = setInterval(async () => {
+            try {
+              const { data: checkData, error: checkError } = await supabase.functions.invoke('xaman-check-payload', {
+                body: { uuid: xData.uuid },
+              });
+              if (checkError) throw checkError;
+              if (checkData?.signed) {
+                clearInterval(poll);
+                resolve();
+              } else if (checkData?.cancelled || checkData?.expired) {
+                clearInterval(poll);
+                reject(new Error(checkData.cancelled ? 'Cancelled in Xaman' : 'Timed out — try again'));
+              }
+            } catch (pErr: any) {
+              clearInterval(poll);
+              reject(pErr);
+            }
+          }, 2000);
+          setTimeout(() => { clearInterval(poll); reject(new Error('Timed out — try again')); }, 300000);
+        });
+
+        setTrustlineRequired(null);
+        retriggerQuote();
+      }
+    } catch (err: any) {
+      const msg = err?.message || 'Unable to enable token';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSponsoringTrustline(false);
+    }
+  };
+
+  // Trustline is only set up when the user actually commits to swap.
+  // If a swap click finds a missing trustline, we sponsor it, then auto-execute
+  // the swap as soon as the fresh quote arrives.
+  const pendingAutoSwapRef = React.useRef(false);
+
   const handleSwap = async () => {
+    // If the destination requires a trustline, set it up first (only now,
+    // not on token select). Then re-quote and auto-execute the swap.
+    if (trustlineRequired) {
+      pendingAutoSwapRef.current = true;
+      await handleSponsorTrustline();
+      return;
+    }
     if (!quoteReady || !txJson) return;
     setSigning(true);
     setError('');
     setPayloadUuid('');
     setQrCode('');
     setTxHash('');
+
+    // Synthetic property swap — simulate execution for demo purposes.
+    if ((txJson as any).__synthetic && sourceAsset.kind === 'property') {
+      try {
+        await new Promise((r) => setTimeout(r, 1200));
+        const fakeHash = 'DEMO' + Math.random().toString(16).slice(2, 10).toUpperCase().padEnd(60, '0');
+        setTxHash(fakeHash);
+        toast.success(
+          `Simulated: sold ${sourceAmount} ${sourceAsset.symbol} for ${
+            estimatedReceive ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'
+          } ${assetSymbol(destAsset, getMeta(destAsset))}`,
+        );
+      } finally {
+        setSigning(false);
+      }
+      return;
+    }
 
     try {
       const { data, error } = await supabase.functions.invoke('xaman-send-payment', {
@@ -241,40 +785,39 @@ const Swap = () => {
     }
   };
 
+  // After a trustline was set up via the Swap click, auto-fire the swap once
+  // the fresh quote arrives — so the user only ever clicks "Swap" once.
+  React.useEffect(() => {
+    if (!pendingAutoSwapRef.current) return;
+    if (trustlineRequired || sponsoringTrustline || loadingQuote) return;
+    if (!quoteReady || !txJson || signing) return;
+    pendingAutoSwapRef.current = false;
+    handleSwap();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteReady, txJson, trustlineRequired, sponsoringTrustline, loadingQuote, signing]);
+
   return (
     <div className="min-h-screen bg-background">
       <Navigation />
 
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.20),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(168,85,247,0.14),_transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent)] pointer-events-none" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 relative">
-          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-8">
-            <div className="max-w-2xl">
-              <Badge variant="outline" className="mb-4 gap-2 px-3 py-1">
-                <Sparkles className="w-3.5 h-3.5" />
-                XRPL Swap Engine
-              </Badge>
-              <h1 className="text-4xl sm:text-5xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
-                Route swaps through the XRPL DEX and AMM.
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5 relative">
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 mb-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-primary bg-clip-text text-transparent">
+                Exchange crypto on XRPL
               </h1>
-              <p className="mt-4 text-muted-foreground text-base sm:text-lg">
-                Live pathfinding quotes, wallet-aware balances, and Xaman signing. The swap is built as a self-payment on the XRP Ledger, so you get native routing without smart contracts.
+              <p className="mt-1 text-muted-foreground text-xs sm:text-sm">
+                Swap your crypto assets here.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:max-w-lg">
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Wallet</div>
-                <div className="mt-1 font-medium truncate">{activeWallet ? activeWallet.label : 'Not connected'}</div>
-              </Card>
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Network</div>
-                <div className="mt-1 font-medium capitalize">{activeNetwork}</div>
-              </Card>
-              <Card className="p-4 bg-card/70 backdrop-blur">
-                <div className="text-xs text-muted-foreground">Trade access</div>
-                <div className="mt-1 font-medium">{compliance?.is_trade_enabled ? 'Enabled' : 'Locked'}</div>
-              </Card>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="px-2 py-1 rounded-md bg-muted/60 capitalize">{activeNetwork}</span>
+              <span className="px-2 py-1 rounded-md bg-muted/60 truncate max-w-[140px]">{activeWallet ? activeWallet.label : 'No wallet'}</span>
+              <span className={`px-2 py-1 rounded-md ${compliance?.is_trade_enabled ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400'}`}>
+                {compliance?.is_trade_enabled ? 'Trade enabled' : 'Trade locked'}
+              </span>
             </div>
           </div>
 
@@ -311,13 +854,13 @@ const Swap = () => {
             >
               <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 items-start">
                 <Card className="p-6 shadow-lg">
-                  <div className="flex items-center justify-between gap-4 mb-6">
+                  <div className="flex items-center justify-between gap-4 mb-5">
                     <div>
-                      <h2 className="text-2xl font-semibold">Build swap quote</h2>
-                      <p className="text-sm text-muted-foreground mt-1">Choose the asset you pay and the asset you want back.</p>
+                      <h2 className="text-2xl font-semibold">Exchange crypto</h2>
+                      <p className="text-sm text-muted-foreground mt-1">Send one asset, receive another. Routed through XRPL.</p>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
                         setSourceAmount('');
@@ -331,135 +874,173 @@ const Swap = () => {
                     </Button>
                   </div>
 
-                  <div className="space-y-5">
-                    <div className="space-y-2">
-                      <Label>Pay with</Label>
-                      <Select
-                        value={sourceAsset.kind === 'xrp' ? 'xrp' : `${sourceAsset.currency}:${sourceAsset.issuer}`}
-                        onValueChange={(value) => {
-                          if (value === 'xrp') {
-                            setSourceAsset({ kind: 'xrp' });
-                            return;
-                          }
-                          const [currency, issuer] = value.split(':');
-                          setSourceAsset({ kind: 'token', currency, issuer });
-                        }}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose source asset" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="xrp">XRP</SelectItem>
-                          {sourceOptions
-                            .filter((asset): asset is Extract<Asset, { kind: 'token' }> => asset.kind === 'token')
-                            .map((asset) => (
-                              <SelectItem key={`${asset.currency}:${asset.issuer}`} value={`${asset.currency}:${asset.issuer}`}>
-                                {formatAsset(asset)}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                      {sourceAsset.kind === 'token' && (
-                        <p className="text-xs text-muted-foreground">Using your wallet balance for this trustline.</p>
-                      )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-3 items-end">
-                      <div className="space-y-2">
-                        <Label htmlFor="source-amount">Amount in</Label>
+                  <div className="relative space-y-1">
+                    {/* You send */}
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground font-medium">You send</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const bal = getBalance(sourceAsset);
+                            if (bal > 0) setSourceAmount(String(bal));
+                          }}
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
+                        >
+                          Balance: {getBalance(sourceAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                          <span className="ml-1.5 text-primary font-medium">MAX</span>
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-3">
                         <Input
-                          id="source-amount"
                           type="number"
                           min="0"
                           step="any"
                           placeholder="0.00"
                           value={sourceAmount}
                           onChange={(e) => setSourceAmount(e.target.value)}
+                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                         />
+                        {renderAssetButton(sourceAsset, () => setPickerOpen('source'))}
                       </div>
-                      <div className="flex justify-center md:pb-1">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <ArrowUpDown className="w-4 h-4" />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Receive as</Label>
-                        <Select value={destinationKind} onValueChange={(v) => setDestinationKind(v as 'xrp' | 'token')}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="token">Token</SelectItem>
-                            <SelectItem value="xrp">XRP</SelectItem>
-                          </SelectContent>
-                        </Select>
+                      <div className="mt-1 h-4 text-xs text-muted-foreground font-medium">
+                        {sourceUsdValue !== null && `≈ $${sourceUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`}
                       </div>
                     </div>
 
-                    {destinationKind === 'token' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="dest-currency">Destination currency</Label>
-                          <Input
-                            id="dest-currency"
-                            value={destinationCurrency}
-                            onChange={(e) => setDestinationCurrency(e.target.value.toUpperCase())}
-                            placeholder="USD"
-                            maxLength={40}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dest-issuer">Destination issuer</Label>
-                          <Input
-                            id="dest-issuer"
-                            value={destinationIssuer}
-                            onChange={(e) => setDestinationIssuer(e.target.value.trim())}
-                            placeholder="r..."
-                            className="font-mono text-sm"
-                          />
-                        </div>
+                    {/* Flip button */}
+                    <div className="flex justify-center -my-2 relative z-10">
+                      <button
+                        type="button"
+                        onClick={flipAssets}
+                        className="h-9 w-9 rounded-xl bg-background border-4 border-card hover:bg-muted transition-colors flex items-center justify-center shadow"
+                        aria-label="Flip assets"
+                      >
+                        <ArrowUpDown className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* You receive */}
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-muted-foreground font-medium">You receive</span>
+                        <span className="text-xs text-muted-foreground">
+                          Balance: {getBalance(destAsset).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                        </span>
                       </div>
-                    )}
+                      <div className="flex items-center gap-3">
+                        <Input
+                          readOnly
+                          placeholder="0.00"
+                          value={
+                            estimatedReceive
+                              ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 6 })
+                              : ''
+                          }
+                          className="border-0 bg-transparent text-5xl font-semibold p-0 h-auto shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 text-muted-foreground"
+                        />
+                        {renderAssetButton(destAsset, () => setPickerOpen('destination'))}
+                      </div>
+                      <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground font-medium">
+                          {destUsdValue !== null && `≈ $${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD`}
+                        </span>
+                        {destUnitUsd !== null && destAsset.kind !== 'xrp' && !isStablecoin(destAsset) && (
+                          <span className="flex items-center gap-1.5 text-muted-foreground">
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75" />
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                            </span>
+                            <span>
+                              Live: <span className="font-semibold text-foreground">${destUnitUsd.toLocaleString(undefined, { maximumFractionDigits: destUnitUsd < 1 ? 6 : 4 })}</span> / {assetSymbol(destAsset, getMeta(destAsset))}
+                            </span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
+                  <div className="space-y-3 mt-5">
                     {sourceDisabled ? (
-                      <Card className="p-4 border-dashed bg-muted/30">
-                        <div className="flex items-start gap-3">
-                          <ShieldAlert className="w-5 h-5 text-amber-600 mt-0.5" />
-                          <div>
-                            <p className="font-medium">Trading is not enabled for this wallet</p>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              The page can still show the UI, but quotes and signing are blocked until compliance is complete.
-                            </p>
-                          </div>
-                        </div>
-                      </Card>
+                      <div className="rounded-lg border border-dashed bg-muted/30 p-3 flex items-start gap-3">
+                        <ShieldAlert className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-muted-foreground">
+                          Trading is not enabled for this wallet. Complete compliance to send a swap.
+                        </p>
+                      </div>
                     ) : null}
 
-                    {destinationSameAsSource ? (
-                      <p className="text-sm text-destructive">Pick a different destination asset.</p>
-                    ) : null}
+                    {destinationSameAsSource && (
+                      <p className="text-sm text-destructive">Pick a different asset to receive.</p>
+                    )}
 
                     {loadingQuote && (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Building live quote...
+                        Finding the best route...
                       </div>
                     )}
 
                     {error && !loadingQuote && (
                       <p className="text-sm text-destructive">{error}</p>
                     )}
+
+
+                    {warnings.length > 0 && !loadingQuote && (
+                      <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-1">
+                        {warnings.map((w, i) => (
+                          <p key={i} className="text-xs text-amber-700 dark:text-amber-300">{w}</p>
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      className="w-full h-12 text-base gap-2"
+                      disabled={
+                        signing ||
+                        sponsoringTrustline ||
+                        loadingQuote ||
+                        !sourceAmount ||
+                        insufficientBalance ||
+                        (!quoteReady && !trustlineRequired)
+                      }
+                      onClick={handleSwap}
+                    >
+                      {(signing || sponsoringTrustline) ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
+                      {sponsoringTrustline
+                        ? 'Preparing swap...'
+                        : signing
+                          ? 'Opening Xaman...'
+                          : !sourceAmount
+                            ? 'Enter an amount'
+                            : insufficientBalance
+                              ? 'Insufficient balance'
+                              : trustlineRequired
+                                ? `Swap for ${decodeCurrency(trustlineRequired.currency)}`
+                                : !quoteReady
+                                  ? 'Quote unavailable'
+                                  : `Send ${sourceAmount} ${assetSymbol(sourceAsset, getMeta(sourceAsset))} for ${
+                                      estimatedReceive
+                                        ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 })
+                                        : '...'
+                                    } ${assetSymbol(destAsset, getMeta(destAsset))}`}
+                    </Button>
                   </div>
                 </Card>
 
+
                 <Card className="p-6 border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 shadow-lg">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <Coins className="w-4 h-4" />
+                    <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                      <img
+                        src="/lovable-uploads/96df3864-7d22-4373-883e-b2a5cb11778d.png"
+                        alt="Accountabul"
+                        className="w-6 h-6 object-contain"
+                      />
                     </div>
                     <div>
                       <h3 className="font-semibold">Quote preview</h3>
-                      <p className="text-xs text-muted-foreground">Powered by `ripple_path_find`.</p>
+                      <p className="text-xs text-muted-foreground">Powered by Accountabul.</p>
                     </div>
                   </div>
 
@@ -468,13 +1049,27 @@ const Swap = () => {
                       <div className="rounded-xl border border-border/70 bg-background/60 p-4 space-y-3">
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">You send</span>
-                          <span className="font-medium text-right">
-                            {sourceAmount || '0'} {sourceAsset.kind === 'xrp' ? 'XRP' : decodeCurrency(sourceAsset.currency)}
-                          </span>
+                          <div className="text-right">
+                            <div className="font-medium">
+                              {sourceAmount || '0'} {assetSymbol(sourceAsset, getMeta(sourceAsset))}
+                            </div>
+                            {sourceUsdValue !== null && (
+                              <div className="text-xs text-muted-foreground">
+                                ≈ ${sourceUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">You receive</span>
-                          <span className="font-semibold text-right">{formatAmount(quote.quoted_destination_amount, destAsset)}</span>
+                          <div className="text-right">
+                            <div className="font-semibold text-lg">{formatAmount(quote.quoted_destination_amount, destAsset)}</div>
+                            {destUsdValue !== null && (
+                              <div className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                                ≈ ${destUsdValue.toLocaleString(undefined, { maximumFractionDigits: 2 })} USD in cash value
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-sm text-muted-foreground">Source path cost</span>
@@ -499,20 +1094,10 @@ const Swap = () => {
                           Prepared for signing
                         </div>
                         <p className="text-muted-foreground mt-1">
-                          The app builds a self-payment `Payment` transaction with `SendMax`, `Amount`, and `Paths`, then hands it to Xaman.
+                          We package this as a single XRPL payment with the best route attached, then send it to Xaman for you to sign.
                         </p>
                       </div>
 
-                      <div className="flex gap-3">
-                        <Button
-                          className="flex-1 gap-2"
-                          disabled={!quoteReady || signing || loadingQuote}
-                          onClick={handleSwap}
-                        >
-                          {signing ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowLeftRight className="w-4 h-4" />}
-                          {signing ? 'Opening Xaman...' : 'Swap in Xaman'}
-                        </Button>
-                      </div>
 
                       {qrCode && (
                         <div className="space-y-3 pt-2">
@@ -544,7 +1129,7 @@ const Swap = () => {
                         <p className="font-medium text-foreground">Swap flow</p>
                         <ol className="mt-2 space-y-2 list-decimal list-inside">
                           <li>Quote the route through XRPL order books and AMMs.</li>
-                          <li>Build a `Payment` transaction with the quoted path.</li>
+                          <li>Lock in the route as a ready-to-sign payment.</li>
                           <li>Sign and submit in Xaman.</li>
                         </ol>
                       </div>
@@ -558,6 +1143,18 @@ const Swap = () => {
       </div>
 
       <Footer />
+
+      <TokenPickerDialog
+        open={pickerOpen !== null}
+        onOpenChange={(o) => !o && setPickerOpen(null)}
+        onSelect={(sel) => pickerOpen && handlePickerSelect(pickerOpen, sel)}
+        walletTokens={pickerOpen === 'source' ? walletPickerTokens : []}
+        propertyHoldings={pickerOpen === 'source' ? allPropertyOptions : []}
+        xrpBalance={portfolio?.spendable_xrp ?? 0}
+        xrpUsd={xrpUsd}
+        hideBalances={pickerOpen === 'destination'}
+        title={pickerOpen === 'source' ? 'Send' : 'Receive'}
+      />
     </div>
   );
 };

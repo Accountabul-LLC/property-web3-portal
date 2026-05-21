@@ -22,7 +22,11 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
-import { createCorsHeaders } from '../_shared/cors.ts'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+}
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com']
 const MAX_RETRIES = 2
@@ -61,11 +65,8 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
 }
 
 Deno.serve(async (req) => {
-  const origin = req.headers.get('Origin')
-  const headers = createCorsHeaders(origin)
-
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers })
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
@@ -88,7 +89,7 @@ Deno.serve(async (req) => {
     )
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
@@ -100,7 +101,7 @@ Deno.serve(async (req) => {
     const { credential_id } = body
     if (!credential_id) {
       return new Response(JSON.stringify({ error: 'Missing required field: credential_id' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         id, ledger_status, issuer_address, credential_type, credential_type_hex,
         wallet_id,
         user_wallets!inner (
-          id, wallet_address, user_id, provider, network, status
+          id, wallet_address, user_id, provider, wallet_secret, network, status
         )
       `)
       .eq('id', credential_id)
@@ -120,22 +121,21 @@ Deno.serve(async (req) => {
     if (credError) throw credError
     if (!credential) {
       return new Response(JSON.stringify({ error: 'Credential not found' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 404,
       })
     }
 
     const wallet = (credential as any).user_wallets
-    const walletSecret = body.wallet_secret as string | null | undefined
     if (wallet.user_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden: credential does not belong to your wallet' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       })
     }
     if (wallet.status !== 'active') {
       return new Response(JSON.stringify({ error: 'Wallet is not active' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -144,7 +144,7 @@ Deno.serve(async (req) => {
         error: `Credential cannot be accepted in status: ${credential.ledger_status}. It must be 'issued' first.`,
         ledger_status: credential.ledger_status,
       }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -158,27 +158,9 @@ Deno.serve(async (req) => {
     }
 
     // ── Testnet: auto-sign ────────────────────────────────────
-    if (wallet.network === 'testnet') {
-      if (!walletSecret) {
-        return new Response(JSON.stringify({
-          error: 'This testnet wallet requires the ephemeral seed from the current browser session to complete acceptance.',
-        }), {
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          status: 400,
-        })
-      }
-
+    if (wallet.network === 'testnet' && wallet.wallet_secret) {
       const { Wallet: XrplWallet } = await import('npm:xrpl@3.1.0')
-      const subjectWallet = XrplWallet.fromSeed(walletSecret)
-
-      if (subjectWallet.address !== wallet.wallet_address) {
-        return new Response(JSON.stringify({
-          error: 'Provided seed does not match the selected wallet.',
-        }), {
-          headers: { ...headers, 'Content-Type': 'application/json' },
-          status: 400,
-        })
-      }
+      const subjectWallet = XrplWallet.fromSeed(wallet.wallet_secret)
 
       const accountInfo = await xrplRequest(TESTNET_NODES, 'account_info', [
         { account: wallet.wallet_address, ledger_index: 'current' },
@@ -213,7 +195,7 @@ Deno.serve(async (req) => {
           error: `CredentialAccept failed: ${engineResult}`,
           engine_result: engineResult,
         }), {
-          headers: { ...headers, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 500,
         })
       }
@@ -233,7 +215,7 @@ Deno.serve(async (req) => {
         accepted_at: acceptedAt,
         message: 'Credential accepted. Wallet is now trade-enabled.',
       }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
@@ -243,7 +225,7 @@ Deno.serve(async (req) => {
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET')
     if (!xamanApiKey || !xamanApiSecret) {
       return new Response(JSON.stringify({ error: 'Xaman API credentials not configured' }), {
-        headers: { ...headers, 'Content-Type': 'application/json' },
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
       })
     }
@@ -303,14 +285,14 @@ Deno.serve(async (req) => {
       websocket_url: xamanData.refs?.websocket_status,
       message: 'Scan the QR code in Xaman to accept your trading credential on-ledger.',
     }), {
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error) {
     console.error('Error in credential-accept:', error)
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...headers, 'Content-Type': 'application/json' },
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })
   }

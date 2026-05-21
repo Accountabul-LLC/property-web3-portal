@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": Deno.env.get("APP_ALLOWED_ORIGIN") ?? "https://accountabul.lovable.app",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -191,31 +191,42 @@ Deno.serve(async (req) => {
     const accountData = accountInfoRes.result?.account_data;
     if (!accountData) return jsonError("Could not fetch wallet account data", 500);
 
+    let insufficientBalance = false;
     if (source_asset.kind === "xrp") {
       const balanceXrp = Number(accountData.Balance) / 1_000_000;
       const reserveXrp = 1 + (Number(accountData.OwnerCount || 0) * 0.2);
       const spendable = balanceXrp - reserveXrp;
       if (Number(source_amount) > spendable) {
-        return jsonError(`Insufficient spendable XRP. You have ${spendable.toFixed(6)} XRP available.`);
-      }
-      if (spendable - Number(source_amount) < 1) {
+        insufficientBalance = true;
+        warnings.push(`Insufficient spendable XRP. You have ${spendable.toFixed(6)} XRP available.`);
+      } else if (spendable - Number(source_amount) < 1) {
         warnings.push("This swap will leave your spendable XRP very low.");
       }
     } else {
       const sourceLines = sourceLinesRes?.result?.lines || [];
       const sourceLine = sourceLines.find((line: any) => line.currency === source_asset.currency && line.account === source_asset.issuer);
-      if (!sourceLine) return jsonError("You do not have a trustline for the source token.");
-      if (sourceLine.freeze_peer) return jsonError("The source token is frozen by the issuer.");
-      if (Number(source_amount) > Number(sourceLine.balance)) {
-        return jsonError(`Insufficient token balance. You have ${sourceLine.balance} ${source_asset.currency} available.`);
+      if (!sourceLine) {
+        insufficientBalance = true;
+        warnings.push("You do not have a trustline for the source token.");
+      } else if (sourceLine.freeze_peer) {
+        insufficientBalance = true;
+        warnings.push("The source token is frozen by the issuer.");
+      } else if (Number(source_amount) > Number(sourceLine.balance)) {
+        insufficientBalance = true;
+        warnings.push(`Insufficient token balance. You have ${sourceLine.balance} ${source_asset.currency} available.`);
       }
     }
 
+    let trustlineMissing: { currency: string; issuer: string } | null = null;
     if (destination_asset.kind === "token") {
       const destinationLines = destinationLinesRes?.result?.lines || [];
       const destinationLine = destinationLines.find((line: any) => line.currency === destination_asset.currency && line.account === destination_asset.issuer);
       if (!destinationLine) {
-        return jsonError("You need a trustline for the destination token before swapping into it.");
+        trustlineMissing = {
+          currency: destination_asset.currency,
+          issuer: destination_asset.issuer,
+        };
+        warnings.push("You'll need a trustline before this swap can execute.");
       }
     }
 
@@ -233,12 +244,24 @@ Deno.serve(async (req) => {
     }]);
 
     if (pathFind.result?.error) {
-      return jsonError(`Path finding failed: ${pathFind.result.error_message || pathFind.result.error}`);
+      return new Response(JSON.stringify({
+        success: false,
+        error: "no_route",
+        message: `Path finding failed: ${pathFind.result.error_message || pathFind.result.error}`,
+        warnings,
+        trustline_required: trustlineMissing,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const alternatives = pathFind.result?.alternatives || [];
     if (alternatives.length === 0) {
-      return jsonError("No swap route found for this pair.");
+      return new Response(JSON.stringify({
+        success: false,
+        error: "no_route",
+        message: "No swap route found for this pair.",
+        warnings,
+        trustline_required: trustlineMissing,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const best = alternatives[0];
@@ -284,6 +307,8 @@ Deno.serve(async (req) => {
       fee_drops: feeDrops,
       fee_xrp: Number(feeDrops) / 1_000_000,
       warnings,
+      insufficient_balance: insufficientBalance,
+      trustline_required: trustlineMissing,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -426,6 +426,9 @@ export type Database = {
           reviewed_at: string | null
           reviewer_id: string | null
           status: string
+          stripe_last_event_at: string | null
+          stripe_verification_session_id: string | null
+          stripe_verification_status: string | null
           submitted_at: string | null
           updated_at: string
           user_id: string
@@ -438,6 +441,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
+          stripe_last_event_at?: string | null
+          stripe_verification_session_id?: string | null
+          stripe_verification_status?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id: string
@@ -450,6 +456,9 @@ export type Database = {
           reviewed_at?: string | null
           reviewer_id?: string | null
           status?: string
+          stripe_last_event_at?: string | null
+          stripe_verification_session_id?: string | null
+          stripe_verification_status?: string | null
           submitted_at?: string | null
           updated_at?: string
           user_id?: string
@@ -1237,6 +1246,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trustline_sponsorships: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          currency: string
+          funded_amount_xrp: number
+          funding_tx_hash: string | null
+          id: string
+          issuer: string
+          network: string
+          status: string
+          trustline_tx_hash: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          currency: string
+          funded_amount_xrp?: number
+          funding_tx_hash?: string | null
+          id?: string
+          issuer: string
+          network: string
+          status?: string
+          trustline_tx_hash?: string | null
+          user_id: string
+          wallet_address: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          currency?: string
+          funded_amount_xrp?: number
+          funding_tx_hash?: string | null
+          id?: string
+          issuer?: string
+          network?: string
+          status?: string
+          trustline_tx_hash?: string | null
+          user_id?: string
+          wallet_address?: string
+        }
+        Relationships: []
       }
       user_roles: {
         Row: {

@@ -98,3 +98,9 @@ verify_jwt = true
 
 [functions.tokenization-pipeline]
 verify_jwt = false
+
+[functions.stripe-identity-create-session]
+verify_jwt = false
+
+[functions.stripe-identity-webhook]
+verify_jwt = false
