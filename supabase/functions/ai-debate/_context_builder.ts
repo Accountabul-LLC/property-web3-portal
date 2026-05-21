@@ -39,7 +39,7 @@ src/integrations/supabase/types.ts — auto-generated DB types (never edit)
 
 ## DB Tables (project: bmxcjxtjujhwreduwtvz)
 auth.users + profiles, user_roles (admin|moderator|user), user_wallets
-wallet_profiles, wallet_audit_log
+wallet_audit_log
 properties, property_documents, property_reviews, saved_properties
 portfolio_holdings, portfolio_transactions
 token_mints, token_orders, token_price_history

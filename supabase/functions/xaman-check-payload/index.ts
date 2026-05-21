@@ -110,33 +110,6 @@ Deno.serve(async (req) => {
         })
         .eq('uuid', uuid);
 
-      // Backward compat: update wallet_profiles
-      const { data: existingProfile } = await supabase
-        .from('wallet_profiles')
-        .select('*')
-        .eq('wallet_address', wallet_address)
-        .single();
-
-      if (!existingProfile) {
-        await supabase
-          .from('wallet_profiles')
-          .insert({
-            wallet_address,
-            created_at: new Date().toISOString(),
-            last_login: new Date().toISOString(),
-            xaman_user_token: userToken,
-            xaman_account_name: account_name,
-          });
-      } else {
-        const updateData: Record<string, unknown> = { last_login: new Date().toISOString() };
-        if (userToken) updateData.xaman_user_token = userToken;
-        if (account_name) updateData.xaman_account_name = account_name;
-        await supabase
-          .from('wallet_profiles')
-          .update(updateData)
-          .eq('wallet_address', wallet_address);
-      }
-
       // SEC-004: Link wallet to user — enforce intended_user_id binding
       if (userId) {
         // Verify the payload was created by this user (wallet-connect flow).
