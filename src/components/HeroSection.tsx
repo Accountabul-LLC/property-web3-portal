@@ -83,7 +83,7 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
                 Start Tokenizing
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto" onClick={() => navigate('/marketplace')}>
                 Explore Marketplace
               </Button>
             </div>
