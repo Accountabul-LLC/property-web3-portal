@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, Shield, TrendingUp, Users, Zap } from 'lucide-react';
@@ -9,6 +10,7 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
+  const navigate = useNavigate();
   const features = [
     {
       icon: Shield,
@@ -81,7 +83,7 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
                 Start Tokenizing
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto">
+              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto" onClick={() => navigate('/marketplace')}>
                 Explore Marketplace
               </Button>
             </div>
