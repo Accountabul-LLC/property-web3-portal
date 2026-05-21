@@ -85,7 +85,7 @@ const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
   const { data: compliance } = useWalletCompliance(activeAddress);
-  const portfolioNetwork = activeNetwork === 'devnet' ? 'testnet' : activeNetwork;
+  const portfolioNetwork = activeNetwork;
   const { data: portfolio } = useXRPLPortfolio(activeAddress, portfolioNetwork);
 
   const [sourceAsset, setSourceAsset] = React.useState<Asset>({ kind: 'xrp' });

@@ -37,7 +37,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       const balance = data.balance || 0;
       const secret = data.secret || null;
 
-      // Add it as a wallet via the context (with secret + testnet_faucet provider)
+      // Add it via context; the testnet seed stays in the browser session only
       await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret);
 
       toast.success(`🧪 Testnet Wallet Created — Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
@@ -52,7 +52,6 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
   const getExplorerUrl = (address: string, network: string) => {
-    if (network === 'devnet') return `https://devnet.xrpl.org/accounts/${address}`;
     if (network === 'testnet') return `https://testnet.xrpl.org/accounts/${address}`;
     return `https://xrpscan.com/account/${address}`;
   };
@@ -152,9 +151,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                         <p className="text-xs font-medium truncate">{w.label}</p>
                         <Badge
                           variant={activeNetwork !== 'mainnet' ? 'secondary' : 'outline'}
-                          className={`text-[9px] px-1 py-0 ${activeNetwork === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : activeNetwork === 'devnet' ? 'bg-purple-500/20 text-purple-500 border-purple-500/30' : ''}`}
+                          className={`text-[9px] px-1 py-0 ${activeNetwork === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}
                         >
-                          {activeNetwork === 'testnet' ? 'Testnet' : activeNetwork === 'devnet' ? 'Devnet' : 'Mainnet'}
+                          {activeNetwork === 'testnet' ? 'Testnet' : 'Mainnet'}
                         </Badge>
                       </div>
                       {w.xamanName && w.xamanName !== w.label && (

@@ -1,12 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
-const DEVNET_NODES = ['https://s.devnet.rippletest.net:51234'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
@@ -92,22 +91,22 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { tx_json, wallet_address, network } = await req.json();
+    const { tx_json, wallet_address, network, wallet_secret } = await req.json();
 
-    if (network !== 'testnet' && network !== 'devnet') {
-      throw new Error('Server-side signing is only supported on testnet and devnet');
+    if (network !== 'testnet') {
+      throw new Error('Server-side signing is only supported on testnet');
     }
 
     if (!tx_json || !wallet_address) {
       throw new Error('Missing tx_json or wallet_address');
     }
 
-    const nodes = network === 'devnet' ? DEVNET_NODES : TESTNET_NODES;
+    const nodes = TESTNET_NODES;
 
     // Ownership check: wallet must belong to the authenticated user
     const { data: walletRow, error: walletError } = await supabaseAdmin
       .from('user_wallets')
-      .select('wallet_secret, provider')
+      .select('provider')
       .eq('wallet_address', wallet_address)
       .eq('user_id', userId)
       .eq('status', 'active')
@@ -117,15 +116,19 @@ Deno.serve(async (req) => {
       throw new Error('Wallet not found');
     }
 
-    if (walletRow.provider !== 'testnet_faucet' || !walletRow.wallet_secret) {
+    if (!wallet_secret) {
+      throw new Error('This testnet wallet requires the ephemeral seed from the current browser session');
+    }
+    if (walletRow.provider !== 'testnet_faucet') {
       throw new Error('This wallet does not support server-side signing');
     }
 
-    const secret = walletRow.wallet_secret;
-
     const { Wallet } = await import('npm:xrpl@3.1.0');
     
-    const wallet = Wallet.fromSeed(secret);
+    const wallet = Wallet.fromSeed(wallet_secret);
+    if (wallet.address !== wallet_address) {
+      throw new Error('Provided seed does not match the selected wallet');
+    }
     console.log('Derived wallet address:', wallet.address);
 
     // Get account info for sequence with failover

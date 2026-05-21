@@ -30,7 +30,7 @@ const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork, getWalletSecret } = useActiveWallet();
   const { user } = useAuth();
   const { data: approvedProperties = [] } = useApprovedProperties();
 
@@ -111,9 +111,13 @@ const MintWizard: React.FC = () => {
       // Branch: testnet faucet wallet → auto-sign server-side
       if (network === 'testnet' && isTestnetFaucetWallet) {
         setMintStatus('pending');
+        const walletSecret = getWalletSecret(mintAddress);
+        if (!walletSecret) {
+          throw new Error('This testnet wallet secret is only available in the current browser session. Reconnect the wallet and try again.');
+        }
 
         const { data: submitData, error: submitError } = await supabase.functions.invoke('xrpl-submit-signed', {
-          body: { tx_json: txJson, wallet_address: mintAddress, network },
+          body: { tx_json: txJson, wallet_address: mintAddress, network, wallet_secret: walletSecret },
         });
 
         if (submitError) throw new Error(submitError.message);
@@ -304,7 +308,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet, selectedPropertyId]);
+  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet, selectedPropertyId, getWalletSecret]);
 
   const handleReset = () => {
     setStep('type');

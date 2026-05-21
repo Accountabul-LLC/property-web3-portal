@@ -5,8 +5,9 @@
  * A credential is only valid after both CredentialCreate (by issuer) AND
  * CredentialAccept (by subject) have been submitted to XRPL.
  *
- * Testnet wallets (provider = 'testnet_faucet', wallet_secret set):
- *   Auto-signs the CredentialAccept tx and submits.
+ * Testnet wallets:
+ *   Auto-signs the CredentialAccept tx when the browser supplies the
+ *   ephemeral testnet seed for the current session.
  *
  * Mainnet wallets (Xaman):
  *   Creates a Xaman payload for the user to sign in the Xaman app.
@@ -23,7 +24,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
@@ -112,7 +113,7 @@ Deno.serve(async (req) => {
         id, ledger_status, issuer_address, credential_type, credential_type_hex,
         wallet_id,
         user_wallets!inner (
-          id, wallet_address, user_id, provider, wallet_secret, network, status
+          id, wallet_address, user_id, provider, network, status
         )
       `)
       .eq('id', credential_id)
@@ -126,6 +127,7 @@ Deno.serve(async (req) => {
     }
 
     const wallet = (credential as any).user_wallets
+    const walletSecret = body.wallet_secret as string | null | undefined
     if (wallet.user_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden: credential does not belong to your wallet' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -157,9 +159,27 @@ Deno.serve(async (req) => {
     }
 
     // ── Testnet: auto-sign ────────────────────────────────────
-    if (wallet.network === 'testnet' && wallet.wallet_secret) {
+    if (wallet.network === 'testnet') {
+      if (!walletSecret) {
+        return new Response(JSON.stringify({
+          error: 'This testnet wallet requires the ephemeral seed from the current browser session to complete acceptance.',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        })
+      }
+
       const { Wallet: XrplWallet } = await import('npm:xrpl@3.1.0')
-      const subjectWallet = XrplWallet.fromSeed(wallet.wallet_secret)
+      const subjectWallet = XrplWallet.fromSeed(walletSecret)
+
+      if (subjectWallet.address !== wallet.wallet_address) {
+        return new Response(JSON.stringify({
+          error: 'Provided seed does not match the selected wallet.',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        })
+      }
 
       const accountInfo = await xrplRequest(TESTNET_NODES, 'account_info', [
         { account: wallet.wallet_address, ledger_index: 'current' },

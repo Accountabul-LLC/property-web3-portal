@@ -6,7 +6,7 @@ import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 import { toast } from 'sonner';
 
 /** Supported XRPL network targets */
-export type XRPLNetwork = 'mainnet' | 'testnet' | 'devnet';
+export type XRPLNetwork = 'mainnet' | 'testnet';
 
 export interface ConnectedWallet {
   id: string;
@@ -32,6 +32,7 @@ interface ActiveWalletContextType {
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
+  getWalletSecret: (address: string | null | undefined) => string | null;
   isConnectModalOpen: boolean;
   openConnectModal: () => void;
   closeConnectModal: () => void;
@@ -41,6 +42,7 @@ interface ActiveWalletContextType {
 
 const ACTIVE_KEY = 'accountabul_active_wallet';
 const NETWORK_KEY = 'accountabul_active_network';
+const WALLET_SECRET_PREFIX = 'accountabul_wallet_secret_';
 
 function loadActiveAddress(): string | null {
   return localStorage.getItem(ACTIVE_KEY);
@@ -49,6 +51,23 @@ function loadActiveAddress(): string | null {
 function saveActiveAddress(addr: string | null) {
   if (addr) localStorage.setItem(ACTIVE_KEY, addr);
   else localStorage.removeItem(ACTIVE_KEY);
+}
+
+function walletSecretKey(address: string) {
+  return `${WALLET_SECRET_PREFIX}${address}`;
+}
+
+function saveWalletSecret(address: string, secret: string | null | undefined) {
+  const key = walletSecretKey(address);
+  if (secret) {
+    sessionStorage.setItem(key, secret);
+  } else {
+    sessionStorage.removeItem(key);
+  }
+}
+
+function loadWalletSecret(address: string) {
+  return sessionStorage.getItem(walletSecretKey(address));
 }
 
 // Fire-and-forget audit log
@@ -66,15 +85,21 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   const [activeAddress, setActiveAddressState] = useState<string | null>(() => loadActiveAddress());
   const [activeNetwork, setActiveNetworkState] = useState<XRPLNetwork>(() => {
     const saved = localStorage.getItem(NETWORK_KEY);
-    return (saved === 'testnet' || saved === 'devnet') ? saved : 'mainnet';
+    return saved === 'testnet' ? saved : 'mainnet';
   });
   const [isConnectModalOpen, setConnectModalOpen] = useState(false);
   const [walletsLoading, setWalletsLoading] = useState(false);
   const prevActiveRef = useRef<string | null>(activeAddress);
+  const walletsRef = useRef<ConnectedWallet[]>([]);
+
+  useEffect(() => {
+    walletsRef.current = wallets;
+  }, [wallets]);
 
   // Load wallets from DB when user authenticates
   useEffect(() => {
     if (!user) {
+      walletsRef.current.forEach(w => saveWalletSecret(w.address, null));
       setWallets([]);
       setActiveAddressState(null);
       saveActiveAddress(null);
@@ -175,7 +200,6 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       last_seen_at: new Date().toISOString(),
       revoked_at: null,
       ...(provider ? { provider } : {}),
-      ...(walletSecret ? { wallet_secret: walletSecret } : {}),
     };
 
     const { data, error } = await supabase
@@ -188,6 +212,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       console.error('Failed to add wallet:', error);
       return;
     }
+
+    saveWalletSecret(address, walletSecret);
 
     // Refresh wallet list
     const { data: allWallets } = await supabase
@@ -226,6 +252,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       .eq('wallet_address', address)
       .eq('user_id', user.id);
 
+    saveWalletSecret(address, null);
+
     setWallets(prev => {
       const updated = prev.filter(w => w.address !== address);
       if (activeAddress === address) {
@@ -256,6 +284,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     if (!user) return;
 
     wallets.forEach(w => logAuditEvent(w.address, 'disconnect_all', user.id));
+    wallets.forEach(w => saveWalletSecret(w.address, null));
 
     await supabase
       .from('user_wallets')
@@ -269,6 +298,11 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = null;
   }, [wallets, user]);
 
+  const getWalletSecret = useCallback((address: string | null | undefined) => {
+    if (!address) return null;
+    return loadWalletSecret(address);
+  }, []);
+
   const onWalletConnected = useCallback((address: string, xamanName?: string | null) => {
     addWallet(address, undefined, xamanName);
     setConnectModalOpen(false);
@@ -278,6 +312,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
   // 30-minute inactivity timeout: clears auth session + wallet context
   const handleInactivityTimeout = useCallback(() => {
+    walletsRef.current.forEach(w => saveWalletSecret(w.address, null));
     setWallets([]);
     setActiveAddressState(null);
     saveActiveAddress(null);
@@ -301,6 +336,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       removeWallet,
       renameWallet,
       disconnectAll,
+      getWalletSecret,
       isConnectModalOpen,
       openConnectModal: () => setConnectModalOpen(true),
       closeConnectModal: () => setConnectModalOpen(false),

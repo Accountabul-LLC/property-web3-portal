@@ -63,7 +63,7 @@ ai-debate (this function — streams Claude + GPT)
 - Never call XRPL from browser
 
 ## Gotchas
-- wallet_secret in user_wallets is plaintext (testnet only, security issue C1)
+- testnet wallet seeds are session-only; do not persist them in the database
 - types.ts and components/ui/ are auto-generated — do not edit
 - Lovable auto-commits to GitHub — pull before pushing
 - ai_agents table is empty (marketplace needs seeding)

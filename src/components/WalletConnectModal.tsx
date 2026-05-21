@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useTeamAccess } from "@/hooks/useTeamAccess";
 
-type XRPLNetwork = 'mainnet' | 'testnet' | 'devnet';
+type XRPLNetwork = 'mainnet' | 'testnet';
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -18,7 +18,6 @@ interface WalletConnectModalProps {
 const NETWORK_OPTIONS: { value: XRPLNetwork; label: string; description: string }[] = [
   { value: 'mainnet', label: 'Mainnet', description: 'Production ledger' },
   { value: 'testnet', label: 'Testnet', description: 'testnet.xrpl-labs.com' },
-  { value: 'devnet', label: 'Devnet', description: 'sdevnet.rippletest.net' },
 ];
 
 export function WalletConnectModal({ isOpen, onClose, onWalletConnected }: WalletConnectModalProps) {
