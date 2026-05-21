@@ -9,6 +9,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({
+        success: false,
+        error: 'Authentication required',
+      }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Parse optional destination from body (fund existing account)
     let destination: string | undefined;
     try {

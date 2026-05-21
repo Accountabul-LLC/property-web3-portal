@@ -27,13 +27,45 @@ serve(async (req) => {
       });
     }
 
+    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user?.id) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     // Extract client info from headers
     const userAgent = req.headers.get('user-agent') || null;
     const ipHint = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: walletOwner, error: ownerError } = await supabase
+      .from('user_wallets')
+      .select('id')
+      .eq('wallet_address', wallet_address)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (ownerError) throw ownerError;
+    if (!walletOwner) {
+      return new Response(JSON.stringify({ error: 'Wallet not owned by authenticated user' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const { error } = await supabase.from('wallet_audit_log').insert({
       wallet_address,
@@ -41,6 +73,7 @@ serve(async (req) => {
       metadata: metadata || {},
       ip_hint: ipHint,
       user_agent: userAgent,
+      user_id: user.id,
     });
 
     if (error) throw error;

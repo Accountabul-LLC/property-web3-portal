@@ -43,18 +43,26 @@ Deno.serve(async (req) => {
       throw new Error('Xaman API credentials not configured');
     }
 
-    // Authenticate the calling user (optional — wallet connect requires auth)
-    let userId: string | null = null;
     const authHeader = req.headers.get('Authorization');
-    if (authHeader?.startsWith('Bearer ')) {
-      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } }
-      });
-      const { data: { user } } = await userClient.auth.getUser();
-      if (user) {
-        userId = user.id;
-      }
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
     }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user?.id) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    const userId = user.id;
 
     console.log('Checking Xaman payload status:', uuid, 'userId:', userId);
 
