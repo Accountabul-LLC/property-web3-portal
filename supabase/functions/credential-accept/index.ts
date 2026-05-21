@@ -22,11 +22,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-}
+import { createCorsHeaders } from '../_shared/cors.ts'
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com']
 const MAX_RETRIES = 2
@@ -65,8 +61,11 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const headers = createCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers })
   }
 
   try {
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
@@ -89,7 +88,7 @@ Deno.serve(async (req) => {
     )
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 401,
       })
     }
@@ -101,7 +100,7 @@ Deno.serve(async (req) => {
     const { credential_id } = body
     if (!credential_id) {
       return new Response(JSON.stringify({ error: 'Missing required field: credential_id' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -121,7 +120,7 @@ Deno.serve(async (req) => {
     if (credError) throw credError
     if (!credential) {
       return new Response(JSON.stringify({ error: 'Credential not found' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 404,
       })
     }
@@ -130,13 +129,13 @@ Deno.serve(async (req) => {
     const walletSecret = body.wallet_secret as string | null | undefined
     if (wallet.user_id !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden: credential does not belong to your wallet' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 403,
       })
     }
     if (wallet.status !== 'active') {
       return new Response(JSON.stringify({ error: 'Wallet is not active' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -145,7 +144,7 @@ Deno.serve(async (req) => {
         error: `Credential cannot be accepted in status: ${credential.ledger_status}. It must be 'issued' first.`,
         ledger_status: credential.ledger_status,
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 400,
       })
     }
@@ -164,7 +163,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           error: 'This testnet wallet requires the ephemeral seed from the current browser session to complete acceptance.',
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...headers, 'Content-Type': 'application/json' },
           status: 400,
         })
       }
@@ -176,7 +175,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({
           error: 'Provided seed does not match the selected wallet.',
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...headers, 'Content-Type': 'application/json' },
           status: 400,
         })
       }
@@ -214,7 +213,7 @@ Deno.serve(async (req) => {
           error: `CredentialAccept failed: ${engineResult}`,
           engine_result: engineResult,
         }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...headers, 'Content-Type': 'application/json' },
           status: 500,
         })
       }
@@ -234,7 +233,7 @@ Deno.serve(async (req) => {
         accepted_at: acceptedAt,
         message: 'Credential accepted. Wallet is now trade-enabled.',
       }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 200,
       })
     }
@@ -244,7 +243,7 @@ Deno.serve(async (req) => {
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET')
     if (!xamanApiKey || !xamanApiSecret) {
       return new Response(JSON.stringify({ error: 'Xaman API credentials not configured' }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { ...headers, 'Content-Type': 'application/json' },
         status: 500,
       })
     }
@@ -304,14 +303,14 @@ Deno.serve(async (req) => {
       websocket_url: xamanData.refs?.websocket_status,
       message: 'Scan the QR code in Xaman to accept your trading credential on-ledger.',
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
       status: 200,
     })
 
   } catch (error) {
     console.error('Error in credential-accept:', error)
     return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
       status: 500,
     })
   }

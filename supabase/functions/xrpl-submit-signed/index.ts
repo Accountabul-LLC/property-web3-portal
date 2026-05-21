@@ -1,9 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { createCorsHeaders } from '../_shared/cors.ts';
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
 const MAX_RETRIES = 2;
@@ -43,8 +39,11 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  const headers = createCorsHeaders(origin);
+
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   try {
@@ -52,7 +51,7 @@ Deno.serve(async (req) => {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ success: false, error: 'Missing authorization' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -65,7 +64,7 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ success: false, error: 'Invalid authentication' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
     const userId = user.id;
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
     const { data: kycStatus, error: kycError } = await supabaseAdmin.rpc('get_kyc_status', { p_user_id: userId });
     if (kycError) {
       return new Response(JSON.stringify({ success: false, error: 'Unable to verify identity status' }), {
-        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
     if (kycStatus !== 'approved') {
@@ -87,7 +86,7 @@ Deno.serve(async (req) => {
         error: 'Identity verification required',
         kyc_status: kycStatus,
       }), {
-        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403, headers: { ...headers, 'Content-Type': 'application/json' },
       });
     }
 
@@ -170,7 +169,7 @@ Deno.serve(async (req) => {
       engine_result: engineResult,
       engine_result_message: submitData.result?.engine_result_message,
     }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
@@ -180,7 +179,7 @@ Deno.serve(async (req) => {
       error: error.message,
     }), {
       status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      headers: { ...headers, 'Content-Type': 'application/json' },
     });
   }
 });

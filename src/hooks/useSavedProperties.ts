@@ -40,43 +40,9 @@ export function useSavedProperties() {
     queryFn: async () => {
       if (!user || !activeAddress) return [];
 
-      const { data, error } = await supabase
-        .from('saved_properties' as any)
-        .select(`
-          id,
-          wallet_address,
-          property_id,
-          created_at,
-          properties (
-            id,
-            title,
-            address,
-            city,
-            state,
-            zip,
-            description,
-            property_type,
-            bedrooms,
-            bathrooms,
-            square_feet,
-            year_built,
-            amenities,
-            images,
-            status,
-            price_per_token,
-            total_tokens,
-            tokens_available,
-            projected_annual_return,
-            projected_rental_yield,
-            market_cap,
-            estimated_value,
-            owner_wallet,
-            created_at,
-            updated_at
-          )
-        `)
-        .eq('wallet_address', activeAddress)
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.rpc('get_saved_properties_for_wallet', {
+        p_wallet_address: activeAddress,
+      });
 
       if (error) throw error;
       return (data || []) as unknown as SavedPropertyWithDetails[];
