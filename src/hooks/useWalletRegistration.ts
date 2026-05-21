@@ -24,17 +24,31 @@ export function useWalletRegistration(walletAddress: string | null): UseWalletRe
   const qc = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['wallet-registration', walletAddress],
+    queryKey: ['wallet-registration', walletAddress, user?.id],
     queryFn: async () => {
       if (!walletAddress || !user) return null
-      const { data, error } = await (supabase
+
+      // 1. Look up the wallet row
+      const { data: wallet, error: walletErr } = await (supabase
         .from('user_wallets') as any)
-        .select('id, wallet_address, wallet_registrations(id, registration_status, created_at)')
+        .select('id, wallet_address')
         .eq('wallet_address', walletAddress)
         .eq('user_id', user.id)
         .maybeSingle()
-      if (error) throw error
-      return data
+      if (walletErr) throw walletErr
+      if (!wallet) return null
+
+      // 2. Look up the latest registration for this wallet (no FK → no embed)
+      const { data: reg, error: regErr } = await (supabase
+        .from('wallet_registrations') as any)
+        .select('id, registration_status, created_at')
+        .eq('wallet_id', wallet.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      if (regErr) throw regErr
+
+      return { id: wallet.id, wallet_registrations: reg ? [reg] : [] }
     },
     enabled: !!walletAddress && !!user,
     staleTime: 30_000,
