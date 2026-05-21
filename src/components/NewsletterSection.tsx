@@ -82,6 +82,8 @@ const NewsletterSection = () => {
                 <a
                   key={index}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   aria-label={social.label}
                   className="w-12 h-12 bg-background border border-border rounded-lg flex items-center justify-center hover:bg-muted hover:scale-110 transition-all duration-300"
                 >
