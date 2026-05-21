@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useParams } from 'react-router-dom';
 import Navigation from '../components/Navigation';
 import Footer from '../components/Footer';
 import PhotoGallery from '../components/property/PhotoGallery';
 import PropertySummary from '../components/property/PropertySummary';
 import FinancialSidebar from '../components/property/FinancialSidebar';
-import PriceChart from '../components/property/PriceChart';
 import MarketStats from '../components/property/MarketStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import DetailsTab from '../components/property/DetailsTab';
-import FinancialsTab from '../components/property/FinancialsTab';
 import OrderBook from '../components/property/OrderBook';
 import DocumentsTab from '../components/property/DocumentsTab';
-import MarketTab from '../components/property/MarketTab';
 import ReviewsTab from '../components/property/ReviewsTab';
 import { useProperty } from '@/hooks/useProperties';
-import { Loader2 } from 'lucide-react';
+import { ChartPanelSkeleton, PropertyDetailLoadingSkeleton } from '@/components/PageSkeletons';
+
+const PriceChart = React.lazy(() => import('../components/property/PriceChart'));
+const FinancialsTab = React.lazy(() => import('../components/property/FinancialsTab'));
+const MarketTab = React.lazy(() => import('../components/property/MarketTab'));
 
 // Property interface for detailed view (used by sub-components)
 export interface PropertyDetail {
@@ -117,15 +118,12 @@ function mapToPropertyDetail(row: any): PropertyDetail {
 const PropertyDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { data: dbProperty, isLoading, error } = useProperty(id);
+  const [activeTab, setActiveTab] = React.useState('details');
 
   const property = dbProperty ? mapToPropertyDetail(dbProperty) : null;
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <PropertyDetailLoadingSkeleton />;
   }
 
   if (error || !property) {
@@ -157,12 +155,14 @@ const PropertyDetailPage: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <PriceChart />
+          <Suspense fallback={<ChartPanelSkeleton />}>
+            <PriceChart />
+          </Suspense>
           <MarketStats property={property} />
         </div>
 
         <div className="w-full">
-          <Tabs defaultValue="details" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="financials">Financials</TabsTrigger>
@@ -177,7 +177,13 @@ const PropertyDetailPage: React.FC = () => {
                 <DetailsTab property={property} />
               </TabsContent>
               <TabsContent value="financials" className="space-y-6">
-                <FinancialsTab property={property} />
+                {activeTab === 'financials' ? (
+                  <Suspense fallback={<ChartPanelSkeleton />}>
+                    <FinancialsTab property={property} />
+                  </Suspense>
+                ) : (
+                  <ChartPanelSkeleton />
+                )}
               </TabsContent>
               <TabsContent value="orderbook" className="space-y-6">
                 <OrderBook />
@@ -186,7 +192,13 @@ const PropertyDetailPage: React.FC = () => {
                 <DocumentsTab propertyId={id} />
               </TabsContent>
               <TabsContent value="market" className="space-y-6">
-                <MarketTab property={property} />
+                {activeTab === 'market' ? (
+                  <Suspense fallback={<ChartPanelSkeleton />}>
+                    <MarketTab property={property} />
+                  </Suspense>
+                ) : (
+                  <ChartPanelSkeleton />
+                )}
               </TabsContent>
               <TabsContent value="reviews" className="space-y-6">
                 <ReviewsTab propertyId={id} />

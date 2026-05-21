@@ -7,6 +7,7 @@ import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { LogIn } from 'lucide-react';
+import { PortfolioLoadingSkeleton } from '@/components/PageSkeletons';
 
 const PortfolioInner = () => {
   const [searchParams] = useSearchParams();
@@ -31,9 +32,7 @@ const Portfolio = () => {
     return (
       <div className="min-h-screen bg-background">
         <Navigation />
-        <div className="flex items-center justify-center py-24">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <PortfolioLoadingSkeleton />
       </div>
     );
   }
