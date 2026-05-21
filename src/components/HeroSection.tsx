@@ -10,6 +10,7 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
+  const navigate = useNavigate();
   const features = [
     {
       icon: Shield,

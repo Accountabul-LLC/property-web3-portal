@@ -40,7 +40,7 @@ export function useSavedProperties() {
     queryFn: async () => {
       if (!user || !activeAddress) return [];
 
-      const { data, error } = await supabase.rpc('get_saved_properties_for_wallet', {
+      const { data, error } = await (supabase.rpc as any)('get_saved_properties_for_wallet', {
         p_wallet_address: activeAddress,
       });
 
