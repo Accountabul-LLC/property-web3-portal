@@ -242,6 +242,16 @@ export function useMyData() {
   Humans curate this section periodically.
 -->
 
+### 2026-05-21 | claude-sonnet-4-6 (security audit)
+- Full security audit + pen test of all edge functions, RLS policies, and client code
+- **Migration** `20260521000000_security_fixes.sql`: drops open RLS on `xaman_payloads` (C1), `wallet_credentials`, `wallet_permission_assignments`, `wallet_profiles`, `wallet_audit_log`; adds user-scoped and admin-scoped read policies
+- **CORS**: replaced `'*'` with `Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'` in all 39 edge functions — set `APP_ALLOWED_ORIGIN` in Supabase Dashboard → Edge Functions → Secrets
+- **Stripe webhook** (`stripe-identity-webhook`): removed dev fallback that accepted unverified events; secret is now required
+- **Faucet** (`xrpl-testnet-faucet`): added JWT auth check — anonymous calls now return 401
+- **check-credential-payload**: added admin/compliance_officer role check + payload ownership check (`admin_user_id` must match requesting user)
+- **Known remaining risk**: `wallet_secret` column in `user_wallets` still stores testnet private keys in plaintext — do not deploy to mainnet without encrypting or removing this column
+- **To do before mainnet**: set `APP_ALLOWED_ORIGIN` secret, set `STRIPE_IDENTITY_WEBHOOK_SECRET`, remove `wallet_secret` or encrypt with Vault
+
 ### 2026-03-07 | claude-sonnet-4-6 (session 2)
 - Built XRPL issuer wallet infrastructure — seed NEVER stored in DB, only pointer (secret_env_key)
 - Migration `20260307210000_xrpl_issuer_wallets.sql`: xrpl_issuer_wallets table + issuer_wallet_id FK on wallet_credentials

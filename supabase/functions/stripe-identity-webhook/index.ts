@@ -12,7 +12,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@17.4.0?target=deno'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, stripe-signature',
 }
 
@@ -29,20 +29,26 @@ Deno.serve(async (req) => {
     const signature = req.headers.get('stripe-signature')
     const rawBody = await req.text()
 
+    if (!WEBHOOK_SECRET) {
+      console.error('STRIPE_IDENTITY_WEBHOOK_SECRET is not configured')
+      return new Response(JSON.stringify({ error: 'Webhook secret not configured' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (!signature) {
+      return new Response(JSON.stringify({ error: 'Missing stripe-signature header' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     let event: Stripe.Event
-    if (WEBHOOK_SECRET && signature) {
-      try {
-        event = await stripe.webhooks.constructEventAsync(rawBody, signature, WEBHOOK_SECRET)
-      } catch (err) {
-        console.error('Webhook signature verification failed:', (err as Error).message)
-        return new Response(JSON.stringify({ error: 'Invalid signature' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        })
-      }
-    } else {
-      // Dev fallback when webhook secret isn't configured yet
-      console.warn('STRIPE_IDENTITY_WEBHOOK_SECRET not set — accepting unverified webhook')
-      event = JSON.parse(rawBody) as Stripe.Event
+    try {
+      event = await stripe.webhooks.constructEventAsync(rawBody, signature, WEBHOOK_SECRET)
+    } catch (err) {
+      console.error('Webhook signature verification failed:', (err as Error).message)
+      return new Response(JSON.stringify({ error: 'Invalid signature' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const svc = createClient(

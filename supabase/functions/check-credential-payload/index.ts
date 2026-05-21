@@ -15,7 +15,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
@@ -48,6 +48,15 @@ Deno.serve(async (req) => {
     }
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
+
+    // ── Role check: admin or compliance_officer only ─────────
+    const { data: isAdmin } = await serviceClient.rpc('has_role', { _user_id: user.id, _role: 'admin' })
+    const { data: isCompliance } = await serviceClient.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' })
+    if (!isAdmin && !isCompliance) {
+      return new Response(JSON.stringify({ error: 'Forbidden: requires admin or compliance_officer role' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+      })
+    }
 
     const { uuid, registration_id } = await req.json()
     if (!uuid || !registration_id) {
@@ -111,6 +120,14 @@ Deno.serve(async (req) => {
       .select('metadata')
       .eq('uuid', uuid)
       .maybeSingle()
+
+    // Verify this payload was created by the requesting admin
+    const storedAdminId = payloadRow?.metadata?.admin_user_id
+    if (storedAdminId && storedAdminId !== user.id) {
+      return new Response(JSON.stringify({ error: 'Forbidden: payload belongs to a different admin' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403,
+      })
+    }
 
     let meta: any = payloadRow?.metadata || {}
 
