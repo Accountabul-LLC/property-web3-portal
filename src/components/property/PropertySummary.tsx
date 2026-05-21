@@ -2,15 +2,15 @@ import React from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Heart, Bell, Star, MapPin } from 'lucide-react';
+import { Bell, Star, MapPin } from 'lucide-react';
 import { PropertyDetail } from '../../pages/PropertyDetail';
+import PropertySaveButton from './PropertySaveButton';
 
 interface PropertySummaryProps {
   property: PropertyDetail;
 }
 
 const PropertySummary: React.FC<PropertySummaryProps> = ({ property }) => {
-  const [isSaved, setIsSaved] = React.useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
 
   const averageRating = property.reviews.reduce((sum, review) => sum + review.rating, 0) / property.reviews.length;
@@ -28,14 +28,7 @@ const PropertySummary: React.FC<PropertySummaryProps> = ({ property }) => {
             </Badge>
             
             <div className="flex space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsSaved(!isSaved)}
-                className={isSaved ? 'text-destructive' : ''}
-              >
-                <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-              </Button>
+              <PropertySaveButton propertyId={property.id} propertyStatus={property.status} />
               <Button
                 variant="outline"
                 size="sm"
