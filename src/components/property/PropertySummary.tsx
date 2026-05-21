@@ -12,8 +12,10 @@ interface PropertySummaryProps {
 
 const PropertySummary: React.FC<PropertySummaryProps> = ({ property }) => {
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(false);
-
-  const averageRating = property.reviews.reduce((sum, review) => sum + review.rating, 0) / property.reviews.length;
+  const averageRating =
+    property.reviews.length > 0
+      ? property.reviews.reduce((sum, review) => sum + review.rating, 0) / property.reviews.length
+      : 0;
 
   return (
     <Card>

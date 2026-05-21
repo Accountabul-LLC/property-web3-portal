@@ -79,11 +79,17 @@ export function useTokenOrders(propertyId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('token_orders' as any)
-        .select('*')
+        .select('id, property_id, side, price, quantity, filled_quantity, status, created_at')
         .eq('property_id', propertyId)
         .eq('status', 'open')
         .order('price', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        const isRlsDenied =
+          error.code === '42501' ||
+          /permission denied|row-level security/i.test(error.message || '');
+        if (isRlsDenied) return [];
+        throw error;
+      }
       return (data || []) as unknown as TokenOrder[];
     },
     enabled: !!propertyId,

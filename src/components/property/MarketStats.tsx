@@ -8,6 +8,10 @@ interface MarketStatsProps {
 }
 
 const MarketStats: React.FC<MarketStatsProps> = ({ property }) => {
+  const totalSupply = Number(property.totalTokens) || 0;
+  const availableSupply = Number(property.tokensAvailable) || 0;
+  const soldPercent = totalSupply > 0 ? ((totalSupply - availableSupply) / totalSupply) * 100 : 0;
+
   const stats = [
     {
       label: 'Last Trade Price',
@@ -81,12 +85,12 @@ const MarketStats: React.FC<MarketStatsProps> = ({ property }) => {
           <div className="mt-4">
             <div className="flex justify-between text-sm mb-2">
               <span>Token Distribution</span>
-              <span>{((property.totalTokens - property.tokensAvailable) / property.totalTokens * 100).toFixed(1)}% Sold</span>
+              <span>{soldPercent.toFixed(1)}% Sold</span>
             </div>
             <div className="w-full bg-muted rounded-full h-2">
               <div 
                 className="bg-primary h-2 rounded-full"
-                style={{ width: `${((property.totalTokens - property.tokensAvailable) / property.totalTokens) * 100}%` }}
+                style={{ width: `${soldPercent}%` }}
               />
             </div>
           </div>

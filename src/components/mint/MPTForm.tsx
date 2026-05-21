@@ -111,8 +111,15 @@ const TokenImageUpload = ({ value, onChange }: { value: string; onChange: (url: 
     }
     setUploading(true);
     try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const user = authData.user;
+      if (!user) {
+        toast.error('Please sign in to upload token logos.');
+        return;
+      }
       const ext = file.name.split('.').pop() || 'png';
-      const path = `${crypto.randomUUID()}.${ext}`;
+      const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from('token-logos').upload(path, file, {
         cacheControl: '31536000',
         upsert: false,
