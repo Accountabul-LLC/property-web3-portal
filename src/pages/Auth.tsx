@@ -107,7 +107,13 @@ const Auth = () => {
             .eq('id', data.user.id);
         }
 
-        toast.success('Check your email to verify your account.');
+        if (data.session) {
+          toast.success('Account created! Welcome.');
+          navigate('/dashboard');
+        } else {
+          toast.success('Account created. Please sign in.');
+          setMode('login');
+        }
       }
     } catch (err: any) {
       toast.error(err.message || 'Authentication failed');
