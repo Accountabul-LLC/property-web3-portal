@@ -274,35 +274,60 @@ export default function CauseDetail() {
                   </span>
                 </div>
               ) : null}
-              {/* Stats */}
+
+              {/* Raised vs Goal */}
               <div>
-                <p className="text-3xl font-bold text-foreground">
-                  {campaign.total_raised.toLocaleString()}
-                  <span className="text-lg font-normal text-muted-foreground ml-1">{campaign.currency}</span>
-                </p>
-                {raisedUsd !== null && (
-                  <p className="text-sm text-muted-foreground mt-0.5">≈ {formatUsd(raisedUsd)} USD</p>
-                )}
-                {campaign.goal_amount && (
-                  <p className="text-sm text-muted-foreground mt-0.5">
-                    of {campaign.goal_amount.toLocaleString()} {campaign.currency}
-                    {goalUsd !== null && <span> (≈ {formatUsd(goalUsd)})</span>} goal
-                  </p>
+                <div className="flex justify-between items-baseline mb-3 gap-4">
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-3xl font-bold text-foreground tracking-tight truncate">
+                      {raisedUsd !== null
+                        ? formatUsd(raisedUsd)
+                        : `${campaign.total_raised.toLocaleString()} ${campaign.currency}`}
+                    </span>
+                    {isXrp && (
+                      <span className="text-xs font-semibold text-primary uppercase tracking-wider mt-0.5">
+                        {campaign.total_raised.toLocaleString()} XRP raised
+                      </span>
+                    )}
+                  </div>
+                  {campaign.goal_amount && (
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Goal</span>
+                      <div className="text-lg font-semibold text-foreground">
+                        {goalUsd !== null
+                          ? formatUsd(goalUsd)
+                          : `${campaign.goal_amount.toLocaleString()} ${campaign.currency}`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {pct !== null && (
+                  <>
+                    <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-primary to-purple-500 rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm font-semibold text-foreground">{pct}% raised</span>
+                      {campaign.goal_amount && (
+                        <span className="text-sm text-muted-foreground">
+                          {(() => {
+                            const remaining = Math.max(0, campaign.goal_amount - campaign.total_raised)
+                            const remainingUsd = isXrp && xrpPrice ? remaining * xrpPrice : null
+                            return remainingUsd !== null
+                              ? `${formatUsd(remainingUsd)} to go`
+                              : `${remaining.toLocaleString()} ${campaign.currency} to go`
+                          })()}
+                        </span>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
 
-              {/* Progress bar */}
-              {pct !== null && (
-                <div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-primary to-purple-500 rounded-full transition-all duration-500"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">{pct}% funded</p>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="bg-muted/50 rounded-lg p-3">
