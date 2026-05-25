@@ -1093,6 +1093,12 @@ export default function AdminCauses() {
                           Hidden
                         </span>
                       )}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
+                        {(campaign.accepted_assets && campaign.accepted_assets.length > 0
+                          ? campaign.accepted_assets
+                          : ['XRP']
+                        ).join(' · ')}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         Submitted {new Date(campaign.created_at).toLocaleDateString()}
                       </span>
