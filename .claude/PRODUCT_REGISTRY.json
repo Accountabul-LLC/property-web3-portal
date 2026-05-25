@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "last_updated": "2026-05-25T00:00:00Z",
+  "last_updated": "2026-05-25T16:02:57.1068158-05:00",
   "description": "Product lifecycle registry. Every feature treated as a product with gated stages: idea → researching → designing → under_review → rework → approved → building → verifying → shipped.",
 
   "lifecycle_stages": [
@@ -124,7 +124,7 @@
     {
       "id": "prod_new_001",
       "name": "Liquidity Pools (XRPL AMM)",
-      "status": "idea",
+      "status": "designing",
       "priority": "high",
       "description": "Pools.tsx is a 100% stub. Build XRPL AMM-based liquidity pools: create, deposit, withdraw, view TVL/APY. Major new feature — full lifecycle required.",
       "source_workstream": "ws_new_001",
@@ -134,7 +134,10 @@
           "description": "Stub page identified in audit. Core DeFi feature for the platform. Full R&D → Design → Antagonist → Build → Verify cycle required.",
           "requester": "product_roadmap"
         },
-        "rnd": null,
+        "rnd": {
+          "date": "2026-05-25",
+          "note": "Research complete. See .claude/products/prod_new_001/RND_FINDINGS.md"
+        },
         "design": null,
         "antagonist_review": null,
         "approved": null,
@@ -143,7 +146,7 @@
         "shipped": null
       },
       "artifacts": {
-        "rnd_findings": null,
+        "rnd_findings": ".claude/products/prod_new_001/RND_FINDINGS.md",
         "design_spec": null,
         "antagonist_report": null,
         "verify_report": null

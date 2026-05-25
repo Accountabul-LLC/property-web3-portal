@@ -2,7 +2,7 @@
   "schema_version": "1.1",
   "project_name": "Accountabul",
   "repo_name": "property-web3-portal",
-  "last_updated": "2026-05-25T08:52:06.1895676-05:00",
+  "last_updated": "2026-05-25T16:02:57.1068158-05:00",
   "audit_date": "2026-05-25",
   "overall_completeness": "~75% production-ready",
 
@@ -177,7 +177,7 @@
       "id": "ws_new_001",
       "name": "Liquidity Pools (Phase 2 Feature)",
       "department": "Backend + Frontend + Supabase",
-      "status": "planning",
+      "status": "ready",
       "priority": "high",
       "description": "Pools.tsx is 100% stub ('coming soon'). Build XRPL AMM-based liquidity pools: create pool, deposit, withdraw, view TVL and APY. Requires XRPL AMMCreate/AMMDeposit/AMMWithdraw transactions.",
       "tasks": [
@@ -322,5 +322,5 @@
     "AI Panel uses ai-debate edge function — streams NDJSON, requires OPENAI_API_KEY and ANTHROPIC_API_KEY secrets"
   ],
 
-  "next_session_prompt": "Phase 2 audit complete. Priority order: (1) ws_fix_001 — fix campaign-release testnet hardcoding, (2) ws_fix_002 — add CauseApply auth gate, (3) ws_sec_001 — add file path whitelist to github-agent, (4) ws_new_001 — begin Pools feature design. Start with ws_fix_001 as it's a data-loss risk on mainnet."
+  "next_session_prompt": "Pools research is complete. Begin ws_new_001 design: define liquidity pool schema, AMM edge function contract, pool discovery UX, deposit/withdraw flow, and the mandatory impermanent-loss risk warning before any user commits funds."
 }
