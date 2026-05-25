@@ -124,6 +124,7 @@ const Navigation = () => {
           {/* Right: desktop actions (lg+) */}
           <div className="hidden items-center gap-1.5 xl:gap-2 flex-shrink-0">
             <ThemeToggle />
+            {user && isConnected && <NotificationBell />}
             {user && !kycApproved && (
               <button
                 onClick={() => navigate('/kyc')}
