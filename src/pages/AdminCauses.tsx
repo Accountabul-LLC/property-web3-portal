@@ -28,6 +28,7 @@ interface Campaign {
   slug: string
   description: string
   image_url: string | null
+  gallery_urls: string[]
   video_url: string | null
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
