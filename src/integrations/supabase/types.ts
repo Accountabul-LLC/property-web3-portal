@@ -1894,6 +1894,21 @@ export type Database = {
     }
     Functions: {
       get_kyc_status: { Args: { p_user_id: string }; Returns: string }
+      get_public_campaign_donations: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          currency: string
+          donor_display_name: string
+          donor_message: string
+          donor_wallet_address: string
+          escrow_status: string
+          id: string
+          is_anonymous: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
