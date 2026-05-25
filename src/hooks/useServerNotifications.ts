@@ -27,7 +27,7 @@ function playPing() {
     if (document.hidden) return;
     if (localStorage.getItem('accountabul_notifications_muted') === '1') return;
     if (!audioEl) {
-      audioEl = new Audio('/notification.mp3');
+      audioEl = new Audio('/notification.wav');
       audioEl.volume = 0.5;
     }
     audioEl.currentTime = 0;
