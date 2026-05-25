@@ -39,6 +39,7 @@ export default function Payments() {
   const [status, setStatus] = useState<"idle" | "preparing" | "ready" | "error">("idle");
   const [response, setResponse] = useState<PaymentCheckoutResponse | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const [stripeModalOpen, setStripeModalOpen] = useState(false);
 
   const updateDraft = (field: keyof PaymentDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value } as PaymentDraft));
