@@ -26,6 +26,16 @@ type Props = {
 }
 
 export default function DonateModal({ campaign, open, onClose }: Props) {
+  const { wallets, activeWallet, setActiveWallet } = useActiveWallet()
+  const campaignNetwork = (campaign.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet'
+  const { data: portfolio, isLoading: balanceLoading } = useXRPLPortfolio(
+    activeWallet?.address ?? null,
+    campaignNetwork
+  )
+  const spendableXrp = portfolio?.spendable_xrp ?? 0
+  // Reserve ~1 XRP headroom for the new escrow object reserve + fee
+  const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - 1) * 1_000_000) / 1_000_000), [spendableXrp])
+
   const [step, setStep] = useState<Step>('form')
   const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
   const [amount, setAmount] = useState('')
@@ -36,6 +46,10 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   const [deepLink, setDeepLink] = useState('')
   const [payloadUuid, setPayloadUuid] = useState('')
   const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null)
+
+  const amt = parseFloat(amount)
+  const insufficientFunds = asset === 'XRP' && !!amount && !Number.isNaN(amt) && amt > maxDonatable
+  const balanceReady = !balanceLoading && !!activeWallet
 
   const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -59,9 +73,16 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
       toast.info('RLUSD donations coming soon — switch to XRP to donate now.')
       return
     }
-    const amt = parseFloat(amount)
+    if (!activeWallet) {
+      toast.error('Connect a wallet to donate')
+      return
+    }
     if (!amt || amt < 1) {
       toast.error(`Minimum donation is 1 ${asset}`)
+      return
+    }
+    if (asset === 'XRP' && amt > maxDonatable) {
+      toast.error(`Not enough XRP in ${activeWallet.label}. Available to donate: ${maxDonatable} XRP.`)
       return
     }
     setLoading(true)
