@@ -19,10 +19,22 @@ import {
   formatCauseReleaseUnlockTimestamp,
   isCauseReleaseReady,
 } from '@/lib/causesRelease'
+import { loadDraft, saveDraft, clearDraft, hasDraft } from '@/lib/draftStorage'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
-  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw,
 } from 'lucide-react'
+
+type EditFormShape = {
+  title: string
+  description: string
+  goal_amount: string
+  image_url: string
+  gallery_urls: string[]
+}
+
+const CREATE_DRAFT_KEY = 'admin-causes:create-draft'
+const editDraftKey = (id: string) => `admin-causes:edit-draft:${id}`
 
 type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
 type CampaignNetwork = 'mainnet' | 'testnet'
