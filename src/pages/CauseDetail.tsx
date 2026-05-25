@@ -251,20 +251,25 @@ export default function CauseDetail() {
                 <h3 className="font-semibold text-foreground mb-4">Recent Supporters</h3>
                 <div className="space-y-3">
                   {donations.map((d: any) => {
-                    const displayName = d.donor_display_name?.trim() || shortAddress(d.donor_wallet_address)
-                    const initials = d.donor_display_name?.trim()
-                      ? d.donor_display_name.trim().split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
-                      : d.donor_wallet_address.slice(1, 3).toUpperCase()
+                    const anon = !!d.is_anonymous
+                    const displayName = anon
+                      ? 'Anonymous'
+                      : (d.donor_display_name?.trim() || shortAddress(d.donor_wallet_address))
+                    const initials = anon
+                      ? 'A'
+                      : (d.donor_display_name?.trim()
+                          ? d.donor_display_name.trim().split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
+                          : (d.donor_wallet_address?.slice(1, 3).toUpperCase() ?? '??'))
                     return (
                     <div key={d.id} className="flex items-start gap-3">
                       <Avatar className="w-8 h-8 flex-shrink-0">
-                        <AvatarFallback className="text-xs bg-primary/10 text-primary">
+                        <AvatarFallback className={`text-xs ${anon ? 'bg-muted text-muted-foreground' : 'bg-primary/10 text-primary'}`}>
                           {initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-medium text-foreground">
+                          <span className={`text-sm font-medium ${anon ? 'text-muted-foreground italic' : 'text-foreground'}`}>
                             {displayName}
                           </span>
                           <span className="text-sm font-semibold text-primary">
