@@ -27,12 +27,14 @@ type Props = {
 }
 
 export default function DonateModal({ campaign, open, onClose }: Props) {
-  const { wallets, activeWallet, setActiveWallet } = useActiveWallet()
+  const { wallets, activeWallet, setActiveWallet, activeNetwork } = useActiveWallet()
   const campaignNetwork = (campaign.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet'
+  // Balance is fetched on the user's selected network so they can verify funds before signing.
   const { data: portfolio, isLoading: balanceLoading } = useXRPLPortfolio(
     activeWallet?.address ?? null,
-    campaignNetwork
+    activeNetwork
   )
+  const networkMismatch = activeNetwork !== campaignNetwork
   const spendableXrp = portfolio?.spendable_xrp ?? 0
   // Reserve ~1 XRP headroom for the new escrow object reserve + fee
   const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - 1) * 1_000_000) / 1_000_000), [spendableXrp])
