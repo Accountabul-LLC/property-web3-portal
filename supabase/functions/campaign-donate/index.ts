@@ -387,10 +387,11 @@ Deno.serve(async (req) => {
       custom_meta: {
         identifier: `donation_${campaign_id.slice(0, 8)}_${Date.now().toString(36)}`,
         blob: JSON.stringify({
-          purpose: isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW',
+          purpose: `${isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW'}${isRlusd ? '_RLUSD' : ''}`,
           campaign_id,
           campaign_title: campaign.title,
-          amount_xrp: xrpAmount,
+          amount: donationAmount,
+          currency: requestedCurrency,
           campaign_type: campaign.campaign_type ?? 'escrow',
         }),
       },
