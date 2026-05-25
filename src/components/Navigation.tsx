@@ -8,6 +8,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { supabase } from '@/integrations/supabase/client';
@@ -123,6 +124,7 @@ const Navigation = () => {
           {/* Right: desktop actions (lg+) */}
           <div className="hidden items-center gap-1.5 xl:gap-2 flex-shrink-0">
             <ThemeToggle />
+            {user && isConnected && <NotificationBell />}
             {user && !kycApproved && (
               <button
                 onClick={() => navigate('/kyc')}
@@ -197,6 +199,7 @@ const Navigation = () => {
           {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
+            {user && isConnected && <NotificationBell />}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />

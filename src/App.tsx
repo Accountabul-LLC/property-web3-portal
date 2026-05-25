@@ -35,6 +35,7 @@ import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
 import { RouteSeo } from "./components/RouteSeo";
+import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ const App = () => (
       <ActiveWalletProvider>
         <TooltipProvider>
           <Sonner />
+          <WalletActivityWatcher />
           <BrowserRouter>
             <RouteSeo />
             <Routes>
