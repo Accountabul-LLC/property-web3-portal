@@ -68,6 +68,7 @@ export type PaymentCheckoutResponse = {
     status?: string;
     payment_intent_id?: string | null;
     client_secret?: string | null;
+    publishable_key?: string | null;
     checkout_url?: string | null;
     wallet_request?: Record<string, unknown> | null;
     configuration_missing?: boolean;
