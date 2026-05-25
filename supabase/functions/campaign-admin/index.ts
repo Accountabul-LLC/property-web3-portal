@@ -208,6 +208,9 @@ Deno.serve(async (req) => {
         if (!Array.isArray(body.gallery_urls)) throw new Error('gallery_urls must be an array')
         updates.gallery_urls = body.gallery_urls.filter((url: unknown) => typeof url === 'string')
       }
+      if (body?.accepted_assets !== undefined) {
+        updates.accepted_assets = normalizeAcceptedAssets(body.accepted_assets)
+      }
       if (body?.campaign_type !== undefined) {
         const campaignType = String(body.campaign_type ?? '').trim()
         if (!['escrow', 'direct'].includes(campaignType)) throw new Error('campaign_type must be escrow or direct')
