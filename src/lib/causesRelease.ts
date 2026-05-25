@@ -1,6 +1,6 @@
 export const CAUSES_RELEASE_SAFETY_BUFFER_MS = 10_000
 
-export type CauseCampaignType = 'escrow' | 'direct'
+export type CauseCampaignType = 'escrow' | 'direct' | 'scheduled' | 'evergreen'
 
 export function getCauseReleaseUnlockAt(releaseDate: string | null | undefined): number {
   if (!releaseDate) return Number.POSITIVE_INFINITY
@@ -17,7 +17,7 @@ export function formatCauseReleaseCountdown(
   now = Date.now(),
   campaignType: CauseCampaignType = 'escrow',
 ): string {
-  if (campaignType === 'direct' || !releaseDate) return 'Direct donations stay open'
+  if (campaignType === 'direct' || campaignType === 'evergreen' || !releaseDate) return 'Direct donations stay open'
   const remaining = getCauseReleaseUnlockAt(releaseDate) - now
   if (remaining <= 0) return 'Ready to release \u2713'
 

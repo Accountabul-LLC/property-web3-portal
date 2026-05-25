@@ -1,17 +1,19 @@
 import { useSyncExternalStore, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, ExternalLink, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   listNotifications,
   unreadCount,
   markAllRead,
   markRead,
   subscribe,
-  explorerUrl,
+  
   WalletNotification,
 } from '@/lib/walletNotifications';
 import {
@@ -32,6 +34,8 @@ type UnifiedItem = {
   created_at: string;
   read: boolean;
   backfilled?: boolean;
+  wallet_address: string | null;
+  donation_id: string | null;
   raw: ServerNotification | WalletNotification;
 };
 
@@ -49,8 +53,9 @@ function useWalletNotifications(address: string | null, network: 'mainnet' | 'te
 }
 
 export function NotificationBell() {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { activeAddress, activeNetwork } = useActiveWallet();
+  const { activeAddress, activeNetwork, setActiveWallet, setActiveNetwork, wallets } = useActiveWallet();
   const network: 'mainnet' | 'testnet' = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const { items: walletItems, unread: walletUnread } = useWalletNotifications(activeAddress, network);
   const { notifications: serverItems, unreadCount: serverUnread } = useServerNotifications();
@@ -65,6 +70,8 @@ export function NotificationBell() {
       network: (n.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet',
       created_at: n.created_at,
       read: !!n.read_at,
+      wallet_address: null,
+      donation_id: n.donation_id,
       raw: n,
     }));
     const fromWallet: UnifiedItem[] = walletItems.map((n) => ({
@@ -77,6 +84,8 @@ export function NotificationBell() {
       created_at: n.created_at,
       read: n.read,
       backfilled: n.backfilled,
+      wallet_address: n.wallet_address,
+      donation_id: null,
       raw: n,
     }));
     // Dedupe by tx_hash — prefer server entries
@@ -97,15 +106,44 @@ export function NotificationBell() {
     if (user) await markAllServerNotificationsRead(user.id);
   };
 
+  const resolveWalletAddress = async (item: UnifiedItem): Promise<string | null> => {
+    if (item.wallet_address) return item.wallet_address;
+    if (item.source === 'server' && item.donation_id) {
+      const { data } = await supabase
+        .from('campaign_donations')
+        .select('donor_wallet_address')
+        .eq('id', item.donation_id)
+        .maybeSingle();
+      return data?.donor_wallet_address ?? null;
+    }
+    return null;
+  };
+
   const handleClick = async (item: UnifiedItem) => {
+    // Mark read first
     if (item.source === 'server') {
       await markServerNotificationRead((item.raw as ServerNotification).id);
     } else if (activeAddress) {
       markRead(activeAddress, network, (item.raw as WalletNotification).id);
     }
-    if (item.tx_hash) {
-      window.open(explorerUrl(item.network, item.tx_hash), '_blank');
+
+    // Match the notification's network if we're on a different one
+    if (item.network !== network) {
+      setActiveNetwork(item.network);
     }
+
+    // Resolve target wallet and auto-switch
+    const targetAddress = await resolveWalletAddress(item);
+    if (targetAddress && targetAddress !== activeAddress) {
+      const owned = wallets.find((w) => w.address === targetAddress);
+      if (owned) setActiveWallet(targetAddress);
+    }
+
+    // Navigate to portfolio with tx focus
+    const params = new URLSearchParams();
+    if (targetAddress) params.set('account', targetAddress);
+    if (item.tx_hash) params.set('tx', item.tx_hash);
+    navigate(`/portfolio${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   return (

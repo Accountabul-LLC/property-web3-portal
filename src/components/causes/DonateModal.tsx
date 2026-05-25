@@ -29,7 +29,7 @@ type Props = {
 export default function DonateModal({ campaign, open, onClose }: Props) {
   const { wallets, activeWallet, setActiveWallet, activeNetwork } = useActiveWallet()
   const campaignNetwork = (campaign.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet'
-  const isDirectCampaign = campaign.campaign_type === 'direct'
+  const isDirectCampaign = campaign.campaign_mode === 'evergreen'
   // Balance is fetched on the user's selected network so they can verify funds before signing.
   const { data: portfolio, isLoading: balanceLoading } = useXRPLPortfolio(
     activeWallet?.address ?? null,

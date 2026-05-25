@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,9 +50,10 @@ const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currenc
 interface PortfolioSectionProps {
   overrideAddress?: string | null;
   isReadOnly?: boolean;
+  focusTxHash?: string | null;
 }
 
-const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
+const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = null }: PortfolioSectionProps) => {
   const queryClient = useQueryClient();
   const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
@@ -93,6 +94,16 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const [mptSortMode, setMptSortMode] = useState<'newest' | 'alpha' | 'supply'>('newest');
   const [mptSearchQuery, setMptSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const focusedTxRef = useRef<HTMLAnchorElement | null>(null);
+
+  // Scroll to and briefly highlight a transaction when opened via notification
+  useEffect(() => {
+    if (!focusTxHash || !xrplData) return;
+    const t = setTimeout(() => {
+      focusedTxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [focusTxHash, xrplData]);
 
   const handleCopyAddress = async () => {
     if (!displayAddress) return;
@@ -979,13 +990,17 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
 
                       const counterparty = tx.direction === 'received' ? tx.sender : tx.destination;
 
+                      const isFocused = !!focusTxHash && tx.hash === focusTxHash;
                       return (
                         <a
                           key={tx.hash}
+                          ref={isFocused ? focusedTxRef : undefined}
                           href={`https://${isTestnet ? 'testnet' : 'livenet'}.xrpl.org/transactions/${tx.hash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group"
+                          className={`flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group ${
+                            isFocused ? 'bg-primary/10 ring-2 ring-primary/40 animate-pulse-once' : ''
+                          }`}
                         >
                           <div className="relative flex-shrink-0 mt-0.5">
                             <TokenAvatar

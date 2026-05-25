@@ -289,6 +289,7 @@ export type Database = {
           escrow_tx_hash: string | null
           id: string
           is_anonymous: boolean
+          release_date: string
           updated_at: string
           xaman_payload_uuid: string | null
         }
@@ -307,6 +308,7 @@ export type Database = {
           escrow_tx_hash?: string | null
           id?: string
           is_anonymous?: boolean
+          release_date: string
           updated_at?: string
           xaman_payload_uuid?: string | null
         }
@@ -325,6 +327,7 @@ export type Database = {
           escrow_tx_hash?: string | null
           id?: string
           is_anonymous?: boolean
+          release_date?: string
           updated_at?: string
           xaman_payload_uuid?: string | null
         }
@@ -343,8 +346,10 @@ export type Database = {
           admin_notes: string | null
           approved_at: string | null
           approved_by: string | null
+          campaign_mode: string
           created_at: string
           currency: string
+          default_release_offset_days: number | null
           description: string
           donor_count: number
           gallery_urls: string[]
@@ -369,8 +374,10 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          campaign_mode?: string
           created_at?: string
           currency?: string
+          default_release_offset_days?: number | null
           description: string
           donor_count?: number
           gallery_urls?: string[]
@@ -395,8 +402,10 @@ export type Database = {
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
+          campaign_mode?: string
           created_at?: string
           currency?: string
+          default_release_offset_days?: number | null
           description?: string
           donor_count?: number
           gallery_urls?: string[]

@@ -36,7 +36,7 @@ interface Campaign {
   image_url: string | null
   gallery_urls: string[]
   video_url: string | null
-  campaign_type: CampaignType
+  campaign_mode: 'scheduled' | 'evergreen'
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
@@ -345,7 +345,7 @@ export default function AdminCauses() {
           goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
           recipient_wallet_address: createForm.recipient_wallet_address.trim(),
           release_date: createForm.campaign_type === 'escrow' ? new Date(createForm.release_date!).toISOString() : null,
-          campaign_type: createForm.campaign_type,
+          campaign_mode: createForm.campaign_type === 'direct' ? 'evergreen' : 'scheduled',
           status: createForm.status === 'active' ? 'active' : 'under_review',
           network: createForm.network,
           submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
@@ -860,9 +860,9 @@ export default function AdminCauses() {
           {filtered.map((campaign) => {
             const isExpanded = expandedId === campaign.id
             const badge = STATUS_BADGE[campaign.status]
-            const isDirectCampaign = campaign.campaign_type === 'direct'
+            const isDirectCampaign = campaign.campaign_mode === 'evergreen'
             const canRelease = !isDirectCampaign && isCauseReleaseReady(campaign.release_date, now)
-            const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_type)
+            const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_mode)
             const releaseUnlockAt = isDirectCampaign
               ? 'No unlock time'
               : formatCauseReleaseUnlockTimestamp(campaign.release_date)

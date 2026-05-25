@@ -49,7 +49,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
     }
   };
 
-  const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+  const shortenAddress = (addr: string) => `…${addr.slice(-6)}`;
 
   const getExplorerUrl = (address: string, network: string) => {
     if (network === 'testnet') return `https://testnet.xrpl.org/accounts/${address}`;

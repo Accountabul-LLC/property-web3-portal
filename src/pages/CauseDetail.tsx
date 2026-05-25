@@ -167,9 +167,9 @@ export default function CauseDetail() {
     )
   }
 
-  const unlockCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_type)
+  const unlockCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_mode)
   const unlockTimestamp = formatCauseReleaseUnlockTimestamp(campaign.release_date)
-  const isDirectCampaign = campaign.campaign_type === 'direct'
+  const isDirectCampaign = campaign.campaign_mode === 'evergreen'
   const releaseReady = isDirectCampaign ? false : isCauseReleaseReady(campaign.release_date, now)
   const releaseDate = campaign.release_date
     ? new Date(campaign.release_date).toLocaleDateString('en-US', {
