@@ -1,4 +1,4 @@
-// UnifiedWalletsOverview — aggregates XRP + token balances across every
+// UnifiedWalletsOverview — aggregates XRP + token + MPT USD value across every
 // connected wallet on the active network. Rendered above PortfolioSection
 // when the user has more than one wallet connected.
 
@@ -7,18 +7,22 @@ import { useQueries } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Wallet, Layers, ChevronRight, FlaskConical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { walletShortId } from '@/lib/walletLabel';
+import { sumMptIssuerUsd } from '@/lib/mptValuation';
 import type { XRPLPortfolioData } from '@/hooks/useXRPLPortfolio';
+import type { TokenMetaData, TokenMetaResult } from '@/hooks/useTokenMeta';
 
 interface WalletSummary {
   address: string;
   label: string;
   xrpBalance: number;
   tokenCount: number;
+  mptCount: number;
+  totalUsd: number;
+  hasUsd: boolean;
   isLoading: boolean;
 }
 
@@ -28,7 +32,7 @@ export default function UnifiedWalletsOverview() {
   const network: 'mainnet' | 'testnet' = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const isTestnet = network === 'testnet';
 
-  // Fetch all wallets in parallel (shares cache with PortfolioSection's per-wallet query)
+  // Fetch all wallets in parallel
   const portfolioQueries = useQueries({
     queries: wallets.map((w) => ({
       queryKey: ['xrpl_portfolio', w.address, network],
@@ -46,26 +50,61 @@ export default function UnifiedWalletsOverview() {
     })),
   });
 
+  // Token metadata per wallet (for IOU price lookups). Keyed on its tokens.
+  const metaQueries = useQueries({
+    queries: wallets.map((w, idx) => {
+      const data = portfolioQueries[idx].data;
+      const tokens = data?.token_holdings.map((t) => ({ currency: t.currency, issuer: t.issuer })) || [];
+      const key = tokens.map((t) => `${t.currency}:${t.issuer}`).sort().join(',');
+      return {
+        queryKey: ['token_meta', key],
+        queryFn: async (): Promise<TokenMetaData> => {
+          const { data: r, error } = await supabase.functions.invoke('xrpl-token-meta', { body: { tokens } });
+          if (error) throw error;
+          const map = new Map();
+          for (const item of (r.tokens || []) as TokenMetaResult[]) {
+            if (item.meta) map.set(`${item.currency}:${item.issuer}`, item.meta);
+          }
+          return { tokenMap: map, xrpUsd: r.xrp_usd || 0 };
+        },
+        enabled: !!data,
+        staleTime: 8_000,
+      };
+    }),
+  });
+
   const summaries: WalletSummary[] = useMemo(
     () =>
       wallets.map((w, idx) => {
         const q = portfolioQueries[idx];
+        const m = metaQueries[idx];
+        const xrpUsd = m.data?.xrpUsd ?? 0;
+        const xrpBal = q.data?.xrp_balance ?? 0;
+        let total = xrpBal * xrpUsd;
+        for (const t of q.data?.token_holdings || []) {
+          const meta = m.data?.tokenMap.get(`${t.currency}:${t.issuer}`);
+          if (meta?.price && meta.price > 0) total += Number(t.balance) * meta.price;
+        }
+        total += sumMptIssuerUsd(q.data?.mpt_issuances);
         return {
           address: w.address,
           label: w.label || w.xamanName || walletShortId(w.address),
-          xrpBalance: q.data?.xrp_balance ?? 0,
+          xrpBalance: xrpBal,
           tokenCount: q.data?.token_holdings?.length ?? 0,
+          mptCount: (q.data?.mpt_issuances?.length ?? 0) + (q.data?.mpt_holdings?.length ?? 0),
+          totalUsd: total,
+          hasUsd: total > 0,
           isLoading: q.isLoading,
         };
       }),
-    [wallets, portfolioQueries],
+    [wallets, portfolioQueries, metaQueries],
   );
 
   const totals = useMemo(() => {
     const totalXrp = summaries.reduce((sum, s) => sum + s.xrpBalance, 0);
-    const totalTokens = summaries.reduce((sum, s) => sum + s.tokenCount, 0);
-    const loaded = summaries.filter((s) => !s.isLoading).length;
-    return { totalXrp, totalTokens, loaded, count: summaries.length };
+    const totalUsd = summaries.reduce((sum, s) => sum + s.totalUsd, 0);
+    const totalTokens = summaries.reduce((sum, s) => sum + s.tokenCount + s.mptCount, 0);
+    return { totalXrp, totalUsd, totalTokens, count: summaries.length };
   }, [summaries]);
 
   if (wallets.length < 2) return null;
@@ -93,16 +132,29 @@ export default function UnifiedWalletsOverview() {
               </Badge>
             )}
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold">
-              {totals.totalXrp.toLocaleString(undefined, { maximumFractionDigits: 4 })}
-            </span>
-            <span className="text-lg font-medium text-muted-foreground">XRP</span>
-            <span className="text-xs text-muted-foreground ml-2">
-              across {totals.count} {totals.count === 1 ? 'wallet' : 'wallets'}
-              {totals.totalTokens > 0 && ` · ${totals.totalTokens} token holdings`}
-            </span>
-          </div>
+          {totals.totalUsd > 0 ? (
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-3xl font-bold">
+                ${totals.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                · {totals.totalXrp.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRP
+                · {totals.count} {totals.count === 1 ? 'wallet' : 'wallets'}
+                {totals.totalTokens > 0 && ` · ${totals.totalTokens} tokens`}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-bold">
+                {totals.totalXrp.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+              </span>
+              <span className="text-lg font-medium text-muted-foreground">XRP</span>
+              <span className="text-xs text-muted-foreground ml-2">
+                across {totals.count} {totals.count === 1 ? 'wallet' : 'wallets'}
+                {totals.totalTokens > 0 && ` · ${totals.totalTokens} tokens`}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -139,14 +191,16 @@ export default function UnifiedWalletsOverview() {
                   <span className="text-xs text-muted-foreground">Loading…</span>
                 ) : (
                   <>
-                    <p className="text-sm font-semibold">
-                      {s.xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} XRP
-                    </p>
-                    {s.tokenCount > 0 && (
-                      <p className="text-[10px] text-muted-foreground">
-                        +{s.tokenCount} {s.tokenCount === 1 ? 'token' : 'tokens'}
+                    {s.hasUsd && (
+                      <p className="text-sm font-semibold">
+                        ${s.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                       </p>
                     )}
+                    <p className={`text-[11px] ${s.hasUsd ? 'text-muted-foreground' : 'text-sm font-semibold text-foreground'}`}>
+                      {s.xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} XRP
+                      {s.tokenCount > 0 && ` · ${s.tokenCount} tok`}
+                      {s.mptCount > 0 && ` · ${s.mptCount} MPT`}
+                    </p>
                   </>
                 )}
               </div>

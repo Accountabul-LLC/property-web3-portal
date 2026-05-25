@@ -52,6 +52,7 @@ export interface MPTIssuance {
   asset_subclass: string | null;
   issuer_name: string | null;
   uris: string[] | null;
+  value_usd: number | null;
 }
 
 export interface MPTHolding {

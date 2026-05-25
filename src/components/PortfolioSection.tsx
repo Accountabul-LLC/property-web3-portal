@@ -8,6 +8,7 @@ import { useXRPLPortfolio, type MPTIssuance, type MPTHolding } from '@/hooks/use
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
+import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 import NetworkToggle from '@/components/NetworkToggle';
@@ -167,10 +168,23 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
       }
     }
 
+    // MPT issuer-held value (unsold supply * implied price per token)
+    let mptSubtotal = 0;
+    for (const mpt of xrplData.mpt_issuances || []) {
+      const v = valueMptIssuance(mpt);
+      if (v.issuerHeldUsd && v.issuerHeldUsd > 0) {
+        mptSubtotal += v.issuerHeldUsd;
+        pricedCount++;
+      } else if ((mpt.max_amount && Number(mpt.max_amount) > 0)) {
+        unpricedCount++;
+      }
+    }
+
     return {
-      totalUsd: xrpSubtotal + tokenSubtotal,
+      totalUsd: xrpSubtotal + tokenSubtotal + mptSubtotal,
       xrpSubtotal,
       tokenSubtotal,
+      mptSubtotal,
       pricedCount,
       unpricedCount,
       assetValues,
@@ -695,6 +709,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                       const scale = mpt.asset_scale || 0;
                       const outstanding = mpt.outstanding_amount ? Number(mpt.outstanding_amount) / Math.pow(10, scale) : 0;
                       const maxAmt = mpt.max_amount ? Number(mpt.max_amount) / Math.pow(10, scale) : null;
+                      const valuation = valueMptIssuance(mpt);
 
                       return (
                         <Card
@@ -728,8 +743,22 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="text-right">
-                                  <p className="text-lg font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
-                                  <p className="text-xs text-muted-foreground">supply</p>
+                                  {valuation.issuerHeldUsd != null ? (
+                                    <>
+                                      <p className="text-lg font-bold">
+                                        ${valuation.issuerHeldUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        {valuation.issuerHeldUnits.toLocaleString(undefined, { maximumFractionDigits: scale })} held
+                                        {valuation.pricePerTokenUsd ? ` · $${valuation.pricePerTokenUsd.toLocaleString(undefined, { maximumFractionDigits: 4 })}/tok` : ''}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-lg font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
+                                      <p className="text-xs text-muted-foreground">supply</p>
+                                    </>
+                                  )}
                                 </div>
                                 {isExpanded ? (
                                   <ChevronUp className="w-4 h-4 text-muted-foreground" />

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useXRPLPortfolio } from './useXRPLPortfolio';
 import { useTokenMeta } from './useTokenMeta';
+import { sumMptIssuerUsd } from '@/lib/mptValuation';
 import type { TreasuryWalletConfig } from '@/config/treasuryWallets';
 
 export interface WalletValuation {
@@ -26,6 +27,7 @@ export function useWalletValuation(wallet: TreasuryWalletConfig): WalletValuatio
         total += Number(t.balance) * meta.price;
       }
     }
+    total += sumMptIssuerUsd(data.mpt_issuances);
     return total;
   }, [data, tokenMetaData]);
 
