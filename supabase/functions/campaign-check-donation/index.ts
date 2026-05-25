@@ -265,6 +265,31 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Detect on-ledger failure (tec*, tef*, ter*, tem*, tel*) — signed in Xaman but rejected by the XRP Ledger
+    const engineResult: string = txData?.meta?.TransactionResult ?? 'unknown'
+    if (engineResult !== 'tesSUCCESS') {
+      const friendly =
+        engineResult === 'tecNO_PERMISSION'
+          ? 'The XRP Ledger rejected this transaction: the escrow release time has not been reached yet, or the cancel window has already passed. No funds were moved.'
+          : `The XRP Ledger rejected this transaction (${engineResult}). No funds were moved.`
+
+      await Promise.all([
+        svc.from('xaman_payloads').update({ status: 'failed' }).eq('uuid', xaman_uuid),
+        svc.from('campaign_donations')
+          .update({ escrow_status: 'cancelled', updated_at: new Date().toISOString() })
+          .eq('xaman_payload_uuid', xaman_uuid),
+      ])
+
+      return new Response(JSON.stringify({
+        status: 'failed',
+        engine_result: engineResult,
+        message: friendly,
+        tx_hash: txHash,
+      }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     const expectedDrops = String(meta.drops ?? Math.round(Number(meta.amount_xrp ?? 0) * 1_000_000))
     const txAmount = typeof txData.Amount === 'string' ? txData.Amount : String(txData.Amount ?? '')
     const txDestination = txData.Destination ?? ''

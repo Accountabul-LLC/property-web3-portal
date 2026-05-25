@@ -145,6 +145,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
           clearInterval(interval)
           setStep('done')
           toast.success('Donation locked in escrow! Thank you.')
+        } else if (json.status === 'failed') {
+          clearInterval(interval)
+          setStep('form')
+          toast.error(
+            json.message ?? `Transaction rejected by the XRP Ledger (${json.engine_result ?? 'unknown'}).`,
+            { duration: 10000 }
+          )
         } else if (json.status === 'cancelled' || json.status === 'expired') {
           clearInterval(interval)
           setStep('form')
