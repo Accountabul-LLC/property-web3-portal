@@ -231,6 +231,25 @@ Deno.serve(async (req) => {
       throw payloadInsertErr
     }
 
+    // ── Look up donor display name from profile ───────────────
+    const { data: profile } = await svc
+      .from('profiles')
+      .select('full_name, first_name, last_name')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    let donorDisplayName: string | null = null
+    if (profile) {
+      if (profile.full_name && profile.full_name.trim()) {
+        donorDisplayName = profile.full_name.trim()
+      } else if (profile.first_name && profile.first_name.trim()) {
+        const last = profile.last_name?.trim()
+        donorDisplayName = last
+          ? `${profile.first_name.trim()} ${last.charAt(0)}.`
+          : profile.first_name.trim()
+      }
+    }
+
     // ── Create pending donation row ───────────────────────────
     const { data: donationRow, error: donErr } = await svc
       .from('campaign_donations')
@@ -238,6 +257,7 @@ Deno.serve(async (req) => {
         campaign_id,
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
+        donor_display_name: donorDisplayName,
         amount: xrpAmount,
         currency: campaign.currency ?? 'XRP',
         xaman_payload_uuid: xamanData.uuid,
@@ -247,6 +267,7 @@ Deno.serve(async (req) => {
       })
       .select('id')
       .single()
+
 
     if (donErr) {
       console.error('Failed to create donation row:', donErr)
