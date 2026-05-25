@@ -53,8 +53,9 @@ function useWalletNotifications(address: string | null, network: 'mainnet' | 'te
 }
 
 export function NotificationBell() {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { activeAddress, activeNetwork } = useActiveWallet();
+  const { activeAddress, activeNetwork, setActiveWallet, setActiveNetwork, wallets } = useActiveWallet();
   const network: 'mainnet' | 'testnet' = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const { items: walletItems, unread: walletUnread } = useWalletNotifications(activeAddress, network);
   const { notifications: serverItems, unreadCount: serverUnread } = useServerNotifications();
@@ -69,6 +70,8 @@ export function NotificationBell() {
       network: (n.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet',
       created_at: n.created_at,
       read: !!n.read_at,
+      wallet_address: null,
+      donation_id: n.donation_id,
       raw: n,
     }));
     const fromWallet: UnifiedItem[] = walletItems.map((n) => ({
@@ -81,6 +84,8 @@ export function NotificationBell() {
       created_at: n.created_at,
       read: n.read,
       backfilled: n.backfilled,
+      wallet_address: n.wallet_address,
+      donation_id: null,
       raw: n,
     }));
     // Dedupe by tx_hash — prefer server entries
