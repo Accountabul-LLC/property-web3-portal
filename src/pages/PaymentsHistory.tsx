@@ -140,10 +140,11 @@ export default function PaymentsHistory() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {payments.map((payment) => {
               const invoice = payment.payment_invoices?.[0];
+              const providerPayload = (payment.provider_payload ?? {}) as Record<string, any>;
               const providerState =
-                payment.provider_payload?.stripe_status ??
-                payment.provider_payload?.wallet_request?.status ??
-                payment.provider_payload?.status ??
+                providerPayload.stripe_status ??
+                providerPayload.wallet_request?.status ??
+                providerPayload.status ??
                 "pending";
 
               return (
