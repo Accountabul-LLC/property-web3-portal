@@ -91,7 +91,7 @@ export function useMyDonations(userId?: string) {
       const { data, error } = await supabase
         .from('campaign_donations')
         .select(`
-          id, amount, currency, escrow_status, donor_message, created_at,
+          id, amount, currency, escrow_status, donor_message, donor_wallet_address, created_at,
           campaigns (id, title, slug, release_date, campaign_mode, network, currency, recipient_wallet_address)
         `)
         .eq('donor_user_id', userId)
