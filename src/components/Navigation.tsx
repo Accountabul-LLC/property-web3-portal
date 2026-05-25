@@ -8,6 +8,7 @@ import ThemeToggle from '@/components/ThemeToggle';
 import { WalletConnectModal } from '@/components/WalletConnectModal';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import WalletSelector from '@/components/WalletSelector';
+import { NotificationBell } from '@/components/NotificationBell';
 import { useAuth } from '@/hooks/useAuth';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { supabase } from '@/integrations/supabase/client';
