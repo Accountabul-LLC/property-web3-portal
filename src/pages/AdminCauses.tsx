@@ -92,13 +92,14 @@ export default function AdminCauses() {
   const [editOpen, setEditOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EditFormShape>({
     title: '',
     description: '',
     goal_amount: '',
     image_url: '',
-    gallery_urls: [] as string[],
+    gallery_urls: [],
   })
+  const [editHasDraft, setEditHasDraft] = useState(false)
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
   const [uploadingEditGallery, setUploadingEditGallery] = useState(false)
   const [now, setNow] = useState(() => Date.now())
