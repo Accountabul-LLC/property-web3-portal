@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, recipient_wallet_address, release_date, currency')
+      .select('id, title, slug, status, network, recipient_wallet_address, release_date, currency')
       .eq('id', campaign_id)
       .maybeSingle()
 
@@ -102,6 +102,11 @@ Deno.serve(async (req) => {
     }
     if (campaign.status !== 'active') {
       return new Response(JSON.stringify({ error: `Campaign is not accepting donations (status: ${campaign.status})` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (campaign.network !== 'mainnet' && campaign.network !== 'testnet') {
+      return new Response(JSON.stringify({ error: 'Campaign network is not configured' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -123,6 +128,13 @@ Deno.serve(async (req) => {
 
     if (!wallet) {
       return new Response(JSON.stringify({ error: 'No active wallet connected. Please connect your Xaman wallet first.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (wallet.network !== campaign.network) {
+      return new Response(JSON.stringify({
+        error: `Connected wallet network (${wallet.network ?? 'unknown'}) must match the campaign network (${campaign.network}).`,
+      }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -186,10 +198,11 @@ Deno.serve(async (req) => {
       uuid: xamanData.uuid,
       status: 'pending',
       intended_user_id: user.id,
-      network: wallet.network ?? 'mainnet',
+      network: campaign.network,
       metadata: {
         purpose: 'CAMPAIGN_DONATION',
         campaign_id,
+        campaign_network: campaign.network,
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
         amount_xrp: xrpAmount,

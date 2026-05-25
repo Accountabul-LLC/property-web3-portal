@@ -293,6 +293,10 @@ export function useMyData() {
 - Exposed `My Donations` in the main navigation for signed-in users so the donor history page is discoverable from the app chrome.
 - Added a Causes product comparison section to the brief covering Lovable baseline, product-standard upgrades, and remaining hardening work.
 
+### 2026-05-24 | codex
+- Hardened Causes donations so the donor wallet network must match the campaign network before a payload is created.
+- Updated donation polling to wait for a validated XRPL EscrowCreate that matches the expected recipient and amount before marking a donation as escrowed.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
