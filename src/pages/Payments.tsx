@@ -16,6 +16,7 @@ import {
 import { PaymentComposer } from "@/components/payments/PaymentComposer";
 import { PaymentRailCards } from "@/components/payments/PaymentRailCards";
 import { PaymentSummary } from "@/components/payments/PaymentSummary";
+import { StripeCheckoutModal } from "@/components/payments/StripeCheckoutModal";
 import type { PaymentCheckoutResponse, PaymentDraft, PaymentRail } from "@/components/payments/paymentTypes";
 
 const DEFAULT_PAYMENT_DRAFT: PaymentDraft = {
@@ -38,6 +39,7 @@ export default function Payments() {
   const [status, setStatus] = useState<"idle" | "preparing" | "ready" | "error">("idle");
   const [response, setResponse] = useState<PaymentCheckoutResponse | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
+  const [stripeModalOpen, setStripeModalOpen] = useState(false);
 
   const updateDraft = (field: keyof PaymentDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value } as PaymentDraft));
@@ -83,6 +85,19 @@ export default function Payments() {
       setStatus("ready");
       setIdempotencyKey(crypto.randomUUID());
       toast.success("Payment request prepared.");
+      if (
+        nextRail === "card" &&
+        backendResponse.provider?.provider === "stripe" &&
+        backendResponse.provider?.client_secret &&
+        backendResponse.provider?.publishable_key
+      ) {
+        setStripeModalOpen(true);
+      } else if (
+        nextRail === "card" &&
+        backendResponse.provider?.configuration_missing
+      ) {
+        toast.error("Stripe is not configured. Add STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY.");
+      }
     } catch (error) {
       setResponse(null);
       setStatus("error");
@@ -255,6 +270,15 @@ export default function Payments() {
       </main>
 
       <Footer />
+
+      <StripeCheckoutModal
+        open={stripeModalOpen}
+        onOpenChange={setStripeModalOpen}
+        clientSecret={response?.provider?.client_secret ?? null}
+        publishableKey={response?.provider?.publishable_key ?? null}
+        amountLabel={formatPaymentAmount(draft.amount, draft.currency)}
+        onSuccess={() => setStripeModalOpen(false)}
+      />
     </div>
   );
 }
