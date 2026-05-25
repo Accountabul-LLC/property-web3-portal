@@ -160,13 +160,78 @@ Write to `.claude/products/{product_id}/VERIFY_REPORT.md`:
    - Set `status` to `"shipped"`
    - Fill in `lifecycle.verify` and `lifecycle.shipped` blocks
    - Add evidence (changed files, date, verify report path)
-2. Append a note to `ROSETTA.md` under `## Agent Notes` with: date, product name, what was built, any new patterns
-3. Commit the product registry update:
+2. Update `.claude/products/{product_id}/PRODUCT_DOC.md`:
+   - If the file doesn't exist yet, create it using the PRODUCT_DOC template below
+   - Append a new entry under `## Work History` with: date, what was done, files changed, new status
+   - Update `## Current State` to reflect what's now complete
+3. Append a note to `ROSETTA.md` under `## Agent Notes` with: date, product name, what was built, any new patterns
+4. Commit everything:
    ```bash
-   git add .claude/PRODUCT_REGISTRY.json ROSETTA.md
+   git add .claude/PRODUCT_REGISTRY.json .claude/products/{product_id}/PRODUCT_DOC.md ROSETTA.md
    git commit -m "SHIPPED: {product_name} ({product_id}) — verified and complete"
    ```
-4. Tell the CEO: "✅ {product_name} SHIPPED. All requirements met. Registry updated."
+5. Tell the CEO: "✅ {product_name} SHIPPED. All requirements met. PRODUCT_DOC updated."
+
+---
+
+## PRODUCT_DOC Template
+
+Create `.claude/products/{product_id}/PRODUCT_DOC.md` with this structure when a product first ships:
+
+```markdown
+# Product: {name}
+**ID:** {product_id}
+**Status:** shipped | building | idea
+**Last updated:** {date}
+
+---
+
+## What This Is
+{2-3 sentences. What is this product/feature? Who uses it? What problem does it solve?}
+
+## What It Does
+- {Exact capability 1}
+- {Exact capability 2}
+- {Exact capability 3}
+(Be specific. "Users can do X" not "handles X.")
+
+## Tech Stack
+| Layer | Technology | Detail |
+|-------|-----------|--------|
+| Frontend | React + TypeScript | Page: src/pages/..., Hook: src/hooks/... |
+| Backend | Supabase Edge Function (Deno) | supabase/functions/... |
+| Database | PostgreSQL via Supabase | Tables: ... |
+| Blockchain | XRPL (via edge function) | Tx types: ... |
+
+## Files
+| File | Purpose |
+|------|---------|
+| `src/pages/...` | ... |
+| `src/hooks/...` | ... |
+| `supabase/functions/...` | ... |
+| `supabase/migrations/...` | ... |
+
+## Current State
+**Working:**
+- {what is fully functional}
+
+**Known limitations:**
+- {what is partial or not yet built}
+
+**Dependencies / env vars required:**
+- {SUPABASE_URL, specific secrets, etc.}
+
+---
+
+## Work History
+
+### {YYYY-MM-DD} — {brief title of what was done}
+**Agent:** {department that did the work}
+**Changes:**
+- `{file}`: {what changed}
+**Status after:** {shipped | partial | blocked}
+**Notes:** {any gotchas, patterns discovered, decisions made}
+```
 
 **If REWORK:**
 1. Update `.claude/PRODUCT_REGISTRY.json`: set `status` to `"rework"`, fill in verify block with verdict and rework items
