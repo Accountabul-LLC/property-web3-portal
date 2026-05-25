@@ -1,10 +1,12 @@
 import { useSyncExternalStore, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Bell, ExternalLink, CheckCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import {
   listNotifications,
   unreadCount,
