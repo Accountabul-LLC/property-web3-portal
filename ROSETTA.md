@@ -291,6 +291,7 @@ export function useMyData() {
 - Added search and status filtering on the Causes listing page.
 - Rendered campaign video URLs on the detail page and switched explorer links to use the campaign network instead of hardcoded testnet.
 - Exposed `My Donations` in the main navigation for signed-in users so the donor history page is discoverable from the app chrome.
+- Added a Causes product comparison section to the brief covering Lovable baseline, product-standard upgrades, and remaining hardening work.
 
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`

@@ -29,6 +29,38 @@ The experience should support:
 - submitting campaign requests for review
 - admin approval, rejection, and escrow release
 
+## Current Implementation vs Product Standard
+
+The repo already has a working Causes scaffold from the Lovable build. That scaffold is useful, but the product standard is higher than the initial MVP.
+
+### Already In Place
+
+- public Causes listing page
+- campaign detail page
+- campaign application page
+- admin Causes review page
+- XRPL escrow-backed donation flow
+- campaign data stored in Supabase
+- route wiring in the main app shell
+
+### Upgraded To Product Standard
+
+- search and filter controls on the listing page
+- `My Donations` history for signed-in users
+- network-aware XRPL explorer links
+- campaign video rendering
+- signed-in gating for cause submission
+- admin release messaging that reflects actual escrow status
+- campaign network field for mainnet/testnet awareness
+
+### Still Needs Ongoing Hardening
+
+- escrow release reliability and auditability
+- public trust and receipt visibility
+- origin and environment defaults for deployed causes endpoints
+- clear operator messaging when manual signing is required
+- any remaining Lovable-era branding or default URLs outside the Causes flow
+
 ## Who It Serves
 
 - Donors who want to support a cause without platform censorship
