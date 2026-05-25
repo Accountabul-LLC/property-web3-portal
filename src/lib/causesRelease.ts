@@ -16,8 +16,10 @@ export function formatCauseReleaseCountdown(
   releaseDate: string | null | undefined,
   now = Date.now(),
   campaignType: CauseCampaignType = 'escrow',
+  campaignStatus?: string | null,
 ): string {
   if (campaignType === 'direct' || campaignType === 'evergreen' || !releaseDate) return 'Direct donations stay open'
+  if (campaignStatus === 'completed') return 'Initial funding round complete \u2014 you can still donate directly to the recipient'
   const remaining = getCauseReleaseUnlockAt(releaseDate) - now
   if (remaining <= 0) return 'Ready to release \u2713'
 
@@ -32,6 +34,7 @@ export function formatCauseReleaseCountdown(
   if (minutes > 0) return `Unlocks in ${minutes}m ${seconds}s`
   return `Unlocks in ${seconds}s`
 }
+
 
 export function formatCauseReleaseUnlockTimestamp(releaseDate: string | null | undefined): string {
   if (!releaseDate) return 'No unlock time'
