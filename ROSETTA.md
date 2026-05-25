@@ -244,6 +244,7 @@ export function useMyData() {
 
 ### 2026-05-25 | lovable
 - Fixed Causes edge function CORS for Lovable preview domains: `campaign-donate`, `campaign-check-donation`, and `campaign-release` now reflect allowed `lovable.app` / `lovableproject.com` origins instead of only `accountabul.com`.
+- Hardened Causes donation polling recovery: `campaign-check-donation` can now rebuild a missing `xaman_payloads` row from the pending `campaign_donations` record before polling Xaman, preventing stale 404s when an older `campaign-donate` deployment created the donation but skipped payload persistence.
 
 ### 2026-05-21 | claude-sonnet-4-6 (security audit)
 - Full security audit + pen test of all edge functions, RLS policies, and client code

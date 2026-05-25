@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Load our payload row ──────────────────────────────────
-    const { data: payloadRow, error: payloadErr } = await svc
+    let { data: payloadRow, error: payloadErr } = await svc
       .from('xaman_payloads')
       .select('metadata, network, status')
       .eq('uuid', xaman_uuid)
@@ -111,8 +111,56 @@ Deno.serve(async (req) => {
       throw payloadErr
     }
     if (!payloadRow) {
-      return new Response(JSON.stringify({ error: 'Payload not found' }), {
-        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      const { data: donationRow, error: donationErr } = await svc
+        .from('campaign_donations')
+        .select('campaign_id, donor_user_id, donor_wallet_address, amount, donor_message, is_anonymous, escrow_status')
+        .eq('xaman_payload_uuid', xaman_uuid)
+        .maybeSingle()
+
+      if (donationErr) throw donationErr
+      if (!donationRow) {
+        return new Response(JSON.stringify({ error: 'Payload not found' }), {
+          status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      if (donationRow.donor_user_id !== user.id) {
+        return new Response(JSON.stringify({ error: 'Forbidden' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const { data: campaignForPayload, error: campaignForPayloadErr } = await svc
+        .from('campaigns')
+        .select('network, release_date')
+        .eq('id', donationRow.campaign_id)
+        .maybeSingle()
+
+      if (campaignForPayloadErr) throw campaignForPayloadErr
+
+      const amountXrp = Number(donationRow.amount ?? 0)
+      payloadRow = {
+        status: donationRow.escrow_status === 'pending' ? 'pending' : donationRow.escrow_status,
+        network: campaignForPayload?.network ?? 'mainnet',
+        metadata: {
+          purpose: 'CAMPAIGN_DONATION',
+          campaign_id: donationRow.campaign_id,
+          campaign_network: campaignForPayload?.network ?? 'mainnet',
+          intended_user_id: donationRow.donor_user_id,
+          donor_user_id: donationRow.donor_user_id,
+          donor_wallet_address: donationRow.donor_wallet_address,
+          amount_xrp: amountXrp,
+          drops: String(Math.round(amountXrp * 1_000_000)),
+          donor_message: donationRow.donor_message ?? null,
+          is_anonymous: donationRow.is_anonymous ?? false,
+        },
+      }
+
+      await svc.from('xaman_payloads').insert({
+        uuid: xaman_uuid,
+        status: payloadRow.status,
+        wallet_address: donationRow.donor_wallet_address,
+        network: payloadRow.network,
+        metadata: payloadRow.metadata,
       })
     }
 
