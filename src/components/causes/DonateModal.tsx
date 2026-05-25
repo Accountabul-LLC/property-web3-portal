@@ -47,9 +47,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   }
 
   async function handleSubmit() {
-    const xrp = parseFloat(amount)
-    if (!xrp || xrp < 1) {
-      toast.error('Minimum donation is 1 XRP')
+    if (asset === 'RLUSD') {
+      toast.info('RLUSD donations coming soon — switch to XRP to donate now.')
+      return
+    }
+    const amt = parseFloat(amount)
+    if (!amt || amt < 1) {
+      toast.error(`Minimum donation is 1 ${asset}`)
       return
     }
     setLoading(true)
@@ -69,7 +73,8 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
         },
         body: JSON.stringify({
           campaign_id: campaign.id,
-          amount: xrp,
+          amount: amt,
+          currency: asset,
           donor_message: message || null,
           is_anonymous: isAnonymous,
         }),
