@@ -1,76 +1,73 @@
-# Wallet Activity Notifications
+# Escrow Release Notifications — Recipient + Donor
 
-Notify users when their active wallet receives funds (XRP, RLUSD, MPTs, IOUs), when an escrow they're party to is finished/cancelled, and other meaningful on-chain events — without polling REST endpoints.
+## Goal
 
-## How it works
+When the cron releases a campaign's escrow:
+- **Recipient** gets an in-app bell notification (with sound) + email (if they're an app user with an email).
+- **Donor** gets an in-app "thank you, your donation was delivered" notification + email.
 
-We already have `useXRPLSubscription` which opens a WebSocket to XRPL and listens to `transaction` messages for the active wallet. Today it only invalidates React Query caches. We extend it to also classify each validated transaction and emit a user-facing notification.
+Today the bell only fires when the recipient's wallet is actively connected and watching XRPL — that's why LFFW saw nothing. We'll move notifications server-side so they survive across sessions and devices, and wire emails through Lovable Emails.
+
+## What to build
+
+### 1. Database: `user_notifications` table
 
 ```text
-XRPL WS  →  useXRPLSubscription  →  classifyTx(tx, activeAddress)
-                                       │
-                                       ├─ invalidate portfolio/balances (existing)
-                                       └─ notificationStore.add({...})
-                                              │
-                                              ├─ Sonner toast (live, ephemeral)
-                                              └─ Bell dropdown in Navigation (persistent, unread badge)
+user_notifications
+  id, user_id, kind, title, body,
+  campaign_id, donation_id, tx_hash, amount, currency,
+  network, read_at, created_at
 ```
 
-## Scope of notifications (v1)
+- RLS: users can read/update their own rows; service role inserts.
+- Realtime enabled on the table so the bell updates live.
 
-Trigger only when `tx.validated === true` AND the active wallet is the **counterparty receiving value or affected**:
+### 2. Notification dispatch in `_shared/campaign-release.ts`
 
-- **XRP received** — `Payment` where `Destination === activeAddress`, delivered_amount is XRP
-- **Token received** — `Payment` where `Destination === activeAddress`, delivered_amount is IOU/MPT (decode currency, show issuer-friendly name via existing `useTokenMeta` when possible)
-- **Escrow released to you** — `EscrowFinish` where `Destination === activeAddress` (covers the donation-release case the user described)
-- **Escrow cancelled (refund)** — `EscrowCancel` returning funds to `Account === activeAddress`
-- **Escrow created against you** — `EscrowCreate` where `Destination === activeAddress` (incoming pending escrow)
-- **Trustline set by someone to your issued token** — optional, off by default in v1
-- **Outgoing payment confirmed** — quiet success toast only (no bell entry), so the user gets feedback after Xaman signs
+After each successful `EscrowFinish`:
 
-Each notification stores: `id, kind, title, body, amount, currency, counterparty, tx_hash, network, created_at, read`.
+- Look up `recipient_user_id` by `recipient_wallet_address` in `user_wallets` (active).
+- Look up `donor_user_id` from the `campaign_donations` row.
+- Insert two rows into `user_notifications`:
+  - Recipient: "Escrow released: X XRP from {campaign}" → links to tx
+  - Donor: "Thank you — your donation to {campaign} was delivered" → links to tx
+- Then enqueue emails (see step 4) for whichever side has an email on file.
 
-## UI
+This runs inside the cron path, so it works whether or not anyone is logged in.
 
-1. **Toast** — Sonner toast on arrival, click → opens explorer link for the tx (network-aware: Bithomp mainnet / testnet).
-2. **Bell icon** in `Navigation.tsx`, right of the network/wallet area:
-   - Badge with unread count
-   - Popover lists last 50 notifications, grouped by day
-   - "Mark all as read" + per-row click jumps to explorer
-3. **Empty state** — "You'll see wallet activity here as it happens."
+### 3. Frontend: in-app bell upgrade
 
-## Persistence
+- New hook `useServerNotifications()` — queries `user_notifications` for the signed-in user, subscribes to realtime INSERTs.
+- `NotificationBell` shows the union of (a) server notifications for the user and (b) existing wallet-scoped localStorage notifications. Server ones take priority.
+- On new realtime INSERT: play a short sound (`/notification.mp3`, ~0.3s ping) + toast.
+- Sound is muted if tab is hidden / user has interacted-mute preference (saved to localStorage).
+- Mark-read writes back to `user_notifications.read_at`.
 
-Two options — pick one:
+### 4. Emails (Lovable Emails)
 
-- **A. Local only (recommended for v1):** keep notifications in `localStorage` keyed by `wallet_address + network`. Zero backend work, survives reloads, naturally scoped per wallet. Cap at 200 entries.
-- **B. DB-backed:** new `wallet_notifications` table with RLS via `owns_wallet`. Adds cross-device sync but requires migration + an edge function to backfill missed events when the user was offline.
+- Set up email domain + infrastructure (one-time dialog if not configured).
+- Scaffold transactional email function `send-transactional-email`.
+- Two templates:
+  - `escrow-released-recipient` — "You received {amount} {currency} from {campaign}"
+  - `donation-delivered-donor` — "Thank you — your donation was delivered"
+- Cron release path calls `send-transactional-email` for each side after insert, using `profiles.email` (recipient resolved via wallet → user_id → profile).
 
-Default plan = **A**. We can layer B later if users ask for cross-device sync or offline backfill.
+### 5. Test it end-to-end
 
-## Missed-while-offline handling (v1)
+- Create a test campaign with release ~2 min out.
+- Donate from wallet A.
+- Confirm after cron runs:
+  - Recipient (wallet B's user) sees bell + sound + email.
+  - Donor (wallet A's user) sees thank-you bell + email.
+  - Campaign card flips to completed live (already works).
 
-On wallet connect / app load, fetch the last ~25 validated transactions for the active wallet via the existing `xrpl-account-data` edge function (extend it with a `tx_history` action if not already there), diff against the last-seen `tx_hash` stored in localStorage, and synthesize notifications for anything new. Mark them as "while you were away" in the bell, no toast spam.
+## Technical notes
 
-## Files to touch
+- `recipient_wallet_address` → user resolution: `user_wallets` where `status='active'`. If no match (external wallet), skip the in-app notification but still log; no email.
+- Email is best-effort: failures don't block release. Logged in `app_audit_log`.
+- Sound asset: tiny royalty-free ping, lazy-loaded, played via `new Audio()` only on realtime INSERT (not on initial fetch / backfill).
+- Migration adds `REPLICA IDENTITY FULL` + publication for `user_notifications`.
 
-- `src/hooks/useXRPLSubscription.ts` — call classifier, push to store
-- `src/lib/txClassifier.ts` *(new)* — pure function: `(tx, address, network) => Notification | null`
-- `src/stores/notificationStore.ts` *(new)* — Zustand or simple Context + localStorage persistence
-- `src/components/NotificationBell.tsx` *(new)* — bell + popover list
-- `src/components/Navigation.tsx` — mount `<NotificationBell />`
-- `src/contexts/ActiveWalletContext.tsx` — on wallet switch, rehydrate store for that address; on disconnect, no-op (data stays in LS)
-- `supabase/functions/xrpl-account-data/index.ts` — add/verify `account_tx` lookup for backfill (only if missing)
+## Open question
 
-## Out of scope
-
-- Email/push notifications
-- Notification preferences UI (everything on by default in v1; toggle can come later)
-- Notifications for wallets you're not actively viewing (only the `activeWallet` is subscribed)
-- DB persistence (option B above)
-
-## Open questions
-
-1. Local-only persistence (A) for v1, or go straight to DB-backed (B)?
-2. Should outgoing payments produce a bell entry, or just a toast?
-3. Include escrow *created against you* (incoming pending) in v1, or only releases/refunds?
+Do you already have an email domain configured for this project, or should the first step open the email-domain setup dialog? (Without it, the in-app bell + sound still works; only emails are blocked.)
