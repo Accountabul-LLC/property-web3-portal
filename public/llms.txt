@@ -1,0 +1,19 @@
+# Accountabul
+
+> Secure digital marketplace for real estate asset management and compliance. Streamline property issuance, treasury operations, and portfolio tracking.
+
+Accountabul is a Web3-powered platform for tokenizing real estate assets on the XRP Ledger (XRPL). It connects property owners, professionals, and investors through a secure, compliant marketplace with integrated KYC, credential verification, and multi-purpose token (MPT) issuance tools.
+
+## Pages
+
+- [Home](/): Overview of the platform, core marketing stats, and navigation to key features.
+- [Marketplace](/marketplace): Browse tokenized real estate properties, view listings, and explore investment opportunities.
+- [Property Detail](/property/:id): Detailed view of an individual property listing with financials, documents, and purchase options.
+- [Professionals](/professionals): Directory of verified real estate professionals and service providers.
+- [KYC](/kyc): Know Your Customer onboarding flow for identity verification and compliance.
+- [Credentials](/credentials): Catalog of verifiable credentials and compliance certifications available to platform users.
+
+## Optional
+
+- [Sitemap](/sitemap.xml): XML sitemap of all public-facing routes for search engine indexing.
+- [Robots](/robots.txt): Crawler access policies and sitemap reference.
