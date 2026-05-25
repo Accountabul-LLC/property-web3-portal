@@ -1,5 +1,11 @@
 project_id = "bmxcjxtjujhwreduwtvz"
 
+[functions.campaign-donate]
+verify_jwt = false
+
+[functions.campaign-check-donation]
+verify_jwt = false
+
 [functions.places-autocomplete]
 verify_jwt = false
 
