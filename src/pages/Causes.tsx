@@ -164,6 +164,9 @@ export default function Causes() {
               </Button>
             </div>
           </div>
+        </div>
+
+
 
 
         <div className="mb-6 rounded-2xl border border-border bg-card/70 p-4 sm:p-5">
