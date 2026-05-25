@@ -25,6 +25,7 @@ import Admin from "./pages/Admin";
 import AdminAIPanel from "./pages/AdminAIPanel";
 import AdminCredentials from "./pages/AdminCredentials";
 import AdminPayments from "./pages/AdminPayments";
+import AdminPaymentsConsole from "./pages/AdminPaymentsConsole";
 import ActionItems from "./pages/ActionItems";
 import Credentials from "./pages/Credentials";
 import AdminCauses from "./pages/AdminCauses";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
               <Route path="/admin/credentials" element={<AdminCredentials />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
+              <Route path="/admin/payments/console" element={<AdminPaymentsConsole />} />
               <Route path="/admin/causes" element={<AdminCauses />} />
               <Route path="/admin/pricing" element={<AdminPricing />} />
               <Route path="/pricing" element={<Pricing />} />

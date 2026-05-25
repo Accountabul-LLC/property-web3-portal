@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { CreditCard, Landmark, ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 
 import Navigation from "@/components/Navigation";
@@ -97,6 +97,12 @@ const AdminPayments = () => {
             <h1 className="text-2xl font-bold">Payments Admin</h1>
             <p className="text-sm text-muted-foreground">Observe payment onboarding, invoices, and settlement state.</p>
           </div>
+          <Link
+            to="/admin/payments/console"
+            className="ml-auto inline-flex items-center rounded-md border border-border px-3 py-2 text-sm font-medium hover:bg-accent"
+          >
+            Open developer console
+          </Link>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4 mb-8">
