@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ExternalLink, Copy, Check, DollarSign, Clock, Coins, FlaskConical, ArrowUpRight, ArrowDownLeft, Building2 } from 'lucide-react';
+import { Loader2, ExternalLink, Copy, Check, DollarSign, Clock, Coins, FlaskConical, ArrowUpRight, ArrowDownLeft, Building2, AlertTriangle } from 'lucide-react';
 import { useXRPLPortfolio, type XRPLPortfolioData } from '@/hooks/useXRPLPortfolio';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import type { TreasuryWalletConfig } from '@/config/treasuryWallets';
@@ -62,7 +62,29 @@ const ago = (iso: string | null) => {
 };
 
 export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig }) => {
-  const { address, label, network, description } = wallet;
+  const { address, label, network, description, isPlaceholder } = wallet;
+
+  if (isPlaceholder) {
+    return (
+      <Card className="p-6 border-amber-500/40 bg-amber-500/5">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+          <div>
+            <h2 className="text-lg font-bold mb-1">{label}</h2>
+            <p className="text-sm text-muted-foreground mb-3">{description}</p>
+            <Badge variant="outline" className="border-amber-500/40 text-amber-500 gap-1 mb-3">
+              <AlertTriangle className="w-3 h-3" /> Setup Required
+            </Badge>
+            <p className="text-sm text-muted-foreground">
+              This wallet address has not been configured. Update{' '}
+              <code className="text-xs bg-muted px-1 py-0.5 rounded">src/config/treasuryWallets.ts</code>{' '}
+              with the real XRPL r-address for this wallet.
+            </p>
+          </div>
+        </div>
+      </Card>
+    );
+  }
   const { data, isLoading, error, dataUpdatedAt } = useXRPLPortfolio(address, network);
   const [copied, setCopied] = useState(false);
 

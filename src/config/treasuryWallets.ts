@@ -17,6 +17,7 @@ export interface TreasuryWalletConfig {
   description?: string;
   mockUsd: number;
   mockTokens?: MockTokenHolding[];
+  isPlaceholder?: boolean;
 }
 
 // Demo price for the Accountabul (ABUL) governance token
@@ -40,6 +41,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
       'Dedicated treasury for the Accountabul (ABUL) governance token — long-term protocol reserve, vesting allocations, and liquidity backing.',
     mockUsd: 6_982_317.04,
     mockTokens: [abul(14_756_173.92)],
+    isPlaceholder: true,
   },
   {
     address: 'rPZdYatVHP4YegTp3qQzkdojCAihb8DmAx',

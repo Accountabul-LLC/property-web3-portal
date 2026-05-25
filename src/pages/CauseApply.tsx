@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -43,8 +43,16 @@ function slugify(title: string) {
 
 export default function CauseApply() {
   const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
   const [submitted, setSubmitted] = useState(false)
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/auth', { state: { next: '/causes/apply' }, replace: true })
+    }
+  }, [user, loading, navigate])
+
+  if (loading) return null
 
   const minDate = new Date()
   minDate.setDate(minDate.getDate() + 30)

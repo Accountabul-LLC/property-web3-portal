@@ -225,6 +225,19 @@ serve(async (req) => {
       });
     }
 
+    // Path allowlist — only permit file reads from safe repo locations
+    const ALLOWED_PATH_PREFIXES = [
+      'src/', 'supabase/functions/', 'supabase/migrations/',
+      'docs/', 'public/', '.claude/skills/',
+    ];
+    const ALLOWED_ROOT_FILES = ['ROSETTA.md', 'CLAUDE.md', 'README.md', 'package.json'];
+
+    function isAllowedPath(p: string): boolean {
+      if (!p || p.includes('..')) return false;
+      if (ALLOWED_ROOT_FILES.includes(p)) return true;
+      return ALLOWED_PATH_PREFIXES.some((prefix) => p.startsWith(prefix));
+    }
+
     const ghToken = await getInstallationToken(appId, privateKey, installationId);
 
     // Audit log the action
@@ -274,6 +287,12 @@ serve(async (req) => {
       case "get_file": {
         const path = params.path;
         if (!path) throw new Error("path is required for get_file");
+        if (!isAllowedPath(path)) {
+          return new Response(JSON.stringify({ error: `Path '${path}' is outside allowed scope. Allowed: src/, supabase/functions/, supabase/migrations/, docs/, public/, .claude/skills/, and root config files.` }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         const file = await githubAPI(ghToken, `/repos/${owner}/${repo}/contents/${path}${params.branch ? `?ref=${params.branch}` : ""}`);
         result = {
           path: file.path,
@@ -334,6 +353,13 @@ serve(async (req) => {
         const files = params.files as Array<{ path: string; content: string }>;
 
         if (!files?.length) throw new Error("files array required for create_pr");
+        const blockedFile = files.find((f) => !isAllowedPath(f.path));
+        if (blockedFile) {
+          return new Response(JSON.stringify({ error: `File path '${blockedFile.path}' is outside allowed scope.` }), {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
 
         const baseRef = await githubAPI(ghToken, `/repos/${owner}/${repo}/git/ref/heads/${baseBranch}`);
         const baseSha = baseRef.object.sha;
