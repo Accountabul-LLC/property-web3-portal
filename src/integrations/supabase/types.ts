@@ -343,6 +343,7 @@ export type Database = {
       }
       campaigns: {
         Row: {
+          accepted_assets: string[]
           admin_notes: string | null
           approved_at: string | null
           approved_by: string | null
@@ -375,6 +376,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          accepted_assets?: string[]
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null
@@ -407,6 +409,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          accepted_assets?: string[]
           admin_notes?: string | null
           approved_at?: string | null
           approved_by?: string | null

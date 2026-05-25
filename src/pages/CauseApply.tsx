@@ -24,6 +24,7 @@ const schema = z.object({
     .string()
     .regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Must be a valid XRPL r-address (starts with r)'),
   goal_amount: z.string().optional(),
+  accept_rlusd: z.boolean().default(false),
   release_date: z.string().min(1, 'Please select a release date'),
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   contact_email: z.string().email('Must be a valid email'),
@@ -47,6 +48,7 @@ export default function CauseApply() {
       description: '',
       recipient_wallet_address: '',
       goal_amount: '',
+      accept_rlusd: false,
       release_date: '',
       image_url: '',
       contact_email: user?.email ?? '',
@@ -62,6 +64,7 @@ export default function CauseApply() {
           description: values.description,
           recipient_wallet_address: values.recipient_wallet_address,
           goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
+          accepted_assets: values.accept_rlusd ? ['XRP', 'RLUSD'] : ['XRP'],
           release_date: new Date(values.release_date).toISOString(),
           image_url: values.image_url || null,
           contact_email: values.contact_email,
@@ -248,6 +251,25 @@ export default function CauseApply() {
                 </FormItem>
               )} />
             </div>
+
+            <FormField control={form.control} name="accept_rlusd" render={({ field }) => (
+              <FormItem className="flex flex-row items-start gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-border"
+                  />
+                </FormControl>
+                <div className="space-y-1">
+                  <FormLabel className="cursor-pointer">Also accept RLUSD donations</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    XRP is always accepted. Enable this to also accept RLUSD (Ripple's USD stablecoin) — the recipient wallet must have an RLUSD trustline before donations can settle. Other tokens are never accepted through the platform donation flow.
+                  </p>
+                </div>
+              </FormItem>
+            )} />
 
             <FormField control={form.control} name="image_url" render={({ field }) => (
               <FormItem>

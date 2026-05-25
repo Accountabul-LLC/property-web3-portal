@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 
+export type AcceptedAsset = 'XRP' | 'RLUSD'
+
 export type Campaign = {
   id: string
   title: string
@@ -14,6 +16,7 @@ export type Campaign = {
   default_release_offset_days: number | null
   goal_amount: number | null
   currency: string
+  accepted_assets: AcceptedAsset[]
   recipient_wallet_address: string
   release_date: string | null
   status: 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'

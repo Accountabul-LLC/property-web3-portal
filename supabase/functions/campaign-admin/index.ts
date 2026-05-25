@@ -15,6 +15,18 @@ function isValidRAddress(address: string) {
   return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address)
 }
 
+const ALLOWED_ASSETS = ['XRP', 'RLUSD'] as const
+
+function normalizeAcceptedAssets(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new Error('accepted_assets must be an array')
+  const list = Array.from(new Set(raw.map((a) => String(a).toUpperCase().trim())))
+  if (!list.includes('XRP')) list.unshift('XRP')
+  if (list.length === 0 || !list.every((a) => (ALLOWED_ASSETS as readonly string[]).includes(a))) {
+    throw new Error(`accepted_assets must be a non-empty subset of ${ALLOWED_ASSETS.join(', ')}`)
+  }
+  return list
+}
+
 async function requireAdmin(req: Request, corsHeaders: Record<string, string>) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
@@ -102,6 +114,13 @@ Deno.serve(async (req) => {
         throw new Error('Goal amount is invalid')
       }
 
+      const acceptedAssets = body?.accepted_assets === undefined
+        ? ['XRP']
+        : normalizeAcceptedAssets(body.accepted_assets)
+
+
+
+
       const { data: campaign, error } = await svc
         .from('campaigns')
         .insert({
@@ -117,6 +136,7 @@ Deno.serve(async (req) => {
           gallery_urls: galleryUrls,
           network,
           currency: 'XRP',
+          accepted_assets: acceptedAssets,
           submitted_by_user_id: null,
           submitted_by_email: submittedByEmail || null,
           submission_notes: submissionNotes || null,
@@ -187,6 +207,9 @@ Deno.serve(async (req) => {
       if (body?.gallery_urls !== undefined) {
         if (!Array.isArray(body.gallery_urls)) throw new Error('gallery_urls must be an array')
         updates.gallery_urls = body.gallery_urls.filter((url: unknown) => typeof url === 'string')
+      }
+      if (body?.accepted_assets !== undefined) {
+        updates.accepted_assets = normalizeAcceptedAssets(body.accepted_assets)
       }
       if (body?.campaign_type !== undefined) {
         const campaignType = String(body.campaign_type ?? '').trim()

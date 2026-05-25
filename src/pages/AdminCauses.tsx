@@ -34,6 +34,7 @@ type EditFormShape = {
   gallery_urls: string[]
   visibility: 'public' | 'hidden'
   hidden_reason: string
+  accepted_assets: Array<'XRP' | 'RLUSD'>
 }
 
 const CREATE_DRAFT_KEY = 'admin-causes:create-draft'
@@ -66,6 +67,7 @@ interface Campaign {
   visibility: 'public' | 'hidden'
   hidden_at: string | null
   hidden_reason: string | null
+  accepted_assets: Array<'XRP' | 'RLUSD'> | null
 }
 
 const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }> = {
@@ -106,6 +108,7 @@ export default function AdminCauses() {
     gallery_urls: [],
     visibility: 'public',
     hidden_reason: '',
+    accepted_assets: ['XRP'],
   })
   const [editHasDraft, setEditHasDraft] = useState(false)
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
@@ -353,6 +356,7 @@ export default function AdminCauses() {
       gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
       visibility: c.visibility ?? 'public',
       hidden_reason: c.hidden_reason ?? '',
+      accepted_assets: (Array.isArray(c.accepted_assets) && c.accepted_assets.length > 0 ? c.accepted_assets : ['XRP']) as Array<'XRP' | 'RLUSD'>,
     }
     const draft = loadDraft<EditFormShape>(editDraftKey(c.id))
     setEditForm(draft ?? dbValues)
@@ -374,6 +378,7 @@ export default function AdminCauses() {
         gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
         visibility: c.visibility ?? 'public',
         hidden_reason: c.hidden_reason ?? '',
+        accepted_assets: (Array.isArray(c.accepted_assets) && c.accepted_assets.length > 0 ? c.accepted_assets : ['XRP']) as Array<'XRP' | 'RLUSD'>,
       })
     }
     toast.success('Draft discarded')
@@ -417,6 +422,7 @@ export default function AdminCauses() {
           goal_amount: editForm.goal_amount ? Number(editForm.goal_amount) : null,
           image_url: editForm.image_url.trim() || null,
           gallery_urls: editForm.gallery_urls,
+          accepted_assets: editForm.accepted_assets,
         },
       })
       if (error) throw error
@@ -950,6 +956,32 @@ export default function AdminCauses() {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Accepted assets whitelist */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
+                <Label>Accepted donation assets</Label>
+                <p className="text-xs text-muted-foreground">
+                  Donors using the platform can only send these. XRP is always accepted. RLUSD requires the recipient to have an RLUSD trustline and is only supported on direct (evergreen) campaigns.
+                </p>
+                <div className="flex gap-4 pt-1">
+                  <label className="flex items-center gap-2 text-sm opacity-70">
+                    <input type="checkbox" checked disabled className="h-4 w-4" />
+                    XRP <span className="text-xs text-muted-foreground">(always)</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editForm.accepted_assets.includes('RLUSD')}
+                      onChange={(e) => setEditForm((p) => ({
+                        ...p,
+                        accepted_assets: e.target.checked ? ['XRP', 'RLUSD'] : ['XRP'],
+                      }))}
+                      className="h-4 w-4"
+                    />
+                    RLUSD
+                  </label>
+                </div>
               </div>
 
               {/* Visibility toggle — applied on Save Changes */}

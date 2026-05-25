@@ -44,6 +44,14 @@ const XRPL_NODES: Record<'mainnet' | 'testnet' | 'devnet', string[]> = {
   devnet: ['https://s.devnet.rippletest.net:51234'],
 }
 
+// RLUSD = "RLUSD" padded to 40-hex characters per XRPL IOU currency code spec.
+const RLUSD_CURRENCY_HEX = '524C555344000000000000000000000000000000'
+const RLUSD_ISSUER: Record<'mainnet' | 'testnet' | 'devnet', string | null> = {
+  mainnet: 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De',
+  testnet: 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV',
+  devnet: null,
+}
+
 function toDrops(xrp: number): string {
   return String(Math.round(xrp * 1_000_000))
 }
@@ -156,16 +164,22 @@ Deno.serve(async (req) => {
     // ── Parse + validate body ─────────────────────────────────
     const body = await req.json()
     const { campaign_id, amount, donor_message, is_anonymous } = body
+    const requestedCurrency = String(body?.currency ?? 'XRP').toUpperCase().trim()
 
     if (!campaign_id || !amount) {
       return new Response(JSON.stringify({ error: 'Missing campaign_id or amount' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    if (!['XRP', 'RLUSD'].includes(requestedCurrency)) {
+      return new Response(JSON.stringify({ error: `Unsupported currency: ${requestedCurrency}` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
-    const xrpAmount = parseFloat(amount)
-    if (isNaN(xrpAmount) || xrpAmount < 1) {
-      return new Response(JSON.stringify({ error: 'Minimum donation is 1 XRP' }), {
+    const donationAmount = parseFloat(amount)
+    if (isNaN(donationAmount) || donationAmount < 1) {
+      return new Response(JSON.stringify({ error: `Minimum donation is 1 ${requestedCurrency}` }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -173,7 +187,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency')
+      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency, accepted_assets')
       .eq('id', campaign_id)
       .maybeSingle()
 
@@ -195,6 +209,28 @@ Deno.serve(async (req) => {
     }
     if (campaign.campaign_type !== 'direct' && (!campaign.release_date || new Date(campaign.release_date) <= new Date())) {
       return new Response(JSON.stringify({ error: 'Campaign release date has already passed' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // ── Accepted-assets whitelist ─────────────────────────────
+    const acceptedAssets: string[] = Array.isArray(campaign.accepted_assets) && campaign.accepted_assets.length > 0
+      ? campaign.accepted_assets.map((a: string) => String(a).toUpperCase())
+      : ['XRP']
+    if (!acceptedAssets.includes(requestedCurrency)) {
+      return new Response(JSON.stringify({
+        error: `This cause only accepts ${acceptedAssets.join(' or ')}. ${requestedCurrency} donations were not enabled by the organizer.`,
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // XRPL EscrowCreate only supports XRP. IOU donations (RLUSD) must be direct payments.
+    const isRlusd = requestedCurrency === 'RLUSD'
+    if (isRlusd && campaign.campaign_type !== 'direct') {
+      return new Response(JSON.stringify({
+        error: 'RLUSD donations are only available on direct (evergreen) campaigns — the XRP Ledger escrow type only supports XRP.',
+      }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -254,27 +290,88 @@ Deno.serve(async (req) => {
 
     const isDirectCampaign = campaign.campaign_type === 'direct'
     const finishAfter = isDirectCampaign || !campaign.release_date ? null : toXrplTime(campaign.release_date)
-    const drops = toDrops(xrpAmount)
 
-    const txjson = isDirectCampaign
-      ? {
-          TransactionType: 'Payment',
-          Account: wallet.wallet_address,
-          Amount: drops,
-          Destination: campaign.recipient_wallet_address,
-        }
-      : {
-          TransactionType: 'EscrowCreate',
-          Account: wallet.wallet_address,
-          Amount: drops,
-          Destination: campaign.recipient_wallet_address,
-          FinishAfter: finishAfter,
-        }
+    // Build the txjson depending on requested currency.
+    let txjson: Record<string, unknown>
+    let amountLogLabel: string
+
+    if (isRlusd) {
+      const rlusdIssuer = RLUSD_ISSUER[recipientNetwork]
+      if (!rlusdIssuer) {
+        return new Response(JSON.stringify({ error: `RLUSD is not available on ${recipientNetwork}.` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Recipient must have an RLUSD trustline; otherwise the payment will fail.
+      const linesRes = await xrplRpc(recipientNetwork, 'account_lines', [{
+        account: campaign.recipient_wallet_address,
+        peer: rlusdIssuer,
+        ledger_index: 'validated',
+      }])
+      const recipientHasTrustline = Array.isArray(linesRes?.result?.lines)
+        && linesRes.result.lines.some((l: { currency?: string }) => l?.currency === RLUSD_CURRENCY_HEX || l?.currency === 'RLUSD')
+      if (!recipientHasTrustline) {
+        return new Response(JSON.stringify({
+          error: "Recipient hasn't set up an RLUSD trustline yet — ask them to add one, or donate in XRP instead.",
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Donor must hold enough RLUSD on a trustline to the same issuer.
+      const donorLinesRes = await xrplRpc(recipientNetwork, 'account_lines', [{
+        account: wallet.wallet_address,
+        peer: rlusdIssuer,
+        ledger_index: 'validated',
+      }])
+      const donorLine = Array.isArray(donorLinesRes?.result?.lines)
+        ? donorLinesRes.result.lines.find((l: { currency?: string }) => l?.currency === RLUSD_CURRENCY_HEX || l?.currency === 'RLUSD')
+        : null
+      const donorBalance = donorLine ? parseFloat(donorLine.balance ?? '0') : 0
+      if (!donorLine || donorBalance < donationAmount) {
+        return new Response(JSON.stringify({
+          error: donorLine
+            ? `Insufficient RLUSD balance — you have ${donorBalance} RLUSD, this donation needs ${donationAmount}.`
+            : "Your wallet doesn't have an RLUSD trustline. Add one in Xaman, then try again.",
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      txjson = {
+        TransactionType: 'Payment',
+        Account: wallet.wallet_address,
+        Destination: campaign.recipient_wallet_address,
+        Amount: {
+          currency: RLUSD_CURRENCY_HEX,
+          issuer: rlusdIssuer,
+          value: String(donationAmount),
+        },
+      }
+      amountLogLabel = `${donationAmount} RLUSD`
+    } else {
+      // XRP path (escrow or direct).
+      const drops = toDrops(donationAmount)
+      txjson = isDirectCampaign
+        ? {
+            TransactionType: 'Payment',
+            Account: wallet.wallet_address,
+            Amount: drops,
+            Destination: campaign.recipient_wallet_address,
+          }
+        : {
+            TransactionType: 'EscrowCreate',
+            Account: wallet.wallet_address,
+            Amount: drops,
+            Destination: campaign.recipient_wallet_address,
+            FinishAfter: finishAfter,
+          }
+      amountLogLabel = `${donationAmount} XRP (${drops} drops)`
+    }
 
     console.log(
-      isDirectCampaign
-        ? `Building Payment: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops)`
-        : `Building EscrowCreate: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops) | FinishAfter: ${finishAfter}`,
+      `Building ${(txjson as { TransactionType: string }).TransactionType}: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${amountLogLabel}${finishAfter ? ` | FinishAfter: ${finishAfter}` : ''}`,
     )
 
     // ── Send to Xaman ─────────────────────────────────────────
@@ -290,10 +387,11 @@ Deno.serve(async (req) => {
       custom_meta: {
         identifier: `donation_${campaign_id.slice(0, 8)}_${Date.now().toString(36)}`,
         blob: JSON.stringify({
-          purpose: isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW',
+          purpose: `${isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW'}${isRlusd ? '_RLUSD' : ''}`,
           campaign_id,
           campaign_title: campaign.title,
-          amount_xrp: xrpAmount,
+          amount: donationAmount,
+          currency: requestedCurrency,
           campaign_type: campaign.campaign_type ?? 'escrow',
         }),
       },
@@ -325,14 +423,14 @@ Deno.serve(async (req) => {
       wallet_address: wallet.wallet_address,
       network: campaign.network,
       metadata: {
-        purpose: isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW',
+        purpose: `${isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW'}${isRlusd ? '_RLUSD' : ''}`,
         campaign_id,
         campaign_network: campaign.network,
         intended_user_id: user.id,
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
-        amount_xrp: xrpAmount,
-        drops,
+        amount: donationAmount,
+        currency: requestedCurrency,
         finish_after: finishAfter,
         donor_message: donor_message ?? null,
         is_anonymous: is_anonymous ?? false,
@@ -371,8 +469,8 @@ Deno.serve(async (req) => {
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
         donor_display_name: donorDisplayName,
-        amount: xrpAmount,
-        currency: campaign.currency ?? 'XRP',
+        amount: donationAmount,
+        currency: requestedCurrency,
         xaman_payload_uuid: xamanData.uuid,
         escrow_status: 'pending',
         donor_message: donor_message ?? null,
@@ -396,7 +494,8 @@ Deno.serve(async (req) => {
       afterState: {
         campaign_id,
         donor_wallet_address: wallet.wallet_address,
-        amount_xrp: xrpAmount,
+        amount: donationAmount,
+        currency: requestedCurrency,
         status: 'pending',
       },
       metadata: {
@@ -413,7 +512,8 @@ Deno.serve(async (req) => {
       deep_link: xamanData.next?.always,
       websocket_url: xamanData.refs?.websocket_status,
       donation_id: donationRow.id,
-      amount_xrp: xrpAmount,
+      amount: donationAmount,
+      currency: requestedCurrency,
       recipient: campaign.recipient_wallet_address,
       release_date: campaign.release_date,
       campaign_type: campaign.campaign_type ?? 'escrow',
