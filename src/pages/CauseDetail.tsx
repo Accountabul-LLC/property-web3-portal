@@ -251,7 +251,7 @@ export default function CauseDetail() {
                         )}
                       </div>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             )}
