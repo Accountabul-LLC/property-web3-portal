@@ -1042,6 +1042,21 @@ export default function AdminCauses() {
                       <Pencil className="w-3.5 h-3.5" />
                       <span className="ml-1 hidden sm:inline">Edit</span>
                     </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); handleSetVisibility(campaign, campaign.visibility === 'hidden' ? 'public' : 'hidden') }}
+                      disabled={!!isProcessing}
+                      className="h-8 px-3"
+                      title={campaign.visibility === 'hidden' ? 'Make public again' : 'Hide from public view'}
+                    >
+                      {campaign.visibility === 'hidden'
+                        ? <Eye className="w-3.5 h-3.5" />
+                        : <EyeOff className="w-3.5 h-3.5" />}
+                      <span className="ml-1 hidden sm:inline">
+                        {campaign.visibility === 'hidden' ? 'Show' : 'Hide'}
+                      </span>
+                    </Button>
                     {/* Quick actions */}
                     {campaign.status === 'under_review' && (
                       <>
