@@ -146,3 +146,18 @@ verify_jwt = false
 
 [functions.admin-fund-signer]
 verify_jwt = false
+
+[functions.payments-create]
+verify_jwt = true
+
+[functions.payments-list]
+verify_jwt = true
+
+[functions.payments-get]
+verify_jwt = true
+
+[functions.payments-webhook]
+verify_jwt = false
+
+[functions.payments-reconcile]
+verify_jwt = false

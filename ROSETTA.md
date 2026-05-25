@@ -307,6 +307,11 @@ export function useMyData() {
 - Small gotcha: `TreasuryWalletConfig.address` is now optional, so treasury consumers should guard for placeholder entries before calling XRPL hooks or building explorer URLs.
 
 ### 2026-05-25 | codex
+- Payments implementation is now complete for v1 in `property-web3-portal`; the reset-plan doc was converted into a completion note at `docs/payments-reset-plan.md`.
+- The payments product now includes user history/detail routes, server-backed list/detail reads, KYC gating, admin visibility, Stripe/XRPL handoff contracts, and generated Supabase types for the new schema.
+- Remaining follow-up is QA automation and Lovable's Stripe client mount, not core product scope.
+
+### 2026-05-25 | codex
 - Moved privileged admin reads for GitHub integrations, credential applications, wallet registrations, and the credential ledger behind Supabase edge functions.
 - Updated the admin dashboards to fetch those datasets via `admin-integrations`, `admin-credential-applications`, `admin-wallet-registrations`, and `admin-credential-ledger` instead of querying sensitive tables directly from the browser.
 - Residual note: the user-scoped `useCredentialApplications` hook still reads only the signed-in user’s own records client-side; that is lower risk and can be moved later if we want a fully server-mediated pattern.

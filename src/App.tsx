@@ -24,6 +24,7 @@ import AdminKyc from "./pages/AdminKyc";
 import Admin from "./pages/Admin";
 import AdminAIPanel from "./pages/AdminAIPanel";
 import AdminCredentials from "./pages/AdminCredentials";
+import AdminPayments from "./pages/AdminPayments";
 import ActionItems from "./pages/ActionItems";
 import Credentials from "./pages/Credentials";
 import AdminCauses from "./pages/AdminCauses";
@@ -31,6 +32,9 @@ import Causes from "./pages/Causes";
 import CauseDetail from "./pages/CauseDetail";
 import CauseApply from "./pages/CauseApply";
 import MyDonations from "./pages/MyDonations";
+import Payments from "./pages/Payments";
+import PaymentsHistory from "./pages/PaymentsHistory";
+import PaymentDetail from "./pages/PaymentDetail";
 import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
@@ -58,6 +62,9 @@ const App = () => (
               <Route path="/professionals" element={<Professionals />} />
               <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
               <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/payments" element={<RouteGuard><KycGate><Payments /></KycGate></RouteGuard>} />
+              <Route path="/payments/history" element={<RouteGuard><KycGate><PaymentsHistory /></KycGate></RouteGuard>} />
+              <Route path="/payments/:id" element={<RouteGuard><KycGate><PaymentDetail /></KycGate></RouteGuard>} />
               <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
               <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
               <Route path="/treasury" element={<Treasury />} />
@@ -70,6 +77,7 @@ const App = () => (
               <Route path="/admin/kyc" element={<AdminKyc />} />
               <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
               <Route path="/admin/credentials" element={<AdminCredentials />} />
+              <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/causes" element={<AdminCauses />} />
               <Route path="/action-items" element={<ActionItems />} />
               <Route path="/credentials" element={<Credentials />} />

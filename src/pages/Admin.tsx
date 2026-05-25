@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart } from 'lucide-react'
+import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, ReceiptText } from 'lucide-react'
 
 const ADMIN_LINKS = [
   {
@@ -25,6 +25,12 @@ const ADMIN_LINKS = [
     description: 'Manage the testnet XRPL credential issuer, approve wallet registrations, and issue or revoke trading credentials.',
     href: '/admin/credentials',
     icon: KeyRound,
+  },
+  {
+    title: 'Payments',
+    description: 'Observe payments, invoices, provider status, and reconciliation for the payments product.',
+    href: '/admin/payments',
+    icon: ReceiptText,
   },
   {
     title: 'AI Panel',
