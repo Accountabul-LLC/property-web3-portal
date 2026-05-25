@@ -58,6 +58,9 @@ export default function CauseDetail() {
 
   const { data: campaign, isLoading, error } = useCampaign(slug!)
   const { data: donations } = useCampaignDonations(campaign?.id ?? '')
+  const { data: xrpPrice } = useXrpPrice()
+
+
 
   if (isLoading) {
     return (
@@ -93,8 +96,8 @@ export default function CauseDetail() {
   const pct = campaign.goal_amount
     ? Math.min(100, Math.round((campaign.total_raised / campaign.goal_amount) * 100))
     : null
-  const { data: xrpPrice } = useXrpPrice()
   const isXrp = (campaign.currency || 'XRP').toUpperCase() === 'XRP'
+
   const raisedUsd = isXrp && xrpPrice ? campaign.total_raised * xrpPrice : null
   const goalUsd = isXrp && xrpPrice && campaign.goal_amount ? campaign.goal_amount * xrpPrice : null
 
