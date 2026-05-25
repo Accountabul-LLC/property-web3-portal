@@ -32,6 +32,7 @@ export type MyDonation = {
   currency: string
   escrow_status: 'pending' | 'escrowed' | 'released' | 'cancelled'
   donor_message: string | null
+  donor_wallet_address: string
   created_at: string
   campaigns: Pick<Campaign, 'id' | 'title' | 'slug' | 'release_date' | 'campaign_mode' | 'network' | 'currency' | 'recipient_wallet_address'> | null
 }
