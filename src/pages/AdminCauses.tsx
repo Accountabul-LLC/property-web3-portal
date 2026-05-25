@@ -345,7 +345,7 @@ export default function AdminCauses() {
           goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
           recipient_wallet_address: createForm.recipient_wallet_address.trim(),
           release_date: createForm.campaign_type === 'escrow' ? new Date(createForm.release_date!).toISOString() : null,
-          campaign_type: createForm.campaign_type,
+          campaign_mode: createForm.campaign_type === 'direct' ? 'evergreen' : 'scheduled',
           status: createForm.status === 'active' ? 'active' : 'under_review',
           network: createForm.network,
           submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
