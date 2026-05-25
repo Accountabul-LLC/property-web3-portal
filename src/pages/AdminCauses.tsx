@@ -155,10 +155,7 @@ export default function AdminCauses() {
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('campaigns')
-        .select('*')
-        .order('created_at', { ascending: false }) as any
+      const { data, error } = await (supabase as any).rpc('admin_list_campaigns')
       if (error) throw error
       return data as Campaign[]
     },

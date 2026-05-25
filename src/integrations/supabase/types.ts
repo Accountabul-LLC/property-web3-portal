@@ -1968,6 +1968,48 @@ export type Database = {
       }
     }
     Functions: {
+      admin_list_campaigns: {
+        Args: never
+        Returns: {
+          accepted_assets: string[]
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          campaign_mode: string
+          created_at: string
+          currency: string
+          default_release_offset_days: number | null
+          description: string
+          donor_count: number
+          gallery_urls: string[]
+          goal_amount: number | null
+          hidden_at: string | null
+          hidden_by: string | null
+          hidden_reason: string | null
+          id: string
+          image_url: string | null
+          network: string
+          recipient_wallet_address: string
+          rejection_reason: string | null
+          release_date: string
+          slug: string
+          status: string
+          submission_notes: string | null
+          submitted_by_email: string | null
+          submitted_by_user_id: string | null
+          title: string
+          total_raised: number
+          updated_at: string
+          video_url: string | null
+          visibility: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "campaigns"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       get_kyc_status: { Args: { p_user_id: string }; Returns: string }
       get_public_campaign_donations: {
         Args: { p_campaign_id: string }
