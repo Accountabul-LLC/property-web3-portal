@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import Navigation from '@/components/Navigation'
@@ -14,6 +14,11 @@ import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import {
+  formatCauseReleaseCountdown,
+  formatCauseReleaseUnlockTimestamp,
+  isCauseReleaseReady,
+} from '@/lib/causesRelease'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
   ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2,
@@ -91,6 +96,7 @@ export default function AdminCauses() {
   })
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
   const [uploadingEditGallery, setUploadingEditGallery] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
@@ -118,6 +124,11 @@ export default function AdminCauses() {
     },
     enabled: !!user && hasAccess,
   })
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   if (authLoading || accessLoading) {
     return (
@@ -843,10 +854,9 @@ export default function AdminCauses() {
           {filtered.map((campaign) => {
             const isExpanded = expandedId === campaign.id
             const badge = STATUS_BADGE[campaign.status]
-            const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
-              year: 'numeric', month: 'short', day: 'numeric',
-            })
-            const isPastRelease = new Date(campaign.release_date) < new Date()
+            const canRelease = isCauseReleaseReady(campaign.release_date, now)
+            const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now)
+            const releaseUnlockAt = formatCauseReleaseUnlockTimestamp(campaign.release_date)
             const isProcessing = processing === campaign.id
 
             return (
@@ -874,8 +884,7 @@ export default function AdminCauses() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5" />
-                        Releases {releaseDate}
-                        {isPastRelease && <span className="text-amber-600 ml-1">(past due)</span>}
+                        <span title={releaseUnlockAt}>{releaseCountdown}</span>
                       </span>
                       {campaign.submitted_by_email && (
                         <span>From: {campaign.submitted_by_email}</span>
@@ -916,16 +925,20 @@ export default function AdminCauses() {
                         </Button>
                       </>
                     )}
-                    {campaign.status === 'active' && isPastRelease && campaign.donor_count > 0 && (
-                      <Button
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); handleRelease(campaign) }}
-                        disabled={!!isProcessing}
-                        className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white"
-                      >
-                        {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        <span className="ml-1 hidden sm:inline">Release Funds</span>
-                      </Button>
+                    {campaign.status === 'active' && campaign.donor_count > 0 && (
+                      <span title={canRelease ? 'Ready to release now' : `Unlocks at ${releaseUnlockAt}`}>
+                        <Button
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleRelease(campaign) }}
+                          disabled={!!isProcessing || !canRelease}
+                          className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          <span className="ml-1 hidden sm:inline">
+                            {canRelease ? 'Release Funds' : 'Unlocking'}
+                          </span>
+                        </Button>
+                      </span>
                     )}
                     {isExpanded
                       ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
@@ -1019,24 +1032,29 @@ export default function AdminCauses() {
                           <div className="flex-1">
                             <p className="text-sm font-medium">Escrow Release</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {isPastRelease
-                                ? `Release date passed. ${campaign.donor_count} escrow(s) ready to release to recipient.`
-                                : `Escrow releases on ${releaseDate}. Button appears when release date arrives.`
+                              {canRelease
+                                ? `Ready to release now. ${campaign.donor_count} escrow(s) can be released to the recipient.`
+                                : `Unlocks in ${releaseCountdown.replace('Unlocks in ', '')}. Exact unlock time: ${releaseUnlockAt}.`
                               }
                             </p>
-                            {isPastRelease && campaign.donor_count > 0 && (
-                              <Button
-                                size="sm"
-                                className="mt-3 bg-green-600 hover:bg-green-700 text-white"
-                                onClick={() => handleRelease(campaign)}
-                                disabled={!!processing}
-                              >
-                                {processing === campaign.id
-                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                                  : <Send className="w-3.5 h-3.5 mr-1.5" />
-                                }
-                                Release {campaign.donor_count} Escrow(s) → Recipient
-                              </Button>
+                            {campaign.donor_count > 0 && (
+                              <span title={canRelease ? 'Ready to release now' : `Unlocks at ${releaseUnlockAt}`}>
+                                <Button
+                                  size="sm"
+                                  className="mt-3 bg-green-600 hover:bg-green-700 text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                  onClick={() => handleRelease(campaign)}
+                                  disabled={!!processing || !canRelease}
+                                >
+                                  {processing === campaign.id
+                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                    : <Send className="w-3.5 h-3.5 mr-1.5" />
+                                  }
+                                  {canRelease
+                                    ? `Release ${campaign.donor_count} Escrow(s) → Recipient`
+                                    : `Unlocks in ${releaseCountdown.replace('Unlocks in ', '')}`
+                                  }
+                                </Button>
+                              </span>
                             )}
                           </div>
                         </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,11 +12,11 @@ import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useXrpPrice, formatUsd } from '@/hooks/useXrpPrice'
-
-function daysUntil(date: string) {
-  const diff = new Date(date).getTime() - Date.now()
-  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)))
-}
+import {
+  formatCauseReleaseCountdown,
+  formatCauseReleaseUnlockTimestamp,
+  isCauseReleaseReady,
+} from '@/lib/causesRelease'
 
 function shortAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
@@ -96,15 +96,19 @@ export default function CauseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { activeWallet, isConnected } = useActiveWallet()
+  const { isConnected } = useActiveWallet()
   const [donateOpen, setDonateOpen] = useState(false)
   const [walletModalOpen, setWalletModalOpen] = useState(false)
+  const [now, setNow] = useState(() => Date.now())
 
   const { data: campaign, isLoading, error } = useCampaign(slug!)
   const { data: donations } = useCampaignDonations(campaign?.id ?? '')
   const { data: xrpPrice } = useXrpPrice()
 
-
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   if (isLoading) {
     return (
@@ -131,8 +135,9 @@ export default function CauseDetail() {
     )
   }
 
-  const days = daysUntil(campaign.release_date)
-  const released = days === 0
+  const unlockCountdown = formatCauseReleaseCountdown(campaign.release_date, now)
+  const unlockTimestamp = formatCauseReleaseUnlockTimestamp(campaign.release_date)
+  const releaseReady = isCauseReleaseReady(campaign.release_date, now)
   const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   })
@@ -361,21 +366,23 @@ export default function CauseDetail() {
                   </p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xl font-bold text-foreground">{days}</p>
+                  <p className="text-xl font-bold text-foreground" title={unlockTimestamp}>
+                    {releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', '')}
+                  </p>
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
-                    <Calendar className="w-3 h-3" /> days left
+                    <Calendar className="w-3 h-3" /> unlock window
                   </p>
                 </div>
               </div>
 
               <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 rounded-lg p-2.5">
                 <Lock className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                {released
-                  ? 'Escrow has been released to the recipient.'
-                  : `Escrow releases on ${releaseDate}`}
+                {campaign.status === 'completed' || releaseReady
+                  ? 'Ready to release to the recipient.'
+                  : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
               </div>
 
-              {campaign.status !== 'completed' && !released && (
+              {campaign.status !== 'completed' && !releaseReady && (
                 !user ? (
                   <Button className="w-full" size="lg" onClick={() => navigate('/auth')}>
                     Sign In to Donate
@@ -393,7 +400,7 @@ export default function CauseDetail() {
                 )
               )}
 
-              {(campaign.status === 'completed' || released) && (
+              {(campaign.status === 'completed' || releaseReady) && (
                 <Button variant="outline" className="w-full" disabled>
                   <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
                   Funds Released
