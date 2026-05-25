@@ -251,7 +251,7 @@ export default function AdminCauses() {
         currency: 'XRP',
         recipient_wallet_address: createForm.recipient_wallet_address.trim(),
         release_date: new Date(createForm.release_date).toISOString(),
-        status: createForm.status,
+        status: createForm.status === 'approved' ? 'active' : createForm.status,
         network: createForm.network,
         submitted_by_user_id: user?.id,
         submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
