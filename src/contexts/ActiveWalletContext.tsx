@@ -213,7 +213,13 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    saveWalletSecret(address, walletSecret);
+    // Only keep testnet faucet secrets in session storage for the current browser session.
+    // Production/Xaman wallets must never place a private seed in the browser.
+    if (provider === 'testnet_faucet') {
+      saveWalletSecret(address, walletSecret);
+    } else {
+      saveWalletSecret(address, null);
+    }
 
     // Refresh wallet list
     const { data: allWallets } = await supabase
@@ -300,6 +306,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
   const getWalletSecret = useCallback((address: string | null | undefined) => {
     if (!address) return null;
+    const wallet = walletsRef.current.find(w => w.address === address);
+    if (wallet?.provider !== 'testnet_faucet') return null;
     return loadWalletSecret(address);
   }, []);
 
