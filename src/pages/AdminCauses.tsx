@@ -31,6 +31,8 @@ type EditFormShape = {
   goal_amount: string
   image_url: string
   gallery_urls: string[]
+  visibility: 'public' | 'hidden'
+  hidden_reason: string
 }
 
 const CREATE_DRAFT_KEY = 'admin-causes:create-draft'
