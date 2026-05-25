@@ -1,0 +1,289 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { ArrowLeft, Send, CheckCircle2, Lock, Info } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage,
+} from '@/components/ui/form'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
+import { supabase } from '@/integrations/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
+import { toast } from 'sonner'
+
+const schema = z.object({
+  title: z.string().min(10, 'Title must be at least 10 characters').max(100),
+  description: z.string().min(50, 'Please provide at least 50 characters describing the cause').max(5000),
+  recipient_wallet_address: z
+    .string()
+    .regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Must be a valid XRPL r-address (starts with r)'),
+  goal_amount: z.string().optional(),
+  release_date: z.string().min(1, 'Please select a release date'),
+  image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  contact_email: z.string().email('Must be a valid email'),
+  submission_notes: z.string().min(20, 'Please tell us more about this cause (min 20 chars)').max(2000),
+})
+
+type FormValues = z.infer<typeof schema>
+
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 60)
+}
+
+export default function CauseApply() {
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [submitted, setSubmitted] = useState(false)
+
+  const minDate = new Date()
+  minDate.setDate(minDate.getDate() + 30)
+
+  const form = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      title: '',
+      description: '',
+      recipient_wallet_address: '',
+      goal_amount: '',
+      release_date: '',
+      image_url: '',
+      contact_email: user?.email ?? '',
+      submission_notes: '',
+    },
+  })
+
+  async function onSubmit(values: FormValues) {
+    try {
+      const slug = slugify(values.title) + '-' + Date.now().toString(36)
+
+      const { error } = await supabase.from('campaigns').insert({
+        title: values.title,
+        slug,
+        description: values.description,
+        recipient_wallet_address: values.recipient_wallet_address,
+        goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
+        release_date: new Date(values.release_date).toISOString(),
+        image_url: values.image_url || null,
+        submitted_by_user_id: user?.id ?? null,
+        submitted_by_email: values.contact_email,
+        submission_notes: values.submission_notes,
+        status: 'under_review',
+      })
+
+      if (error) throw error
+      setSubmitted(true)
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to submit. Please try again.')
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navigation />
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="text-center max-w-md">
+            <div className="w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-10 h-10 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-3">Submission Received</h2>
+            <p className="text-muted-foreground mb-2">
+              Thank you for submitting your cause. The Accountabul civil division will review it
+              and reach out to you at the email you provided.
+            </p>
+            <p className="text-sm text-muted-foreground mb-8">
+              Review typically takes 3–5 business days. If approved, your campaign will go live on the Causes page.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <Button onClick={() => navigate('/causes')}>View Active Causes</Button>
+              <Button variant="outline" onClick={() => { setSubmitted(false); form.reset() }}>
+                Submit Another
+              </Button>
+            </div>
+          </div>
+        </div>
+        <Footer />
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navigation />
+
+      <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        <button
+          onClick={() => navigate('/causes')}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Causes
+        </button>
+
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-foreground mb-2">Submit a Cause</h1>
+          <p className="text-muted-foreground">
+            All campaigns are reviewed by the Accountabul civil division before going live.
+            We focus on social justice, community defense, and civil rights causes.
+          </p>
+        </div>
+
+        {/* Info banner */}
+        <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex gap-3 mb-8">
+          <Lock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+          <div className="text-sm text-muted-foreground space-y-1">
+            <p><strong className="text-foreground">How funds work:</strong> Every donation goes into XRPL escrow — locked on-chain until your release date, then sent directly to your wallet. The Accountabul team never holds the funds.</p>
+            <p className="flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 flex-shrink-0" />
+              You must provide a valid XRPL wallet address to receive funds.
+            </p>
+          </div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+
+            <FormField control={form.control} name="title" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Campaign Title *</FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Justice for Marcus Johnson Defense Fund" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="description" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Description *</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Describe the cause, who it helps, and why it matters. Be specific — this is what donors will read."
+                    rows={6}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <FormField control={form.control} name="recipient_wallet_address" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Recipient XRPL Wallet Address *</FormLabel>
+                <FormControl>
+                  <Input
+                    placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                    className="font-mono"
+                    {...field}
+                  />
+                </FormControl>
+                <p className="text-xs text-muted-foreground">
+                  Must be a valid XRPL r-address. This is where funds will be sent when the escrow releases.
+                </p>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField control={form.control} name="goal_amount" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Goal Amount (XRP, optional)</FormLabel>
+                  <FormControl>
+                    <Input type="number" min="0" placeholder="e.g. 50000" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Shown as a soft goal — donations continue past the goal.</p>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="release_date" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Escrow Release Date *</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      min={minDate.toISOString().split('T')[0]}
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">Minimum 30 days from today.</p>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <FormField control={form.control} name="image_url" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Campaign Image URL (optional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="url"
+                    placeholder="https://example.com/image.jpg"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            <div className="border-t border-border pt-6">
+              <h3 className="font-medium text-foreground mb-4">Contact & Review</h3>
+
+              <FormField control={form.control} name="contact_email" render={({ field }) => (
+                <FormItem className="mb-4">
+                  <FormLabel>Contact Email *</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="your@email.com" {...field} />
+                  </FormControl>
+                  <p className="text-xs text-muted-foreground">We'll reach out here with approval status.</p>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
+              <FormField control={form.control} name="submission_notes" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Message to Review Team *</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Tell us more about this cause — who is involved, any urgency, links to news coverage, legal documents, etc."
+                      rows={4}
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )} />
+            </div>
+
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full"
+              disabled={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
+              Submit for Review
+            </Button>
+          </form>
+        </Form>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}

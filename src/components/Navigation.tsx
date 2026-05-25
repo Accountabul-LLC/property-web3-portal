@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets, Heart } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 import { WalletConnectModal } from '@/components/WalletConnectModal';
@@ -51,6 +51,7 @@ const Navigation = () => {
 
   // shortLabel used between lg (1024px) and xl (1280px) to prevent overflow
   const navItems = [
+    { path: '/causes',       label: 'Causes',       shortLabel: 'Causes',  icon: Heart },
     { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },
     { path: '/professionals', label: 'Professionals', shortLabel: 'Pros',  icon: Users },
