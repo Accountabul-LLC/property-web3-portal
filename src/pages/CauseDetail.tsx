@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2 } from 'lucide-react'
+import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import DonateModal from '@/components/causes/DonateModal'
+import { WalletConnectModal } from '@/components/WalletConnectModal'
 import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 
 function daysUntil(date: string) {
   const diff = new Date(date).getTime() - Date.now()
