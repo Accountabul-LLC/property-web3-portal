@@ -35,8 +35,8 @@ export default function Causes() {
     })
   }, [campaigns, search, filter])
 
-  const featuredCampaigns = useMemo(() => filteredCampaigns.slice(0, 3), [filteredCampaigns])
-  const remainingCampaigns = useMemo(() => filteredCampaigns.slice(3), [filteredCampaigns])
+  const featuredCampaigns = useMemo(() => filteredCampaigns.slice(0, 2), [filteredCampaigns])
+  const remainingCampaigns = useMemo(() => filteredCampaigns.slice(2), [filteredCampaigns])
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
