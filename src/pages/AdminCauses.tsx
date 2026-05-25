@@ -200,7 +200,12 @@ export default function AdminCauses() {
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Release failed')
-      if (json.campaign_completed) {
+
+      const errors = (json.results ?? []).filter((r: any) => r.status === 'error')
+      if (errors.length > 0) {
+        // Surface the first error so admin sees the real reason (e.g. signer not funded on testnet)
+        toast.error(errors[0].error ?? 'One or more escrows failed to release', { duration: 12000 })
+      } else if (json.campaign_completed) {
         toast.success(`All escrow released for ${campaign.title}`)
       } else if ((json.manual_count ?? 0) > 0 && (json.released_count ?? 0) === 0) {
         toast.info(`Release prepared for manual signing — ${json.manual_count} escrow(s) waiting`)

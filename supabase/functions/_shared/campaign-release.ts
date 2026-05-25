@@ -143,6 +143,8 @@ export async function releaseCampaignEscrows(opts: {
       const connection = await connectClient(network)
       client = connection.client
 
+      console.log(`Submitting EscrowFinish on ${network} | signer=${signerWallet.address} | owner=${donation.donor_wallet_address} | seq=${donation.escrow_sequence}`)
+
       const prepared = await client.autofill({
         ...finishTx,
         Fee: '12',
@@ -174,15 +176,24 @@ export async function releaseCampaignEscrows(opts: {
         engine_result: txResult,
       })
     } catch (err) {
+      const rawMsg = err instanceof Error ? err.message : String(err)
+      let friendly = rawMsg
+      if (rawMsg.includes('Account not found')) {
+        friendly = `Signer wallet ${signerWallet.address} does not exist on XRPL ${network}. Fund it with at least 10 XRP (use the ${network} faucet if testnet/devnet) and retry.`
+      } else if (rawMsg.includes('tecNO_PERMISSION')) {
+        friendly = `XRPL rejected EscrowFinish with tecNO_PERMISSION — the escrow's FinishAfter time has not been reached on-ledger yet. Wait ~10 seconds past release_date and retry.`
+      }
+      console.error(`Failed to release donation ${donation.id}: ${friendly}`)
       results.push({
         donation_id: donation.id,
         status: 'error',
-        error: err instanceof Error ? err.message : String(err),
+        error: friendly,
       })
     } finally {
       try { await client?.disconnect() } catch (disconnectErr) { void disconnectErr }
     }
   }
+
 
   const releasedCount = results.filter((r): r is Extract<CampaignReleaseResult, { status: 'released' }> => r.status === 'released').length
   const manualCount = results.filter((r): r is Extract<CampaignReleaseResult, { status: 'pending_manual' }> => r.status === 'pending_manual').length
