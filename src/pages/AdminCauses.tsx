@@ -296,15 +296,36 @@ export default function AdminCauses() {
 
   function openEdit(c: Campaign) {
     setEditId(c.id)
-    setEditForm({
+    const dbValues: EditFormShape = {
       title: c.title,
       description: c.description,
       goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
       image_url: c.image_url ?? '',
       gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
-    })
+    }
+    const draft = loadDraft<EditFormShape>(editDraftKey(c.id))
+    setEditForm(draft ?? dbValues)
+    setEditHasDraft(!!draft)
     setEditOpen(true)
   }
+
+  function discardEditDraft() {
+    if (!editId) return
+    const c = campaigns?.find((x) => x.id === editId)
+    clearDraft(editDraftKey(editId))
+    setEditHasDraft(false)
+    if (c) {
+      setEditForm({
+        title: c.title,
+        description: c.description,
+        goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
+        image_url: c.image_url ?? '',
+        gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+      })
+    }
+    toast.success('Draft discarded')
+  }
+
 
   async function handleEditCoverUpload(file: File) {
     setUploadingEditCover(true)
