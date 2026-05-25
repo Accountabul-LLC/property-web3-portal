@@ -13,7 +13,7 @@ import {
   markAllRead,
   markRead,
   subscribe,
-  explorerUrl,
+  
   WalletNotification,
 } from '@/lib/walletNotifications';
 import {
