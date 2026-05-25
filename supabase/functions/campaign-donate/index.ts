@@ -213,6 +213,28 @@ Deno.serve(async (req) => {
       })
     }
 
+    // ── Accepted-assets whitelist ─────────────────────────────
+    const acceptedAssets: string[] = Array.isArray(campaign.accepted_assets) && campaign.accepted_assets.length > 0
+      ? campaign.accepted_assets.map((a: string) => String(a).toUpperCase())
+      : ['XRP']
+    if (!acceptedAssets.includes(requestedCurrency)) {
+      return new Response(JSON.stringify({
+        error: `This cause only accepts ${acceptedAssets.join(' or ')}. ${requestedCurrency} donations were not enabled by the organizer.`,
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    // XRPL EscrowCreate only supports XRP. IOU donations (RLUSD) must be direct payments.
+    const isRlusd = requestedCurrency === 'RLUSD'
+    if (isRlusd && campaign.campaign_type !== 'direct') {
+      return new Response(JSON.stringify({
+        error: 'RLUSD donations are only available on direct (evergreen) campaigns — the XRP Ledger escrow type only supports XRP.',
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     // ── Get donor's active wallet ─────────────────────────────
     const { data: wallet } = await svc
       .from('user_wallets')
