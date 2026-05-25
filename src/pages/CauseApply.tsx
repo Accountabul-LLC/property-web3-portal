@@ -24,6 +24,7 @@ const schema = z.object({
     .string()
     .regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Must be a valid XRPL r-address (starts with r)'),
   goal_amount: z.string().optional(),
+  accept_rlusd: z.boolean().default(false),
   release_date: z.string().min(1, 'Please select a release date'),
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   contact_email: z.string().email('Must be a valid email'),
@@ -47,6 +48,7 @@ export default function CauseApply() {
       description: '',
       recipient_wallet_address: '',
       goal_amount: '',
+      accept_rlusd: false,
       release_date: '',
       image_url: '',
       contact_email: user?.email ?? '',
@@ -62,6 +64,7 @@ export default function CauseApply() {
           description: values.description,
           recipient_wallet_address: values.recipient_wallet_address,
           goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
+          accepted_assets: values.accept_rlusd ? ['XRP', 'RLUSD'] : ['XRP'],
           release_date: new Date(values.release_date).toISOString(),
           image_url: values.image_url || null,
           contact_email: values.contact_email,
