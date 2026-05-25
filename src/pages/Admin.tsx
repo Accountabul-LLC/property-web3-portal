@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, ReceiptText } from 'lucide-react'
+import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, ReceiptText, Tag } from 'lucide-react'
 
 const ADMIN_LINKS = [
   {
@@ -21,6 +21,12 @@ const ADMIN_LINKS = [
     icon: FileSearch,
   },
   {
+    title: 'Membership Tiers',
+    description: 'Edit pricing, features, and visibility of membership plans shown on the public pricing page.',
+    href: '/admin/pricing',
+    icon: Tag,
+  },
+  {
     title: 'Credential Management',
     description: 'Manage the testnet XRPL credential issuer, approve wallet registrations, and issue or revoke trading credentials.',
     href: '/admin/credentials',
@@ -31,6 +37,12 @@ const ADMIN_LINKS = [
     description: 'Observe payments, invoices, provider status, and reconciliation for the payments product.',
     href: '/admin/payments',
     icon: ReceiptText,
+  },
+  {
+    title: 'Membership Tiers',
+    description: 'Edit pricing, features, and visibility of membership plans shown on the public pricing page.',
+    href: '/admin/pricing',
+    icon: Tag,
   },
   {
     title: 'AI Panel',

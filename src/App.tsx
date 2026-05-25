@@ -28,6 +28,7 @@ import AdminPayments from "./pages/AdminPayments";
 import ActionItems from "./pages/ActionItems";
 import Credentials from "./pages/Credentials";
 import AdminCauses from "./pages/AdminCauses";
+import AdminPricing from "./pages/AdminPricing";
 import Causes from "./pages/Causes";
 import CauseDetail from "./pages/CauseDetail";
 import CauseApply from "./pages/CauseApply";
@@ -35,6 +36,7 @@ import MyDonations from "./pages/MyDonations";
 import Payments from "./pages/Payments";
 import PaymentsHistory from "./pages/PaymentsHistory";
 import PaymentDetail from "./pages/PaymentDetail";
+import Pricing from "./pages/Pricing";
 import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
@@ -79,6 +81,8 @@ const App = () => (
               <Route path="/admin/credentials" element={<AdminCredentials />} />
               <Route path="/admin/payments" element={<AdminPayments />} />
               <Route path="/admin/causes" element={<AdminCauses />} />
+              <Route path="/admin/pricing" element={<AdminPricing />} />
+              <Route path="/pricing" element={<Pricing />} />
               <Route path="/action-items" element={<ActionItems />} />
               <Route path="/credentials" element={<Credentials />} />
               <Route path="/causes" element={<Causes />} />

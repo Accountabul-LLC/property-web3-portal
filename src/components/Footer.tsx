@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -17,9 +18,9 @@ const Footer = () => {
       { label: "Community Forum", href: "#" }
     ],
     Membership: [
-      { label: "Get Membership", href: "#" },
-      { label: "Benefits", href: "#" },
-      { label: "Pricing", href: "#" },
+      { label: "Get Membership", href: "/pricing" },
+      { label: "Benefits", href: "/pricing" },
+      { label: "Pricing", href: "/pricing" },
       { label: "NFT Collection", href: "#" }
     ],
     Legal: [
@@ -61,14 +62,23 @@ const Footer = () => {
               <ul className="space-y-2">
                 {links.map((link, index) => (
                   <li key={index}>
-                    <a 
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {link.label}
-                    </a>
+                    {link.href.startsWith('/') ? (
+                      <Link
+                        to={link.href}
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                      </Link>
+                    ) : (
+                      <a
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {link.label}
+                      </a>
+                    )}
                   </li>
                 ))}
               </ul>
