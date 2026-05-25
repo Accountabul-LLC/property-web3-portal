@@ -16,7 +16,7 @@ function progressPct(raised: number, goal: number | null) {
 
 export default function CauseCard({ campaign }: { campaign: Campaign }) {
   const navigate = useNavigate()
-  const isDirectCampaign = campaign.campaign_type === 'direct'
+  const isDirectCampaign = campaign.campaign_mode === 'evergreen'
   const days = campaign.release_date ? daysUntil(campaign.release_date) : 0
   const pct = progressPct(campaign.total_raised, campaign.goal_amount)
 

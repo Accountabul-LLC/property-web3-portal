@@ -860,7 +860,7 @@ export default function AdminCauses() {
           {filtered.map((campaign) => {
             const isExpanded = expandedId === campaign.id
             const badge = STATUS_BADGE[campaign.status]
-            const isDirectCampaign = campaign.campaign_type === 'direct'
+            const isDirectCampaign = campaign.campaign_mode === 'evergreen'
             const canRelease = !isDirectCampaign && isCauseReleaseReady(campaign.release_date, now)
             const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_type)
             const releaseUnlockAt = isDirectCampaign
