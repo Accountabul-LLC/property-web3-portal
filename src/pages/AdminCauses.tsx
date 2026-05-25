@@ -150,7 +150,15 @@ export default function AdminCauses() {
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Release failed')
-      toast.success(`Release initiated — ${json.released_count} escrow(s) finishing`)
+      if (json.campaign_completed) {
+        toast.success(`All escrow released for ${campaign.title}`)
+      } else if ((json.manual_count ?? 0) > 0 && (json.released_count ?? 0) === 0) {
+        toast.info(`Release prepared for manual signing — ${json.manual_count} escrow(s) waiting`)
+      } else if ((json.manual_count ?? 0) > 0) {
+        toast.info(`${json.released_count} escrow(s) released, ${json.manual_count} still need manual signing`)
+      } else {
+        toast.success(`Released ${json.released_count} escrow(s)`)
+      }
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
     } catch (err: any) {
       toast.error(err.message)
