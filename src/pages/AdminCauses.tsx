@@ -948,6 +948,13 @@ export default function AdminCauses() {
                   className="p-5 flex items-start gap-4 cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => setExpandedId(isExpanded ? null : campaign.id)}
                 >
+                  {campaign.image_url && (
+                    <img
+                      src={campaign.image_url}
+                      alt={campaign.title}
+                      className="w-16 h-24 sm:w-20 sm:h-28 object-cover rounded-md border border-border flex-shrink-0"
+                    />
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
