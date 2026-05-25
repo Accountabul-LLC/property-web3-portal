@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import {
   PAYMENT_CURRENCIES,
 } from "@/components/payments/paymentUtils";
 import { PaymentComposer } from "@/components/payments/PaymentComposer";
+import { PaymentDeveloperConsole } from "@/components/payments/PaymentDeveloperConsole";
 import { PaymentRailCards } from "@/components/payments/PaymentRailCards";
 import { PaymentSummary } from "@/components/payments/PaymentSummary";
 import { StripeCheckoutModal } from "@/components/payments/StripeCheckoutModal";
@@ -40,10 +41,17 @@ export default function Payments() {
   const [response, setResponse] = useState<PaymentCheckoutResponse | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
+  const showDeveloperConsole =
+    import.meta.env.DEV || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("debug"));
 
   const updateDraft = (field: keyof PaymentDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value } as PaymentDraft));
   };
+
+  const request = useMemo(
+    () => buildPaymentCheckoutRequest(draft, rail, idempotencyKey),
+    [draft, rail, idempotencyKey],
+  );
 
   const handleCheckout = async (nextRail: PaymentRail) => {
     const amount = Number(draft.amount);
@@ -128,7 +136,7 @@ export default function Payments() {
                 location attachment. The browser only prepares the request. Settlement stays server-side.
               </p>
             </div>
-          <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="rounded-full px-3 py-1">
                 <ReceiptText className="mr-2 h-3.5 w-3.5" />
                 Invoice and payment flows
@@ -217,6 +225,16 @@ export default function Payments() {
             onCheckout={handleCheckout}
           />
         </section>
+
+        {showDeveloperConsole ? (
+          <PaymentDeveloperConsole
+            draft={draft}
+            request={request}
+            response={response}
+            rail={rail}
+            busy={busy}
+          />
+        ) : null}
       </main>
 
       <Footer />
