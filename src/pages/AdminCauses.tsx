@@ -103,6 +103,8 @@ export default function AdminCauses() {
     goal_amount: '',
     image_url: '',
     gallery_urls: [],
+    visibility: 'public',
+    hidden_reason: '',
   })
   const [editHasDraft, setEditHasDraft] = useState(false)
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
