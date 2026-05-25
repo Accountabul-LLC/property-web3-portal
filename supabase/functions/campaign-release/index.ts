@@ -2,11 +2,13 @@
  * campaign-release  (admin only)
  *
  * Triggers EscrowFinish for all escrowed donations on a campaign whose
- * release_date has passed. Funds go directly from escrow to recipient wallet.
+ * release_date has passed. Funds go directly from escrow to the release
+ * signer wallet, and the helper marks the campaign completed when all
+ * escrows are released.
  *
  * Uses the network stored on the original Xaman payload so the release path
- * matches the donation path. If a testnet signer is configured, the function
- * can auto-submit EscrowFinish; otherwise it returns transaction JSON for
+ * matches the donation path. If a signer seed is configured, the function
+ * auto-submits EscrowFinish. Otherwise it returns transaction JSON for
  * manual signing.
  *
  * Body: { campaign_id }
@@ -14,6 +16,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { releaseCampaignEscrows } from '../_shared/campaign-release.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -31,33 +34,6 @@ function buildCors(req: Request): Record<string, string> {
   }
 }
 
-const XRPL_NODES = {
-  mainnet: ['https://xrplcluster.com', 'https://s1.ripple.com'],
-  testnet: ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'],
-  devnet:  ['https://s.devnet.rippletest.net:51234'],
-}
-
-async function xrplRequest(network: string, method: string, params: unknown[]): Promise<any> {
-  const nodes = XRPL_NODES[network as keyof typeof XRPL_NODES] ?? XRPL_NODES.mainnet
-  let lastErr: Error | null = null
-  for (const node of nodes) {
-    try {
-      const res = await fetch(node, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ method, params }),
-        signal: AbortSignal.timeout(8000),
-      })
-      if (!res.ok) { lastErr = new Error(`${node} HTTP ${res.status}`); continue }
-      const data = await res.json()
-      return data.result
-    } catch (e) {
-      lastErr = e as Error
-    }
-  }
-  throw lastErr ?? new Error('All XRPL nodes failed')
-}
-
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req)
 
@@ -66,11 +42,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl    = Deno.env.get('SUPABASE_URL')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
-    // ── Auth + admin check ────────────────────────────────────
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -96,7 +71,6 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── Validate campaign ─────────────────────────────────────
     const { campaign_id } = await req.json()
     if (!campaign_id) {
       return new Response(JSON.stringify({ error: 'Missing campaign_id' }), {
@@ -106,7 +80,7 @@ Deno.serve(async (req) => {
 
     const { data: campaign } = await svc
       .from('campaigns')
-      .select('id, title, status, release_date, recipient_wallet_address')
+      .select('id, title, status, release_date, recipient_wallet_address, network')
       .eq('id', campaign_id)
       .maybeSingle()
 
@@ -126,132 +100,19 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── Fetch all escrowed donations ──────────────────────────
-    const { data: donations } = await svc
-      .from('campaign_donations')
-      .select('id, donor_wallet_address, amount, escrow_tx_hash, escrow_sequence, xaman_payload_uuid')
-      .eq('campaign_id', campaign_id)
-      .eq('escrow_status', 'escrowed') as any
-
-    if (!donations || donations.length === 0) {
-      return new Response(JSON.stringify({
-        released_count: 0,
-        message: 'No escrowed donations to release',
-        results: [],
-      }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    console.log(`Releasing ${donations.length} escrow(s) for campaign: ${campaign.title}`)
-
-    // Optional platform signer for testnet auto-release
     const signerSeed = Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
+    const signerAlgorithm = (Deno.env.get('CAMPAIGN_RELEASE_SIGNER_ALGORITHM') ?? 'secp256k1') as
+      | 'ed25519'
+      | 'secp256k1'
+    const result = await releaseCampaignEscrows({
+      svc,
+      campaign,
+      signerSeed,
+      signerAlgorithm,
+      allowManualFallback: true,
+    })
 
-    const results: any[] = []
-
-    for (const donation of donations) {
-      if (!donation.escrow_sequence) {
-        console.warn(`Donation ${donation.id} missing escrow_sequence — skipping auto-release`)
-        results.push({ donation_id: donation.id, status: 'skipped', reason: 'missing escrow_sequence' })
-        continue
-      }
-
-      const { data: xamanPayload } = await svc
-        .from('xaman_payloads')
-        .select('network')
-        .eq('uuid', donation.xaman_payload_uuid)
-        .maybeSingle() as any
-
-      const network = xamanPayload?.network ?? 'mainnet'
-
-      const finishTx: Record<string, unknown> = {
-        TransactionType: 'EscrowFinish',
-        Account: campaign.recipient_wallet_address, // recipient finishes the escrow
-        Owner: donation.donor_wallet_address,
-        OfferSequence: donation.escrow_sequence,
-      }
-
-      // Testnet auto-sign path
-      if (signerSeed && network === 'testnet') {
-        try {
-          const { Wallet } = await import('npm:xrpl@3.1.0')
-          const signerWallet = Wallet.fromSeed(signerSeed)
-
-          // Get account info for sequence
-          const accountInfo = await xrplRequest(network, 'account_info', [
-            { account: signerWallet.address, ledger_index: 'current' }
-          ])
-          if (accountInfo?.error) {
-            throw new Error(`Account info error: ${accountInfo.error_message ?? accountInfo.error}`)
-          }
-
-          const serverInfo = await xrplRequest(network, 'server_info', [{}])
-          const ledgerSeq = serverInfo?.info?.validated_ledger?.seq ?? 0
-
-          const completeTx = {
-            ...finishTx,
-            Account: signerWallet.address,
-            Sequence: accountInfo.account_data.Sequence,
-            Fee: '12',
-            LastLedgerSequence: ledgerSeq + 30,
-          }
-
-          const signed = signerWallet.sign(completeTx as any)
-          const submit = await xrplRequest(network, 'submit', [{ tx_blob: signed.tx_blob }])
-
-          const txResult = submit?.engine_result ?? 'unknown'
-          const txHash = submit?.tx_json?.hash ?? signed.hash
-
-          await svc
-            .from('campaign_donations')
-            .update({
-              escrow_status: 'released',
-              escrow_finish_tx_hash: txHash,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', donation.id)
-
-          results.push({ donation_id: donation.id, status: 'released', tx_hash: txHash, engine_result: txResult })
-          console.log(`Released donation ${donation.id}: ${txResult} tx=${txHash}`)
-
-        } catch (err: any) {
-          console.error(`Failed to release donation ${donation.id}:`, err.message)
-          results.push({ donation_id: donation.id, status: 'error', error: err.message })
-        }
-
-      } else {
-        // No auto-signer — return tx JSON for manual/Xaman submission
-        results.push({
-          donation_id: donation.id,
-          status: 'pending_manual',
-          finish_tx: finishTx,
-          message: 'Sign this EscrowFinish tx with the recipient wallet in Xaman',
-        })
-      }
-    }
-
-    // Mark campaign as completed if all released
-    const allReleased = results.every(r => r.status === 'released')
-    if (allReleased && results.length > 0) {
-      await svc
-        .from('campaigns')
-        .update({ status: 'completed', updated_at: new Date().toISOString() })
-        .eq('id', campaign_id) as any
-    }
-
-    const releasedCount = results.filter(r => r.status === 'released').length
-    const manualCount = results.filter(r => r.status === 'pending_manual').length
-    const errorCount = results.filter(r => r.status === 'error').length
-
-    return new Response(JSON.stringify({
-      released_count: releasedCount,
-      manual_count: manualCount,
-      error_count: errorCount,
-      total_donations: donations.length,
-      campaign_completed: allReleased,
-      results,
-    }), {
+    return new Response(JSON.stringify(result), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
 

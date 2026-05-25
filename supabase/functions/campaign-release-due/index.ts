@@ -67,6 +67,9 @@ Deno.serve(async (req) => {
     if (error) throw error
 
     const signerSeed = Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
+    const signerAlgorithm = (Deno.env.get('CAMPAIGN_RELEASE_SIGNER_ALGORITHM') ?? 'secp256k1') as
+      | 'ed25519'
+      | 'secp256k1'
     if (!signerSeed) {
       return new Response(JSON.stringify({
         error: 'Campaign release signer seed not configured',
@@ -82,6 +85,7 @@ Deno.serve(async (req) => {
         svc,
         campaign,
         signerSeed,
+        signerAlgorithm,
         allowManualFallback: false,
       })
       results.push({

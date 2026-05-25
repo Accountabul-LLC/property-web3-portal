@@ -64,9 +64,16 @@ export async function releaseCampaignEscrows(opts: {
   svc: any
   campaign: CampaignReleaseCampaign
   signerSeed?: string | null
+  signerAlgorithm?: 'ed25519' | 'secp256k1'
   allowManualFallback?: boolean
 }): Promise<CampaignReleaseSummary> {
-  const { svc, campaign, signerSeed = null, allowManualFallback = true } = opts
+  const {
+    svc,
+    campaign,
+    signerSeed = null,
+    signerAlgorithm = 'secp256k1',
+    allowManualFallback = true,
+  } = opts
 
   const { data: donations, error: donationError } = await svc
     .from('campaign_donations')
@@ -90,7 +97,7 @@ export async function releaseCampaignEscrows(opts: {
   }
 
   const results: CampaignReleaseResult[] = []
-  const signerWallet = signerSeed ? Wallet.fromSeed(signerSeed) : null
+  const signerWallet = signerSeed ? Wallet.fromSeed(signerSeed, { algorithm: signerAlgorithm }) : null
 
   for (const donation of rows) {
     if (!donation.escrow_sequence) {

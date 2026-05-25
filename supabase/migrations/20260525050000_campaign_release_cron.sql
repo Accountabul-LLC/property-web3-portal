@@ -6,6 +6,8 @@
 --
 -- The edge function also needs the signer seed configured in project secrets:
 --   CAMPAIGN_RELEASE_SIGNER_SEED
+-- If that seed comes from XRPL secret numbers, set:
+--   CAMPAIGN_RELEASE_SIGNER_ALGORITHM=secp256k1
 
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
