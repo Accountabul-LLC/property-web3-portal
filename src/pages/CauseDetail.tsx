@@ -304,14 +304,19 @@ export default function CauseDetail() {
               </div>
 
               {campaign.status !== 'completed' && !released && (
-                user ? (
-                  <Button className="w-full" size="lg" onClick={() => setDonateOpen(true)}>
-                    <Heart className="w-4 h-4 mr-2" />
-                    Donate with Xaman
-                  </Button>
-                ) : (
+                !user ? (
                   <Button className="w-full" size="lg" onClick={() => navigate('/auth')}>
                     Sign In to Donate
+                  </Button>
+                ) : !isConnected ? (
+                  <Button className="w-full" size="lg" onClick={() => setWalletModalOpen(true)}>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Connect Wallet to Donate
+                  </Button>
+                ) : (
+                  <Button className="w-full" size="lg" onClick={() => setDonateOpen(true)}>
+                    <Heart className="w-4 h-4 mr-2" />
+                    Donate
                   </Button>
                 )
               )}
