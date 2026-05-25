@@ -1,73 +1,50 @@
-# Escrow Release Notifications — Recipient + Donor
+# Humanize Transaction Labels
 
-## Goal
+Right now the Recent Transactions list shows raw XRPL types ("EscrowFinish", "EscrowCreate", "TrustSet", "DIDSet"). Notifications already use friendlier phrasing, but it's inconsistent. This plan unifies everything behind a single helper so the user always sees natural language.
 
-When the cron releases a campaign's escrow:
-- **Recipient** gets an in-app bell notification (with sound) + email (if they're an app user with an email).
-- **Donor** gets an in-app "thank you, your donation was delivered" notification + email.
+## What changes (UI only)
 
-Today the bell only fires when the recipient's wallet is actively connected and watching XRPL — that's why LFFW saw nothing. We'll move notifications server-side so they survive across sessions and devices, and wire emails through Lovable Emails.
+In the activity list, replace raw types with phrases based on direction + type:
 
-## What to build
+| XRPL type | Direction | New label |
+|---|---|---|
+| Payment | received | "Received payment" |
+| Payment | sent | "Sent payment" |
+| EscrowCreate | sent (you funded it) | "Escrow created" |
+| EscrowCreate | received (someone funded you) | "Incoming escrow" |
+| EscrowFinish | received | "Escrow released to you" |
+| EscrowFinish | sent | "Escrow released" |
+| EscrowCancel | any | "Escrow refunded" |
+| OfferCreate | — | "DEX order placed" |
+| OfferCancel | — | "DEX order cancelled" |
+| TrustSet | — | "Trustline updated" |
+| AccountSet | — | "Account settings updated" |
+| NFTokenMint | — | "NFT minted" |
+| NFTokenCreateOffer | — | "NFT offer created" |
+| NFTokenAcceptOffer | — | "NFT offer accepted" |
+| MPTokenIssuanceCreate | — | "Token issued" |
+| MPTokenAuthorize | — | "Token authorized" |
+| Payment (is_swap) | — | "Token swap" |
+| DIDSet | — | "Identity updated" |
+| DIDDelete | — | "Identity removed" |
+| CredentialCreate | sent | "Credential issued" |
+| CredentialCreate | received | "Credential received" |
+| CredentialAccept | — | "Credential accepted" |
+| CredentialDelete | — | "Credential revoked" |
+| (unknown) | — | prettified type (e.g. "Set Regular Key") |
 
-### 1. Database: `user_notifications` table
+Tooltip on hover still shows the raw XRPL type for power users.
 
-```text
-user_notifications
-  id, user_id, kind, title, body,
-  campaign_id, donation_id, tx_hash, amount, currency,
-  network, read_at, created_at
-```
+## Files touched
 
-- RLS: users can read/update their own rows; service role inserts.
-- Realtime enabled on the table so the bell updates live.
+- **new** `src/lib/txLabels.ts` — single `humanizeTx({ type, direction, is_swap })` helper plus a `prettifyType` fallback that splits PascalCase into words.
+- `src/components/PortfolioSection.tsx` — replace the inline `txLabel` ternary (~line 998-1002) with `humanizeTx(tx)`, and wrap the label `<p>` in a `title={tx.type}` for the raw type on hover.
+- `src/lib/txClassifier.ts` — keep notification titles as-is (already friendly), but route through the same helper for consistency where applicable (escrow titles already match).
+- `src/components/WalletActivityWatcher.tsx` — same: align backfilled notification titles with the helper.
 
-### 2. Notification dispatch in `_shared/campaign-release.ts`
+No backend/edge-function changes. No DB changes. No behavior changes — only label text.
 
-After each successful `EscrowFinish`:
+## Out of scope
 
-- Look up `recipient_user_id` by `recipient_wallet_address` in `user_wallets` (active).
-- Look up `donor_user_id` from the `campaign_donations` row.
-- Insert two rows into `user_notifications`:
-  - Recipient: "Escrow released: X XRP from {campaign}" → links to tx
-  - Donor: "Thank you — your donation to {campaign} was delivered" → links to tx
-- Then enqueue emails (see step 4) for whichever side has an email on file.
-
-This runs inside the cron path, so it works whether or not anyone is logged in.
-
-### 3. Frontend: in-app bell upgrade
-
-- New hook `useServerNotifications()` — queries `user_notifications` for the signed-in user, subscribes to realtime INSERTs.
-- `NotificationBell` shows the union of (a) server notifications for the user and (b) existing wallet-scoped localStorage notifications. Server ones take priority.
-- On new realtime INSERT: play a short sound (`/notification.mp3`, ~0.3s ping) + toast.
-- Sound is muted if tab is hidden / user has interacted-mute preference (saved to localStorage).
-- Mark-read writes back to `user_notifications.read_at`.
-
-### 4. Emails (Lovable Emails)
-
-- Set up email domain + infrastructure (one-time dialog if not configured).
-- Scaffold transactional email function `send-transactional-email`.
-- Two templates:
-  - `escrow-released-recipient` — "You received {amount} {currency} from {campaign}"
-  - `donation-delivered-donor` — "Thank you — your donation was delivered"
-- Cron release path calls `send-transactional-email` for each side after insert, using `profiles.email` (recipient resolved via wallet → user_id → profile).
-
-### 5. Test it end-to-end
-
-- Create a test campaign with release ~2 min out.
-- Donate from wallet A.
-- Confirm after cron runs:
-  - Recipient (wallet B's user) sees bell + sound + email.
-  - Donor (wallet A's user) sees thank-you bell + email.
-  - Campaign card flips to completed live (already works).
-
-## Technical notes
-
-- `recipient_wallet_address` → user resolution: `user_wallets` where `status='active'`. If no match (external wallet), skip the in-app notification but still log; no email.
-- Email is best-effort: failures don't block release. Logged in `app_audit_log`.
-- Sound asset: tiny royalty-free ping, lazy-loaded, played via `new Audio()` only on realtime INSERT (not on initial fetch / backfill).
-- Migration adds `REPLICA IDENTITY FULL` + publication for `user_notifications`.
-
-## Open question
-
-Do you already have an email domain configured for this project, or should the first step open the email-domain setup dialog? (Without it, the in-app bell + sound still works; only emails are blocked.)
+- Restructuring the transaction shape returned by `xrpl-account-data`.
+- Credential-flow surfacing in the activity list (we already label what the parser emits; if credentials don't currently appear, that's a separate parser task).
