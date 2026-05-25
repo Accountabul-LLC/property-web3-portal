@@ -77,6 +77,7 @@ export default function AdminCauses() {
   const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('under_review')
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
