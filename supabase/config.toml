@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.stripe-identity-webhook]
 verify_jwt = false
+
+[functions.admin-reveal-signer]
+verify_jwt = false
+
+[functions.admin-fund-signer]
+verify_jwt = false
