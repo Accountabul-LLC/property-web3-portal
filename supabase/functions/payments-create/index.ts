@@ -246,9 +246,11 @@ serve(async (req) => {
           payment_intent_id: intentBody.id,
           client_secret: intentBody.client_secret,
           status: intentBody.status,
+          publishable_key: publishableKey,
         },
       });
     }
+
 
     const xrplDestinationAddress = Deno.env.get("XRPL_RECEIVING_ADDRESS");
     if (existingPaymentPayload.wallet_request || existingInvoicePayload.wallet_request) {
