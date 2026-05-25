@@ -1131,6 +1131,26 @@ export default function AdminCauses() {
                       <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{campaign.description}</p>
                     </div>
 
+                    {campaign.visibility === 'hidden' && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Hidden from public
+                        </p>
+                        <div className="text-sm bg-card border border-border rounded-lg p-3 space-y-1">
+                          {campaign.hidden_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Hidden on {new Date(campaign.hidden_at).toLocaleString()}
+                            </p>
+                          )}
+                          <p className="text-foreground whitespace-pre-line">
+                            {campaign.hidden_reason || 'No reason recorded.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+
                     {campaign.submission_notes && (
                       <div>
                         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Message from Applicant</p>
