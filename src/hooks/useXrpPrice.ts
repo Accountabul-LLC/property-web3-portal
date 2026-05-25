@@ -1,18 +1,19 @@
 import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/integrations/supabase/client'
 
 export function useXrpPrice() {
   return useQuery({
     queryKey: ['xrp-usd-price'],
     queryFn: async () => {
-      const res = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd'
-      )
-      if (!res.ok) throw new Error('Failed to fetch XRP price')
-      const json = await res.json()
-      return Number(json?.ripple?.usd) || 0
+      const { data, error } = await supabase.functions.invoke('xrp-price')
+      if (error) throw error
+      const n = Number((data as any)?.price)
+      if (!Number.isFinite(n) || n <= 0) throw new Error('Invalid XRP price')
+      return n
     },
-    staleTime: 60_000,
-    refetchInterval: 60_000,
+    staleTime: 30_000,
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   })
 }
 
