@@ -1018,11 +1018,14 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                         <ArrowUpRight className="w-4 h-4 text-destructive" />
                       );
 
-                      const txLabel = humanizeTx({
-                        type: tx.type,
-                        direction: tx.direction,
-                        is_swap: tx.is_swap,
-                      });
+                      const donationCtx = donationLookup?.get(tx.hash);
+                      const txLabel = donationCtx
+                        ? donationLabel(donationCtx)
+                        : humanizeTx({
+                            type: tx.type,
+                            direction: tx.direction,
+                            is_swap: tx.is_swap,
+                          });
 
                       // Show swap details
                       let amountLine = '';
