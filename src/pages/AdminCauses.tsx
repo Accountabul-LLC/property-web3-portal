@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { supabase } from '@/integrations/supabase/client'
@@ -31,6 +32,8 @@ type EditFormShape = {
   goal_amount: string
   image_url: string
   gallery_urls: string[]
+  visibility: 'public' | 'hidden'
+  hidden_reason: string
 }
 
 const CREATE_DRAFT_KEY = 'admin-causes:create-draft'
@@ -101,6 +104,8 @@ export default function AdminCauses() {
     goal_amount: '',
     image_url: '',
     gallery_urls: [],
+    visibility: 'public',
+    hidden_reason: '',
   })
   const [editHasDraft, setEditHasDraft] = useState(false)
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
@@ -346,6 +351,8 @@ export default function AdminCauses() {
       goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
       image_url: c.image_url ?? '',
       gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+      visibility: c.visibility ?? 'public',
+      hidden_reason: c.hidden_reason ?? '',
     }
     const draft = loadDraft<EditFormShape>(editDraftKey(c.id))
     setEditForm(draft ?? dbValues)
@@ -365,6 +372,8 @@ export default function AdminCauses() {
         goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
         image_url: c.image_url ?? '',
         gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+        visibility: c.visibility ?? 'public',
+        hidden_reason: c.hidden_reason ?? '',
       })
     }
     toast.success('Draft discarded')
@@ -398,6 +407,7 @@ export default function AdminCauses() {
     try {
       if (!editForm.title.trim()) throw new Error('Title is required')
       if (!editForm.description.trim()) throw new Error('Description is required')
+      const current = campaigns?.find((x) => x.id === editId)
       const { data, error } = await supabase.functions.invoke('campaign-admin', {
         body: {
           action: 'update',
@@ -411,6 +421,25 @@ export default function AdminCauses() {
       })
       if (error) throw error
       if (!data?.success) throw new Error(data?.error || 'Failed to update campaign')
+
+      // Apply visibility change as part of Save Changes (if toggled)
+      const prevVisibility = current?.visibility ?? 'public'
+      const nextVisibility = editForm.visibility
+      const nextReason = editForm.hidden_reason.trim()
+      const reasonChanged = nextVisibility === 'hidden' && nextReason !== (current?.hidden_reason ?? '')
+      if (nextVisibility !== prevVisibility || reasonChanged) {
+        const { data: visData, error: visErr } = await supabase.functions.invoke('campaign-admin', {
+          body: {
+            action: 'set_visibility',
+            campaign_id: editId,
+            visibility: nextVisibility,
+            reason: nextVisibility === 'hidden' ? (nextReason || null) : null,
+          },
+        })
+        if (visErr) throw visErr
+        if (!visData?.success) throw new Error(visData?.error || 'Failed to update visibility')
+      }
+
       toast.success('Campaign updated')
       if (editId) clearDraft(editDraftKey(editId))
       setEditHasDraft(false)
@@ -923,7 +952,44 @@ export default function AdminCauses() {
                 )}
               </div>
 
+              {/* Visibility toggle — applied on Save Changes */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-visibility-toggle" className="flex items-center gap-2 cursor-pointer">
+                      {editForm.visibility === 'hidden'
+                        ? <EyeOff className="w-4 h-4 text-muted-foreground" />
+                        : <Eye className="w-4 h-4 text-muted-foreground" />}
+                      Hide from public
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      When on, this cause is removed from the public-facing site but remains live and visible to admins. Takes effect when you click <span className="font-medium">Save Changes</span>.
+                    </p>
+                  </div>
+                  <Switch
+                    id="edit-visibility-toggle"
+                    checked={editForm.visibility === 'hidden'}
+                    onCheckedChange={(checked) =>
+                      setEditForm((p) => ({ ...p, visibility: checked ? 'hidden' : 'public' }))
+                    }
+                  />
+                </div>
+                {editForm.visibility === 'hidden' && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-hidden-reason" className="text-xs">Reason (optional, admin-only)</Label>
+                    <Textarea
+                      id="edit-hidden-reason"
+                      value={editForm.hidden_reason}
+                      onChange={(e) => setEditForm((p) => ({ ...p, hidden_reason: e.target.value }))}
+                      placeholder="e.g. Pending content review, reported by user, awaiting clarification from organizer…"
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
+
                 <Button type="button" variant="ghost" onClick={() => setEditOpen(false)} disabled={editing}>
                   Cancel
                 </Button>
@@ -1041,21 +1107,6 @@ export default function AdminCauses() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       <span className="ml-1 hidden sm:inline">Edit</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); handleSetVisibility(campaign, campaign.visibility === 'hidden' ? 'public' : 'hidden') }}
-                      disabled={!!isProcessing}
-                      className="h-8 px-3"
-                      title={campaign.visibility === 'hidden' ? 'Make public again' : 'Hide from public view'}
-                    >
-                      {campaign.visibility === 'hidden'
-                        ? <Eye className="w-3.5 h-3.5" />
-                        : <EyeOff className="w-3.5 h-3.5" />}
-                      <span className="ml-1 hidden sm:inline">
-                        {campaign.visibility === 'hidden' ? 'Show' : 'Hide'}
-                      </span>
                     </Button>
                     {/* Quick actions */}
                     {campaign.status === 'under_review' && (
