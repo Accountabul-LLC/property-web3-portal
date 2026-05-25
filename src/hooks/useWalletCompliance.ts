@@ -49,6 +49,12 @@ export function useWalletCompliance(walletAddress: string | null | undefined) {
         }
       )
 
+      if (res.status === 401 || res.status === 403) {
+        // Session expired or invalid — sign out so the UI redirects to /auth
+        await supabase.auth.signOut()
+        return null
+      }
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
         throw new Error(err.error || 'compliance-check failed')
