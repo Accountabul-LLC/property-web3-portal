@@ -24,6 +24,11 @@ async function fetchRole(userId: string): Promise<boolean> {
     return has;
   })();
 
+  pending.set(userId, p);
+  return p;
+}
+
+
 export function useTeamAccess() {
   const { user, loading: authLoading } = useAuth();
   const cached = user ? roleCache.get(user.id) : undefined;
