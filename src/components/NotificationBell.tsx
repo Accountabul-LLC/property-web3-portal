@@ -34,6 +34,8 @@ type UnifiedItem = {
   created_at: string;
   read: boolean;
   backfilled?: boolean;
+  wallet_address: string | null;
+  donation_id: string | null;
   raw: ServerNotification | WalletNotification;
 };
 
