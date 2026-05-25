@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Lock, ExternalLink, Loader2, CheckCircle2, Heart } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Lock, ExternalLink, Loader2, CheckCircle2, Heart, Wallet as WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import type { Campaign } from '@/hooks/useCampaigns'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio'
+
+function shortAddr(a: string) {
+  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : ''
+}
 
 type Step = 'form' | 'qr' | 'confirming' | 'done'
 
