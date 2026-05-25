@@ -481,7 +481,9 @@ export default function AdminCauses() {
               </Button>
             </div>
           </form>
-        </Card>
+          </DialogContent>
+        </Dialog>
+
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
