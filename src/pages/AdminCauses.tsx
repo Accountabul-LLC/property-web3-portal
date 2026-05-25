@@ -715,14 +715,29 @@ export default function AdminCauses() {
         <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditId(null) }}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
                 <Pencil className="w-5 h-5 text-primary" />
                 Edit Cause
+                {editHasDraft && (
+                  <Badge variant="secondary" className="ml-1 gap-1">
+                    Unsaved draft
+                    <button
+                      type="button"
+                      onClick={discardEditDraft}
+                      className="ml-1 inline-flex items-center gap-1 text-xs underline hover:no-underline"
+                      title="Discard local draft and reload saved values"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Discard
+                    </button>
+                  </Badge>
+                )}
               </DialogTitle>
               <DialogDescription>
-                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions.
+                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions. Closing this dialog keeps your edits as a local draft — nothing changes until you click <span className="font-medium">Save Changes</span>.
               </DialogDescription>
             </DialogHeader>
+
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-2">
