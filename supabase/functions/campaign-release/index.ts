@@ -100,8 +100,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    const signerSeed = Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
-    const signerAlgorithm = (Deno.env.get('CAMPAIGN_RELEASE_SIGNER_ALGORITHM') ?? 'secp256k1') as
+    // Per-network signer seed with single-seed fallback.
+    const network = (campaign.network === 'testnet' || campaign.network === 'devnet' || campaign.network === 'mainnet')
+      ? campaign.network
+      : 'mainnet'
+    const networkSeedVar = `CAMPAIGN_RELEASE_SIGNER_SEED_${network.toUpperCase()}`
+    const networkAlgVar = `CAMPAIGN_RELEASE_SIGNER_ALGORITHM_${network.toUpperCase()}`
+    const signerSeed = Deno.env.get(networkSeedVar) ?? Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
+    const signerAlgorithm = (Deno.env.get(networkAlgVar) ?? Deno.env.get('CAMPAIGN_RELEASE_SIGNER_ALGORITHM') ?? 'secp256k1') as
       | 'ed25519'
       | 'secp256k1'
     const result = await releaseCampaignEscrows({
@@ -111,6 +117,7 @@ Deno.serve(async (req) => {
       signerAlgorithm,
       allowManualFallback: true,
     })
+
 
     return new Response(JSON.stringify(result), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
