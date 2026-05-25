@@ -48,6 +48,20 @@ Deno.serve(async (req) => {
     const submissionNotes = String(body?.submission_notes ?? '').trim()
     const contactEmail = String(body?.contact_email ?? user.email ?? '').trim()
 
+    // Accepted assets whitelist — donors using our flow can only send these.
+    // Default to XRP-only when omitted. XRP is always required.
+    const ALLOWED_ASSETS = ['XRP', 'RLUSD'] as const
+    const rawAssets = Array.isArray(body?.accepted_assets) ? body.accepted_assets : null
+    const acceptedAssets = rawAssets
+      ? Array.from(new Set(rawAssets.map((a: unknown) => String(a).toUpperCase().trim())))
+      : ['XRP']
+    if (!acceptedAssets.includes('XRP')) acceptedAssets.unshift('XRP')
+    if (acceptedAssets.length === 0 || !acceptedAssets.every((a) => (ALLOWED_ASSETS as readonly string[]).includes(a))) {
+      return new Response(JSON.stringify({ error: `accepted_assets must be a non-empty subset of ${ALLOWED_ASSETS.join(', ')}` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     if (title.length < 10 || title.length > 100) {
       return new Response(JSON.stringify({ error: 'Title must be between 10 and 100 characters' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
