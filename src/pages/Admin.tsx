@@ -5,9 +5,15 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound } from 'lucide-react'
+import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart } from 'lucide-react'
 
 const ADMIN_LINKS = [
+  {
+    title: 'Causes',
+    description: 'Review campaign submissions, approve or reject causes, and trigger escrow release when funds are ready.',
+    href: '/admin/causes',
+    icon: Heart,
+  },
   {
     title: 'KYC Review',
     description: 'Review and approve user identity verification applications.',
