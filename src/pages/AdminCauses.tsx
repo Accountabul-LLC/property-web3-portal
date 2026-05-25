@@ -301,7 +301,7 @@ export default function AdminCauses() {
       setProcessing(null)
     }
   }
-  }
+
 
   async function uploadCauseImage(file: File): Promise<string | null> {
     if (!file.type.startsWith('image/')) {
