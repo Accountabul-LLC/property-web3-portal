@@ -11,6 +11,7 @@ import { WalletConnectModal } from '@/components/WalletConnectModal'
 import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useXrpPrice, formatUsd } from '@/hooks/useXrpPrice'
 
 function daysUntil(date: string) {
   const diff = new Date(date).getTime() - Date.now()
@@ -92,6 +93,10 @@ export default function CauseDetail() {
   const pct = campaign.goal_amount
     ? Math.min(100, Math.round((campaign.total_raised / campaign.goal_amount) * 100))
     : null
+  const { data: xrpPrice } = useXrpPrice()
+  const isXrp = (campaign.currency || 'XRP').toUpperCase() === 'XRP'
+  const raisedUsd = isXrp && xrpPrice ? campaign.total_raised * xrpPrice : null
+  const goalUsd = isXrp && xrpPrice && campaign.goal_amount ? campaign.goal_amount * xrpPrice : null
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -266,9 +271,13 @@ export default function CauseDetail() {
                   {campaign.total_raised.toLocaleString()}
                   <span className="text-lg font-normal text-muted-foreground ml-1">{campaign.currency}</span>
                 </p>
+                {raisedUsd !== null && (
+                  <p className="text-sm text-muted-foreground mt-0.5">≈ {formatUsd(raisedUsd)} USD</p>
+                )}
                 {campaign.goal_amount && (
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    of {campaign.goal_amount.toLocaleString()} {campaign.currency} goal
+                    of {campaign.goal_amount.toLocaleString()} {campaign.currency}
+                    {goalUsd !== null && <span> (≈ {formatUsd(goalUsd)})</span>} goal
                   </p>
                 )}
               </div>
