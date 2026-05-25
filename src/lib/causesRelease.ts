@@ -17,7 +17,7 @@ export function formatCauseReleaseCountdown(
   now = Date.now(),
   campaignType: CauseCampaignType = 'escrow',
 ): string {
-  if (campaignType === 'direct' || !releaseDate) return 'Direct donations stay open'
+  if (campaignType === 'direct' || campaignType === 'evergreen' || !releaseDate) return 'Direct donations stay open'
   const remaining = getCauseReleaseUnlockAt(releaseDate) - now
   if (remaining <= 0) return 'Ready to release \u2713'
 
