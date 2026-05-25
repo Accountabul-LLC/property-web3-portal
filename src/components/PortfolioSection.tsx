@@ -1015,11 +1015,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                         <ArrowUpRight className="w-4 h-4 text-destructive" />
                       );
 
-                      const txLabel = tx.is_swap
-                        ? 'Swap'
-                        : tx.type === 'OfferCreate'
-                        ? 'DEX Order'
-                        : tx.type;
+                      const txLabel = humanizeTx({
+                        type: tx.type,
+                        direction: tx.direction,
+                        is_swap: tx.is_swap,
+                      });
 
                       // Show swap details
                       let amountLine = '';
