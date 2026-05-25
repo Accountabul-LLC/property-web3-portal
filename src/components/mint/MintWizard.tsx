@@ -163,7 +163,7 @@ const MintWizard: React.FC = () => {
             console.error('[MintWizard] Failed to create property listing:', propErr);
             toast.error('Token minted but marketplace listing failed. Contact support.');
           }
-          if (newProp && typeof newProp === 'object' && 'id' in newProp) linkedPropertyId = String(newProp.id);
+          if (newProp && typeof newProp === 'object' && 'id' in (newProp as any)) linkedPropertyId = String((newProp as any).id);
         }
 
         // Save mint record as validated
@@ -177,7 +177,7 @@ const MintWizard: React.FC = () => {
           status: 'validated',
           tx_hash: submitData.tx_hash,
           property_id: linkedPropertyId,
-        });
+        } as never);
 
               // Activate linked property (if it was pre-existing and approved)
               if (selectedPropertyId) {
@@ -239,7 +239,7 @@ const MintWizard: React.FC = () => {
             console.error('[MintWizard] Failed to create property listing:', propErr);
             toast.error('Token minted but marketplace listing failed. Contact support.');
           }
-          if (newProp && typeof newProp === 'object' && 'id' in newProp) xamanLinkedPropertyId = String(newProp.id);
+          if (newProp && typeof newProp === 'object' && 'id' in (newProp as any)) xamanLinkedPropertyId = String((newProp as any).id);
         }
 
         // Save mint record
@@ -253,7 +253,7 @@ const MintWizard: React.FC = () => {
           status: 'pending',
           xaman_payload_uuid: signData.uuid,
           property_id: xamanLinkedPropertyId,
-        });
+        } as never);
 
         // Poll for signing result
         const uuid = signData.uuid;

@@ -841,12 +841,12 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                                 <div>
                                   <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Verification Links</p>
                                   <div className="flex flex-wrap gap-2">
-                                    {mpt.uris.map((uri, uriIdx: number) => {
+                                    {mpt.uris.map((uri: any, uriIdx: number) => {
                                       // Support both XLS-89 object format {u, c, t} and plain string URIs
-                                      const href = typeof uri === 'string' ? uri : (uri && typeof uri === 'object' && 'u' in uri ? String(uri.u || '') : '');
+                                      const href = typeof uri === 'string' ? uri : (uri && typeof uri === 'object' && 'u' in uri ? String((uri as any).u || '') : '');
                                       const label = typeof uri === 'string'
                                         ? uri.replace(/^https?:\/\//, '').slice(0, 30)
-                                        : (uri && typeof uri === 'object' && 't' in uri && uri.t ? String(uri.t) : href.replace(/^https?:\/\//, '').slice(0, 30));
+                                        : (uri && typeof uri === 'object' && 't' in uri && (uri as any).t ? String((uri as any).t) : href.replace(/^https?:\/\//, '').slice(0, 30));
                                       const fullUrl = href.startsWith('http') ? href : `https://${href}`;
                                       if (!href) return null;
                                       return (
