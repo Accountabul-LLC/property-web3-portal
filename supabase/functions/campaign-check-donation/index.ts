@@ -100,12 +100,16 @@ Deno.serve(async (req) => {
     }
 
     // ── Load our payload row ──────────────────────────────────
-    const { data: payloadRow } = await svc
+    const { data: payloadRow, error: payloadErr } = await svc
       .from('xaman_payloads')
-      .select('intended_user_id, metadata, network, status')
+      .select('metadata, network, status')
       .eq('uuid', xaman_uuid)
       .maybeSingle()
 
+    if (payloadErr) {
+      console.error('xaman_payloads select error:', payloadErr)
+      throw payloadErr
+    }
     if (!payloadRow) {
       return new Response(JSON.stringify({ error: 'Payload not found' }), {
         status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -113,7 +117,10 @@ Deno.serve(async (req) => {
     }
 
     // Ownership check — only the donor who created this payload can poll it
-    if (payloadRow.intended_user_id && payloadRow.intended_user_id !== user.id) {
+    const intendedUserId = (payloadRow.metadata as any)?.intended_user_id
+      ?? (payloadRow.metadata as any)?.donor_user_id
+      ?? null
+    if (intendedUserId && intendedUserId !== user.id) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), {
         status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
