@@ -251,7 +251,7 @@ export default function AdminCauses() {
         currency: 'XRP',
         recipient_wallet_address: createForm.recipient_wallet_address.trim(),
         release_date: new Date(createForm.release_date).toISOString(),
-        status: createForm.status,
+        status: createForm.status === 'approved' ? 'active' : createForm.status,
         network: createForm.network,
         submitted_by_user_id: user?.id,
         submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
@@ -444,8 +444,7 @@ export default function AdminCauses() {
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="under_review">Under Review</option>
-                  <option value="approved">Approved</option>
-                  <option value="active">Active</option>
+                  <option value="active">Active (publicly visible)</option>
                 </select>
               </div>
 
