@@ -990,13 +990,17 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
 
                       const counterparty = tx.direction === 'received' ? tx.sender : tx.destination;
 
+                      const isFocused = !!focusTxHash && tx.hash === focusTxHash;
                       return (
                         <a
                           key={tx.hash}
+                          ref={isFocused ? focusedTxRef : undefined}
                           href={`https://${isTestnet ? 'testnet' : 'livenet'}.xrpl.org/transactions/${tx.hash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group"
+                          className={`flex items-start space-x-3 py-3 px-3 -mx-3 rounded-lg border-b border-border last:border-b-0 cursor-pointer transition-all duration-200 hover:bg-secondary/15 hover:border-secondary/30 group ${
+                            isFocused ? 'bg-primary/10 ring-2 ring-primary/40 animate-pulse-once' : ''
+                          }`}
                         >
                           <div className="relative flex-shrink-0 mt-0.5">
                             <TokenAvatar
