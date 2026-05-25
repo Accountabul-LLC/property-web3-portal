@@ -15,6 +15,18 @@ function isValidRAddress(address: string) {
   return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address)
 }
 
+const ALLOWED_ASSETS = ['XRP', 'RLUSD'] as const
+
+function normalizeAcceptedAssets(raw: unknown): string[] {
+  if (!Array.isArray(raw)) throw new Error('accepted_assets must be an array')
+  const list = Array.from(new Set(raw.map((a) => String(a).toUpperCase().trim())))
+  if (!list.includes('XRP')) list.unshift('XRP')
+  if (list.length === 0 || !list.every((a) => (ALLOWED_ASSETS as readonly string[]).includes(a))) {
+    throw new Error(`accepted_assets must be a non-empty subset of ${ALLOWED_ASSETS.join(', ')}`)
+  }
+  return list
+}
+
 async function requireAdmin(req: Request, corsHeaders: Record<string, string>) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
