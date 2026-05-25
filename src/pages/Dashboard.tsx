@@ -39,6 +39,15 @@ const US_STATES = [
   'VA','WA','WV','WI','WY','DC',
 ];
 
+type DashboardProperty = {
+  id: string;
+  title: string;
+  status: string;
+  city: string | null;
+  state: string | null;
+  created_at: string;
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
@@ -62,7 +71,7 @@ const Dashboard = () => {
     zip: '',
     country: 'US',
   });
-  const [properties, setProperties] = useState<any[]>([]);
+  const [properties, setProperties] = useState<DashboardProperty[]>([]);
   const [saving, setSaving] = useState(false);
   const [editingWalletAddr, setEditingWalletAddr] = useState<string | null>(null);
   const [walletLabel, setWalletLabel] = useState('');
@@ -100,7 +109,7 @@ const Dashboard = () => {
     const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
     const avatarUrl = urlData.publicUrl + '?t=' + Date.now();
 
-    await updateProfile({ avatar_url: avatarUrl } as any);
+    await updateProfile({ avatar_url: avatarUrl });
     toast.success('Profile picture updated!');
     setUploadingAvatar(false);
   };
@@ -135,11 +144,11 @@ const Dashboard = () => {
     if (!user) return;
     const fetchProperties = async () => {
       const { data } = await supabase
-        .from('properties' as any)
+        .from('properties')
         .select('id, title, status, city, state, created_at')
         .eq('owner_user_id', user.id)
         .order('created_at', { ascending: false });
-      if (data) setProperties(data as any[]);
+      if (data) setProperties(data as DashboardProperty[]);
     };
     fetchProperties();
   }, [user]);
@@ -220,7 +229,7 @@ const Dashboard = () => {
     );
   }
 
-  const statusColor = (status: string) => {
+  const statusColor = (status: string): 'default' | 'secondary' | 'outline' => {
     switch (status) {
       case 'approved': return 'default';
       case 'submitted': return 'secondary';
@@ -254,10 +263,16 @@ const Dashboard = () => {
           <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             Dashboard
           </h1>
-          <Button onClick={() => navigate('/tokenize')} className="gap-2">
-            <Plus className="w-4 h-4" />
-            Tokenize Property
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/settings')} className="gap-2">
+              <Pencil className="w-4 h-4" />
+              Settings
+            </Button>
+            <Button onClick={() => navigate('/tokenize')} className="gap-2">
+              <Plus className="w-4 h-4" />
+              Tokenize Property
+            </Button>
+          </div>
         </div>
 
         {/* Complete Profile Banner */}
@@ -674,7 +689,7 @@ const Dashboard = () => {
           </Card>
         ) : (
           <div className="space-y-3">
-            {properties.map((prop: any) => (
+            {properties.map((prop) => (
               <Card
                 key={prop.id}
                 className="p-4 flex items-center justify-between hover:shadow-md transition-shadow cursor-pointer"
@@ -693,7 +708,7 @@ const Dashboard = () => {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={statusColor(prop.status) as any}>{prop.status}</Badge>
+                  <Badge variant={statusColor(prop.status)}>{prop.status}</Badge>
                   <p className="text-xs text-muted-foreground">
                     {new Date(prop.created_at).toLocaleDateString()}
                   </p>

@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { callEdgeFunction } from "@/lib/edgeFunction";
 
 import type {
   PaymentAttachmentType,
@@ -108,13 +108,5 @@ export function buildPaymentCheckoutRequest(
 }
 
 export async function createPaymentCheckoutSession(request: PaymentCheckoutRequest) {
-  const { data, error } = await supabase.functions.invoke(PAYMENT_CREATE_FUNCTION, {
-    body: request,
-  });
-
-  if (error) {
-    throw new Error(error.message || "Payment request failed");
-  }
-
-  return data as unknown;
+  return callEdgeFunction(PAYMENT_CREATE_FUNCTION, request, { requireAuth: true });
 }

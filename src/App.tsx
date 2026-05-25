@@ -36,6 +36,7 @@ import CauseDetail from "./pages/CauseDetail";
 import CauseApply from "./pages/CauseApply";
 import MyDonations from "./pages/MyDonations";
 import Payments from "./pages/Payments";
+import Settings from "./pages/Settings";
 import PaymentsHistory from "./pages/PaymentsHistory";
 import PaymentDetail from "./pages/PaymentDetail";
 import Pricing from "./pages/Pricing";
@@ -91,6 +92,7 @@ const App = () => (
               <Route path="/admin/causes" element={<AdminCauses />} />
               <Route path="/admin/pricing" element={<AdminPricing />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/settings" element={<Settings />} />
               <Route path="/action-items" element={<ActionItems />} />
               <Route path="/credentials" element={<Credentials />} />
               <Route path="/causes" element={<Causes />} />

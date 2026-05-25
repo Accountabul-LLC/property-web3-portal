@@ -51,7 +51,7 @@ export function PaymentRailCards({
             Stripe-ready card payment
           </CardTitle>
           <CardDescription>
-            Lovable can mount the client-side Stripe handoff here once the backend contract returns a client secret.
+            Card payments are prepared server-side and hand off to Stripe when the session is ready.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -59,7 +59,7 @@ export function PaymentRailCards({
             {busy && activeRail === "card" ? "Preparing..." : "Prepare card payment"}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Use this when the payer will complete the payment with a card checkout session.
+            Use this when the payer will complete the payment with a Stripe checkout session.
           </p>
         </CardContent>
       </Card>

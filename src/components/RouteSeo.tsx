@@ -63,6 +63,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/admin/users': { title: `Admin Users | ${SITE_NAME}`, description: 'Admin user management redirect.', noindex: true },
   '/payments': { title: `Payments | ${SITE_NAME}`, description: 'Payments and invoices.', noindex: true },
   '/payments/history': { title: `Payment History | ${SITE_NAME}`, description: 'Payment history.', noindex: true },
+  '/settings': { title: `Settings | ${SITE_NAME}`, description: 'Account settings and preferences.', noindex: true },
 };
 
 const matchDynamic = (pathname: string): RouteMeta | null => {

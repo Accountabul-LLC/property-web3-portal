@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { toast } from "sonner";
@@ -14,7 +14,6 @@ import {
   PAYMENT_CURRENCIES,
 } from "@/components/payments/paymentUtils";
 import { PaymentComposer } from "@/components/payments/PaymentComposer";
-import { PaymentDeveloperConsole } from "@/components/payments/PaymentDeveloperConsole";
 import { PaymentRailCards } from "@/components/payments/PaymentRailCards";
 import { PaymentSummary } from "@/components/payments/PaymentSummary";
 import { StripeCheckoutModal } from "@/components/payments/StripeCheckoutModal";
@@ -35,15 +34,16 @@ const DEFAULT_PAYMENT_DRAFT: PaymentDraft = {
 
 export default function Payments() {
   const [draft, setDraft] = useState<PaymentDraft>(DEFAULT_PAYMENT_DRAFT);
-  const [rail, setRail] = useState<PaymentRail>("card");
+  const [rail, setRail] = useState<PaymentRail>(() =>
+    typeof window !== "undefined" && localStorage.getItem("accountabul_preferred_payment_rail") === "wallet"
+      ? "wallet"
+      : "card",
+  );
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<"idle" | "preparing" | "ready" | "error">("idle");
   const [response, setResponse] = useState<PaymentCheckoutResponse | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState(() => crypto.randomUUID());
   const [stripeModalOpen, setStripeModalOpen] = useState(false);
-  const showDeveloperConsole =
-    import.meta.env.DEV || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("debug"));
-
   const updateDraft = (field: keyof PaymentDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value } as PaymentDraft));
   };
@@ -52,6 +52,10 @@ export default function Payments() {
     () => buildPaymentCheckoutRequest(draft, rail, idempotencyKey),
     [draft, rail, idempotencyKey],
   );
+
+  useEffect(() => {
+    localStorage.setItem("accountabul_preferred_payment_rail", rail);
+  }, [rail]);
 
   const handleCheckout = async (nextRail: PaymentRail) => {
     const amount = Number(draft.amount);
@@ -155,6 +159,12 @@ export default function Payments() {
               >
                 View payment history
               </Link>
+              <Link
+                to="/settings"
+                className="inline-flex items-center rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+              >
+                Payment settings
+              </Link>
             </div>
           </div>
 
@@ -226,15 +236,6 @@ export default function Payments() {
           />
         </section>
 
-        {showDeveloperConsole ? (
-          <PaymentDeveloperConsole
-            draft={draft}
-            request={request}
-            response={response}
-            rail={rail}
-            busy={busy}
-          />
-        ) : null}
       </main>
 
       <Footer />

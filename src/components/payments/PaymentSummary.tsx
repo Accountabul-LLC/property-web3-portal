@@ -36,7 +36,7 @@ export function PaymentSummary({ draft, response, rail, status }: PaymentSummary
             variant={ready ? "secondary" : status === "error" ? "destructive" : "outline"}
             className="rounded-full px-3 py-1"
           >
-            {ready ? "Payment handoff ready" : status === "error" ? "Backend contract missing" : "Draft preview"}
+            {ready ? "Payment handoff ready" : status === "error" ? "Payment session unavailable" : "Draft preview"}
           </Badge>
           <Badge variant="outline" className="rounded-full px-3 py-1">
             {rail === "card" ? "Card rail" : "Wallet rail"}
@@ -46,7 +46,7 @@ export function PaymentSummary({ draft, response, rail, status }: PaymentSummary
           <WalletCards className="h-5 w-5 text-primary" />
           Live payment summary
         </CardTitle>
-        <CardDescription>Everything here is read-only until the backend session is created.</CardDescription>
+        <CardDescription>Everything here is read-only until the payment session is created.</CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-4">
