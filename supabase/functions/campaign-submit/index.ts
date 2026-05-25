@@ -123,6 +123,7 @@ Deno.serve(async (req) => {
         submitted_by_user_id: user.id,
         submitted_by_email: contactEmail || null,
         submission_notes: submissionNotes,
+        accepted_assets: acceptedAssets,
         status: 'under_review',
       })
       .select('*')
