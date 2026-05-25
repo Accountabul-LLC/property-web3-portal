@@ -88,7 +88,7 @@ export default function AdminCauses() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('all')
+  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'hidden' | 'all'>('all')
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
