@@ -99,9 +99,13 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
         {/* Hero Image */}
         <div className="mb-16 animate-fade-in" style={{ animationDelay: '0.6s' }}>
           <div className="relative rounded-2xl overflow-hidden shadow-elegant hover:shadow-glow transition-all duration-500">
-            <img 
-              src={heroImage} 
+            <img
+              src={heroImage}
               alt="Real Estate Tokenization Platform"
+              width={1920}
+              height={1080}
+              fetchPriority="high"
+              decoding="async"
               className="w-full h-[400px] md:h-[500px] object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
