@@ -450,15 +450,46 @@ export default function AdminCauses() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cause-image">Image URL</Label>
-                <Input
-                  id="cause-image"
-                  type="url"
-                  value={createForm.image_url}
-                  onChange={(e) => setCreateForm((prev) => ({ ...prev, image_url: e.target.value }))}
-                  placeholder="https://example.com/image.jpg"
-                />
+                <Label htmlFor="cause-image">Cover Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="cause-image"
+                    type="url"
+                    value={createForm.image_url}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, image_url: e.target.value }))}
+                    placeholder="https://example.com/image.jpg or upload →"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={uploadingImage}
+                    onClick={() => document.getElementById('cause-image-file')?.click()}
+                  >
+                    {uploadingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span className="ml-2">Upload</span>
+                  </Button>
+                  <input
+                    id="cause-image-file"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleImageUpload(f)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+                {createForm.image_url && (
+                  <img
+                    src={createForm.image_url}
+                    alt="Cover preview"
+                    className="mt-2 h-24 w-full max-w-xs object-cover rounded-md border border-border"
+                  />
+                )}
               </div>
+
+
 
               <div className="space-y-2">
                 <Label htmlFor="cause-video">Video URL</Label>
