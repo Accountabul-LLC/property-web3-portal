@@ -1,4 +1,5 @@
 import React from 'react';
+import { Seo } from '@/components/Seo';
 import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/HeroSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
@@ -24,6 +25,11 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Accountabul | Digital Real Estate Asset Management"
+        description="Secure digital marketplace for tokenized real estate. Streamline property issuance, treasury operations, and portfolio tracking on the XRP Ledger."
+        path="/"
+      />
       <Navigation />
       <HeroSection onGetStarted={handleGetStarted} />
       <HowItWorksSection />

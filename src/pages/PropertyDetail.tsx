@@ -13,6 +13,7 @@ import DocumentsTab from '../components/property/DocumentsTab';
 import ReviewsTab from '../components/property/ReviewsTab';
 import { useProperty } from '@/hooks/useProperties';
 import { ChartPanelSkeleton, PropertyDetailLoadingSkeleton } from '@/components/PageSkeletons';
+import { Seo } from '@/components/Seo';
 
 const PriceChart = React.lazy(() => import('../components/property/PriceChart'));
 const FinancialsTab = React.lazy(() => import('../components/property/FinancialsTab'));
@@ -141,7 +142,13 @@ const PropertyDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${property.title} | Accountabul`}
+        description={`${property.title} in ${property.city}, ${property.state}. View tokenized property details, financials, and on-chain ownership on Accountabul.`.slice(0, 160)}
+        path={`/property/${id}`}
+      />
       <Navigation />
+      
       
       <main className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
