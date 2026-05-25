@@ -219,15 +219,28 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
             {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
               <span className="text-foreground">· {activeWallet.label}</span>
             )}
-            <a
-              href={`${explorerBase}/accounts/${displayAddress}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1"
-            >
-              {displayAddress}
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`${explorerBase}/accounts/${displayAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                {shortenAddress(displayAddress || '')}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <button
+                onClick={handleCopyAddress}
+                className="inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors"
+                title="Copy address"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-green-500" />
+                ) : (
+                  <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
         {!isReadOnly && (
