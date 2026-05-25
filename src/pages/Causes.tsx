@@ -153,16 +153,6 @@ export default function Causes() {
                 Search the public catalog, filter by status, and open a campaign to donate.
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="outline" onClick={() => navigate('/causes/my-donations')}>
-                My Donations
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/causes/apply')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Submit Cause
-              </Button>
-            </div>
           </div>
         </div>
 
