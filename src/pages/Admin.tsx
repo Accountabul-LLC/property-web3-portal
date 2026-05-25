@@ -39,12 +39,6 @@ const ADMIN_LINKS = [
     icon: ReceiptText,
   },
   {
-    title: 'Membership Tiers',
-    description: 'Edit pricing, features, and visibility of membership plans shown on the public pricing page.',
-    href: '/admin/pricing',
-    icon: Tag,
-  },
-  {
     title: 'AI Panel',
     description: 'Access the multi-model AI debate panel for research and analysis.',
     href: '/admin/ai-panel',

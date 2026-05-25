@@ -15,12 +15,16 @@ const Index = () => {
   const navigate = useNavigate();
 
   const handleGetStarted = () => {
-    navigate('/tokenize');
+    setIsMembershipModalOpen(true);
+  };
+
+  const handleExploreMarketplace = () => {
+    navigate('/marketplace');
   };
 
   const handleMembershipPurchase = () => {
     setIsMembershipModalOpen(false);
-    navigate('/tokenize');
+    navigate('/pricing');
   };
 
   return (
@@ -31,7 +35,7 @@ const Index = () => {
         path="/"
       />
       <Navigation />
-      <HeroSection onGetStarted={handleGetStarted} />
+      <HeroSection onGetStarted={handleGetStarted} onExploreMarketplace={handleExploreMarketplace} />
       <HowItWorksSection />
       <ValuePropositionSection />
       <TestimonialsSection />

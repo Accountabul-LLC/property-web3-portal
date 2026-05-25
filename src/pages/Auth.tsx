@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
@@ -16,8 +16,10 @@ import { Mail, Lock, ArrowRight, User, Building2, ShieldCheck } from 'lucide-rea
 
 const Auth = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const nextPath = (location.state as { next?: string } | null)?.next ?? '/dashboard';
 
   const isAdminTab = searchParams.get('tab') === 'admin';
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login');
@@ -41,11 +43,11 @@ const Auth = () => {
             navigate('/dashboard');
           }
         });
-      } else {
-        navigate('/dashboard');
+        } else {
+        navigate(nextPath, { replace: true });
       }
     }
-  }, [user, authLoading, navigate, isAdminTab]);
+  }, [user, authLoading, navigate, isAdminTab, nextPath]);
 
   const handleTabChange = (value: string) => {
     if (value === 'admin') {
@@ -86,7 +88,7 @@ const Auth = () => {
           navigate('/admin');
         } else {
           toast.success('Welcome back!');
-          navigate('/dashboard');
+          navigate(nextPath, { replace: true });
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -98,13 +100,13 @@ const Auth = () => {
 
         if (data.user) {
           await supabase
-            .from('profiles' as any)
+            .from('profiles' as never)
             .update({
               full_name: fullName,
               account_type: accountType,
               company_name: accountType === 'business' ? companyName : null,
-            } as any)
-            .eq('id', data.user.id);
+            } as never)
+            .eq('id' as never, data.user.id);
         }
 
         if (data.session) {
@@ -115,8 +117,8 @@ const Auth = () => {
           setMode('login');
         }
       }
-    } catch (err: any) {
-      toast.error(err.message || 'Authentication failed');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Authentication failed');
     } finally {
       setLoading(false);
     }

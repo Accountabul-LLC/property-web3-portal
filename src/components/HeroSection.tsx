@@ -1,5 +1,4 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowRight, Shield, TrendingUp, Users, Zap } from 'lucide-react';
@@ -7,10 +6,10 @@ import heroImage from '@/assets/hero-image.jpg';
 
 interface HeroSectionProps {
   onGetStarted: () => void;
+  onExploreMarketplace: () => void;
 }
 
-const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
-  const navigate = useNavigate();
+const HeroSection = ({ onGetStarted, onExploreMarketplace }: HeroSectionProps) => {
   const features = [
     {
       icon: Shield,
@@ -43,7 +42,6 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-background via-muted/30 to-background">
-      {/* Background Elements */}
       <div className="absolute inset-0 bg-gradient-hero opacity-5"></div>
       <div className="absolute top-0 left-1/4 w-[60vw] max-w-96 h-[60vw] max-h-96 bg-primary/10 rounded-full blur-3xl animate-float"></div>
       <div className="absolute bottom-0 right-1/4 w-[60vw] max-w-96 h-[60vw] max-h-96 bg-secondary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
@@ -68,26 +66,31 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
               Fractional ownership. Secure transactions. Community-powered wealth.
               <br />
-              Tokenize, invest, and manage real estate portfolios—all powered by secure, 
+              Tokenize, invest, and manage real estate portfolios—all powered by secure,
               transparent blockchain technology, and built for everyone.
             </p>
           </div>
           <div className="space-y-6 animate-fade-in" style={{ animationDelay: '0.4s' }}>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="premium" 
-                size="lg" 
+              <Button
+                variant="premium"
+                size="lg"
                 onClick={onGetStarted}
                 className="text-lg px-8 py-4 h-auto"
               >
                 Start Tokenizing
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
-              <Button variant="outline" size="lg" className="text-lg px-8 py-4 h-auto" onClick={() => navigate('/marketplace')}>
+              <Button
+                variant="outline"
+                size="lg"
+                className="text-lg px-8 py-4 h-auto"
+                onClick={onExploreMarketplace}
+              >
                 Explore Marketplace
               </Button>
             </div>
-            
+
             <div className="bg-muted/30 backdrop-blur-sm border border-muted rounded-lg p-4 max-w-md mx-auto">
               <p className="text-sm text-muted-foreground text-center">
                 <strong>Membership Required:</strong> All tokenization and marketplace features require active Accountabul Membership.
@@ -96,23 +99,17 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
           </div>
         </div>
 
-        {/* Hero Image */}
         <div className="mb-16 animate-fade-in" style={{ animationDelay: '0.6s' }}>
           <div className="relative rounded-2xl overflow-hidden shadow-elegant hover:shadow-glow transition-all duration-500">
             <img
               src={heroImage}
               alt="Real Estate Tokenization Platform"
-              width={1920}
-              height={1080}
-              fetchPriority="high"
-              decoding="async"
               className="w-full h-[400px] md:h-[500px] object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent"></div>
           </div>
         </div>
 
-        {/* Features Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {features.map((feature, index) => {
             const Icon = feature.icon;
@@ -132,7 +129,6 @@ const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
           })}
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
           {stats.map((stat, index) => (
             <div key={index} className="animate-fade-in" style={{ animationDelay: `${1.2 + index * 0.1}s` }}>

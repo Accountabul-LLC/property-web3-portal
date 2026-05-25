@@ -316,6 +316,11 @@ export function useMyData() {
 - Updated the admin dashboards to fetch those datasets via `admin-integrations`, `admin-credential-applications`, `admin-wallet-registrations`, and `admin-credential-ledger` instead of querying sensitive tables directly from the browser.
 - Residual note: the user-scoped `useCredentialApplications` hook still reads only the signed-in user’s own records client-side; that is lower risk and can be moved later if we want a fully server-mediated pattern.
 - Consolidated the repeated authenticated edge-function fetch boilerplate into a shared `src/lib/edgeFunction.ts` helper and had admin components reuse it instead of local copies.
+### 2026-05-25 | codex
+- Finished the membership product wiring in the local branch: added `/pricing` and `/admin/pricing` routes, the DB-driven membership tier hook, the public pricing page, and the admin pricing editor.
+- Connected the homepage CTA to the membership modal, routed the modal to the pricing page, added actionable footer links, and made the marketplace CTA work from the hero.
+- Added the `membership_tiers` migration and `profiles.membership_tier_id` FK so the pricing page has a backing schema.
+- Gotcha: the local `main` branch was behind `origin/main`, so the membership work had to be recreated locally instead of assuming it was already present.
 
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`

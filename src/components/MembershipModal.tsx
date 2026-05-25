@@ -46,7 +46,7 @@ const MembershipModal = ({ isOpen, onClose, onPurchase }: MembershipModalProps) 
               variant="hero" 
               size="lg"
             >
-              Buy Membership Now
+              View Membership Plans
             </Button>
             <Button 
               onClick={onClose}
