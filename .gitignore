@@ -30,3 +30,10 @@ dist-ssr
 
 # Supabase temp
 supabase/.temp/
+
+# Agent state and artifacts — live in ceo-brain repo, not here
+# Skills (.claude/skills/) are kept: they are behavior definitions, not state.
+.claude/CEO_STATE.json
+.claude/PRODUCT_REGISTRY.json
+.claude/BOOTSTRAP.md
+.claude/products/

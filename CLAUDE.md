@@ -19,21 +19,43 @@ If the task touches XRPL, minting, or payments: also read `.rosetta/modules/xrpl
 
 ## CEO Agent (Autonomous Orchestrator)
 
-To run autonomous multi-department development:
-
-```
-CEO Agent: Continue Phase 1 provider foundation. Read .claude/CEO_STATE.json for full context.
-```
-
-Skills are in `.claude/skills/`:
-- `CEO_AGENT.md` — main orchestrator (load first for CEO-mode sessions)
+Skills live in `.claude/skills/` (committed to this repo — these are behavior definitions):
+- `CEO_AGENT.md` — main orchestrator
+- `DEPT_RND.md` — research & development specialist (always runs before design)
+- `DEPT_ANTAGONIST.md` — pre-build design challenger
+- `DEPT_VERIFY.md` — post-build verification and shipping
 - `DEPT_SUPABASE.md` — database/migrations specialist
 - `DEPT_BACKEND.md` — edge function specialist
 - `DEPT_FRONTEND.md` — UI component specialist
 
-State is in `.claude/CEO_STATE.json`. Update it after every session and commit.
+**State and artifacts are NOT in this repo.** They live in the Brain repo (see below).
+The files `.claude/CEO_STATE.json`, `.claude/PRODUCT_REGISTRY.json`, and `.claude/products/`
+are gitignored here. CEO agent reads/writes them from the Brain repo via GitHub MCP.
 
-See `.claude/BOOTSTRAP.md` for first-run setup and usage examples.
+### Brain Repo
+
+All agent state, product lifecycle artifacts, R&D findings, and cross-session memory
+live in the Brain repo: `JibreelMuhammad/ceo-brain`
+
+Structure:
+```
+ceo-brain/
+├── projects/
+│   └── property-web3-portal/
+│       ├── CEO_STATE.json
+│       ├── PRODUCT_REGISTRY.json
+│       └── products/
+│           ├── prod_audit_001/
+│           └── prod_new_001/
+└── global/
+    └── PATTERNS.md   (cross-project learnings)
+```
+
+To start a CEO session, read the Brain repo first:
+```
+CEO Agent: Load context for property-web3-portal from JibreelMuhammad/ceo-brain.
+Then read .claude/skills/CEO_AGENT.md for orchestration rules.
+```
 
 ## After Making Changes
 
