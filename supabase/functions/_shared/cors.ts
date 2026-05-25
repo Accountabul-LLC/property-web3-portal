@@ -4,6 +4,13 @@ const DEFAULT_ALLOWED_ORIGINS = [
   Deno.env.get('APP_URL') ?? 'https://accountabul.com',
 ];
 
+// Hostname suffix patterns that are always allowed (Lovable preview + published domains).
+const ALLOWED_HOSTNAME_SUFFIXES = [
+  '.lovableproject.com',
+  '.lovable.app',
+  '.lovable.dev',
+];
+
 function loadAllowedOrigins() {
   const raw =
     Deno.env.get('APP_ALLOWED_ORIGINS') ??
@@ -20,9 +27,24 @@ function loadAllowedOrigins() {
   );
 }
 
+function isOriginAllowed(origin: string, allowList: string[]): boolean {
+  if (allowList.includes(origin)) return true;
+  try {
+    const { hostname, protocol } = new URL(origin);
+    if (protocol !== 'https:' && protocol !== 'http:') return false;
+    return ALLOWED_HOSTNAME_SUFFIXES.some(
+      (suffix) => hostname === suffix.slice(1) || hostname.endsWith(suffix),
+    );
+  } catch {
+    return false;
+  }
+}
+
 export function createCorsHeaders(origin: string | null) {
   const allowedOrigins = loadAllowedOrigins();
-  const allowedOrigin = origin && allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+  const allowedOrigin = origin && isOriginAllowed(origin, allowedOrigins)
+    ? origin
+    : allowedOrigins[0];
 
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
