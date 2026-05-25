@@ -218,7 +218,10 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             {/* Wallet picker */}
             {activeWallet && (
               <div className="space-y-2">
-                <Label>Donate from</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label>Donate from</Label>
+                  <NetworkToggle />
+                </div>
                 {wallets.length > 1 ? (
                   <Select value={activeWallet.address} onValueChange={(v) => setActiveWallet(v)}>
                     <SelectTrigger className="h-auto py-2">
@@ -245,17 +248,21 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                 )}
                 <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                   {balanceLoading ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading {campaignNetwork} balance…</>
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading {activeNetwork} balance…</>
                   ) : (
                     <>
-                      <span className={campaignNetwork === 'mainnet' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
-                        {campaignNetwork === 'mainnet' ? '● Mainnet' : '● Testnet'}
+                      <span className={activeNetwork === 'mainnet' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
+                        {activeNetwork === 'mainnet' ? '● Mainnet' : '● Testnet'}
                       </span>
                       balance: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP
                     </>
                   )}
                 </p>
-
+                {networkMismatch && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-md px-2 py-1.5">
+                    This campaign signs on <strong>{campaignNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'}</strong>. Switch the toggle to match before donating.
+                  </p>
+                )}
               </div>
             )}
 
