@@ -36,7 +36,7 @@ interface Campaign {
   image_url: string | null
   gallery_urls: string[]
   video_url: string | null
-  campaign_type: CampaignType
+  campaign_mode: 'scheduled' | 'evergreen'
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
