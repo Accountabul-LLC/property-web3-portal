@@ -298,11 +298,16 @@ Deno.serve(async (req) => {
       // IOU — TrustSet or Payment
       const { currency_code, amount, destination, step } = params || {};
 
-      if (!currency_code || typeof currency_code !== 'string' || currency_code.length !== 3) {
-        return new Response(JSON.stringify({ error: 'Currency code must be exactly 3 characters.' }), {
+      if (!currency_code || typeof currency_code !== 'string' || currency_code.length < 3 || currency_code.length > 20) {
+        return new Response(JSON.stringify({ error: 'Currency code must be 3–20 characters.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+
+      // XRPL currency: 3-char standard, or 40-char hex (160-bit) for non-standard codes like "RLUSD"
+      const normalizedCurrency = currency_code.length === 3
+        ? currency_code.toUpperCase()
+        : toHex(currency_code.toUpperCase()).padEnd(40, '0').slice(0, 40);
       if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
         return new Response(JSON.stringify({ error: 'Invalid amount.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
