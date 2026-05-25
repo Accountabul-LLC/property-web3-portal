@@ -330,18 +330,18 @@ export default function AdminCauses() {
         </div>
 
 
-        <Card className="p-5 mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
-            <div>
-              <h2 className="text-lg font-semibold">Add Cause</h2>
-              <p className="text-sm text-muted-foreground">
-                Create a new campaign directly in the Causes system and choose whether it starts as a draft or goes live.
-              </p>
-            </div>
-            <Badge variant="secondary" className="w-fit">
-              Admin insert enabled
-            </Badge>
-          </div>
+        <Dialog open={addOpen} onOpenChange={setAddOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5 text-primary" />
+                Add Cause
+              </DialogTitle>
+              <DialogDescription>
+                Create a new campaign directly in the Causes system. Choose whether it starts as a draft (Under Review) or goes live immediately.
+              </DialogDescription>
+            </DialogHeader>
+
 
           <form onSubmit={handleCreateCampaign} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
