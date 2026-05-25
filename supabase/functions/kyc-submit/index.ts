@@ -93,7 +93,8 @@ Deno.serve(async (req) => {
 
     const missingFields: string[] = []
     for (const field of REQUIRED_FIELDS) {
-      if (!formData || !formData[field]) {
+      const value = formData?.[field]
+      if (typeof value !== 'string' || value.trim().length === 0) {
         missingFields.push(field)
       }
     }

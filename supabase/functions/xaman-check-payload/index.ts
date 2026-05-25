@@ -23,6 +23,20 @@ function buildCors(req: Request): Record<string, string> {
   }
 }
 
+type XamanPayloadResponse = {
+  meta?: {
+    signed?: boolean;
+    cancelled?: boolean;
+    expired?: boolean;
+  };
+  response?: {
+    account?: string;
+    user_token?: string | null;
+    txid?: string | null;
+    hash?: string | null;
+  };
+};
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === 'OPTIONS') {
@@ -31,14 +45,13 @@ Deno.serve(async (req) => {
 
   try {
     const { uuid } = await req.json();
-    
-    if (!uuid) {
+    if (typeof uuid !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) {
       return new Response(
-        JSON.stringify({ success: false, error: 'UUID is required' }),
+        JSON.stringify({ success: false, error: 'Valid UUID is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
-
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -87,7 +100,7 @@ Deno.serve(async (req) => {
       throw new Error(`Xaman API error: ${xamanResponse.status}`);
     }
 
-    let xamanData: any;
+    let xamanData: XamanPayloadResponse;
     try {
       xamanData = JSON.parse(responseText);
     } catch {

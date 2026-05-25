@@ -16,6 +16,24 @@ const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:512
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
+const MAX_MPT_FIELD_LENGTHS = {
+  name: 80,
+  description: 280,
+  ticker: 10,
+  image_url: 512,
+  property_address: 200,
+  city: 100,
+  state: 100,
+  zip: 20,
+  country: 100,
+  property_type: 80,
+  owner_name: 120,
+  owner_email: 254,
+  uri: 512,
+  currency_code: 20,
+  destination: 34,
+} as const;
+type UriEntry = { u: string; c: string; t: string };
 
 async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
   let lastError: Error | null = null;
@@ -59,6 +77,28 @@ function toHex(str: string): string {
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
     .toUpperCase();
+}
+
+function parseLimitedString(
+  value: unknown,
+  max: number,
+  field: string,
+  required = false,
+): { value: string | null; error: string | null } {
+  if (value === undefined || value === null) {
+    return required ? { value: null, error: `${field} is required` } : { value: null, error: null };
+  }
+  if (typeof value !== 'string') {
+    return { value: null, error: `${field} must be a string` };
+  }
+  const trimmed = value.trim();
+  if (required && trimmed.length === 0) {
+    return { value: null, error: `${field} is required` };
+  }
+  if (trimmed.length > max) {
+    return { value: null, error: `${field} must be at most ${max} characters` };
+  }
+  return { value: trimmed.length > 0 ? trimmed : null, error: null };
 }
 
 Deno.serve(async (req) => {
@@ -173,11 +213,13 @@ Deno.serve(async (req) => {
 
     if (token_type === 'nft') {
       const { uri, flags } = params || {};
-      if (!uri || typeof uri !== 'string') {
-        return new Response(JSON.stringify({ error: 'URI is required for NFT minting.' }), {
+      const uriResult = parseLimitedString(uri, MAX_MPT_FIELD_LENGTHS.uri, 'uri', true);
+      if (uriResult.error) {
+        return new Response(JSON.stringify({ error: uriResult.error }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      const cleanUri = uriResult.value!;
 
       let nftFlags = 0;
       if (flags?.transferable) nftFlags |= 0x00000008;
@@ -187,7 +229,7 @@ Deno.serve(async (req) => {
       txJson = {
         TransactionType: 'NFTokenMint',
         Account: wallet_address,
-        URI: toHex(uri),
+        URI: toHex(cleanUri),
         Flags: nftFlags,
         NFTokenTaxon: 0,
         Fee: feeDrops,
@@ -196,6 +238,42 @@ Deno.serve(async (req) => {
     } else if (token_type === 'mpt') {
       // MPTokenIssuanceCreate
       const { name, description, max_amount, asset_scale, transfer_fee, flags } = params || {};
+      const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = params || {};
+      const limited = {
+        name: parseLimitedString(name, MAX_MPT_FIELD_LENGTHS.name, 'name'),
+        description: parseLimitedString(description, MAX_MPT_FIELD_LENGTHS.description, 'description'),
+        ticker: parseLimitedString(ticker, MAX_MPT_FIELD_LENGTHS.ticker, 'ticker'),
+        image_url: parseLimitedString(image_url, MAX_MPT_FIELD_LENGTHS.image_url, 'image_url'),
+        property_address: parseLimitedString(property_address, MAX_MPT_FIELD_LENGTHS.property_address, 'property_address'),
+        city: parseLimitedString(city, MAX_MPT_FIELD_LENGTHS.city, 'city'),
+        state: parseLimitedString(state, MAX_MPT_FIELD_LENGTHS.state, 'state'),
+        zip: parseLimitedString(zip, MAX_MPT_FIELD_LENGTHS.zip, 'zip'),
+        country: parseLimitedString(country, MAX_MPT_FIELD_LENGTHS.country, 'country'),
+        property_type: parseLimitedString(property_type, MAX_MPT_FIELD_LENGTHS.property_type, 'property_type'),
+        owner_name: parseLimitedString(owner_name, MAX_MPT_FIELD_LENGTHS.owner_name, 'owner_name'),
+        owner_email: parseLimitedString(owner_email, MAX_MPT_FIELD_LENGTHS.owner_email, 'owner_email'),
+      } as const;
+
+      for (const field of Object.values(limited)) {
+        if (field.error) {
+          return new Response(JSON.stringify({ error: field.error }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+      }
+
+      const maxName = limited.name.value;
+      const maxDescription = limited.description.value;
+      const maxTicker = limited.ticker.value;
+      const maxImageUrl = limited.image_url.value;
+      const maxPropertyAddress = limited.property_address.value;
+      const maxCity = limited.city.value;
+      const maxState = limited.state.value;
+      const maxZip = limited.zip.value;
+      const maxCountry = limited.country.value;
+      const maxPropertyType = limited.property_type.value;
+      const maxOwnerName = limited.owner_name.value;
+      const maxOwnerEmail = limited.owner_email.value;
 
       let mptFlags = 0;
       if (flags?.can_lock)      mptFlags |= 0x00000002;
@@ -220,79 +298,60 @@ Deno.serve(async (req) => {
       }
 
       // Build XLS-89 compliant MPTokenMetadata (max 1024 bytes)
-      if (name || description) {
-        const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = params || {};
-
+      if (maxName || maxDescription) {
         const ptMap: Record<string, string> = {
           'Single Family': 'real_estate', 'Multi-Family': 'real_estate', 'Condo / Apartment': 'real_estate',
           'Townhouse': 'real_estate', 'Commercial': 'real_estate', 'Industrial': 'real_estate',
           'Land / Lot': 'real_estate', 'Mixed-Use': 'real_estate', 'Other': 'other',
         };
 
-        const autoTicker = ticker || (name ? name.replace(/[^A-Za-z]/g, '').substring(0, 5).toUpperCase() : undefined);
+        const autoTicker = maxTicker || (maxName ? maxName.replace(/[^A-Za-z]/g, '').substring(0, 5).toUpperCase() : undefined);
 
         const metaObj: Record<string, unknown> = {};
         if (autoTicker) metaObj.t = autoTicker;
-        if (name) metaObj.n = name;
-        if (description) metaObj.d = description;
-        if (image_url) metaObj.i = image_url;
+        if (maxName) metaObj.n = maxName;
+        if (maxDescription) metaObj.d = maxDescription;
+        if (maxImageUrl) metaObj.i = maxImageUrl;
         metaObj.ac = 'rwa';
-        metaObj.as = ptMap[property_type] || 'real_estate';
-        if (owner_name) metaObj.in = owner_name;
+        metaObj.as = ptMap[maxPropertyType ?? ''] || 'real_estate';
+        if (maxOwnerName) metaObj.in = maxOwnerName;
 
         if (uris && Array.isArray(uris) && uris.length > 0) {
-          const validUris = uris.filter((u: any) => u.u && u.c && u.t);
+          const validUris = uris.filter((u: unknown): u is UriEntry => {
+            if (!u || typeof u !== 'object') return false;
+            const entry = u as Partial<UriEntry>;
+            return !!entry.u && !!entry.c && !!entry.t;
+          });
           if (validUris.length > 0) {
-            metaObj.us = validUris.map((u: any) => ({ u: u.u, c: u.c, t: u.t }));
+            metaObj.us = validUris.map((u) => ({ u: u.u, c: u.c, t: u.t }));
           }
         }
 
         const ai: Record<string, unknown> = {};
-        if (property_address) ai.address = property_address;
-        if (city) ai.city = city;
-        if (state) ai.state = state;
-        if (zip) ai.zip = zip;
-        if (country) ai.country = country;
-        if (property_type) ai.property_type = property_type;
+        if (maxPropertyAddress) ai.address = maxPropertyAddress;
+        if (maxCity) ai.city = maxCity;
+        if (maxState) ai.state = maxState;
+        if (maxZip) ai.zip = maxZip;
+        if (maxCountry) ai.country = maxCountry;
+        if (maxPropertyType) ai.property_type = maxPropertyType;
         if (bedrooms) ai.bedrooms = Number(bedrooms);
         if (bathrooms) ai.bathrooms = Number(bathrooms);
         if (square_feet) ai.sqft = Number(square_feet);
         if (year_built) ai.year_built = Number(year_built);
         if (estimated_value) ai.value_usd = Number(estimated_value);
-        if (owner_email) ai.contact = owner_email;
+        if (maxOwnerEmail) ai.contact = maxOwnerEmail;
 
         if (Object.keys(ai).length > 0) metaObj.ai = ai;
 
-        // Enforce XRPL 1024-byte limit
-        let metaJson = JSON.stringify(metaObj);
-        let metaBytes = new TextEncoder().encode(metaJson).length;
+        // Enforce XRPL 1024-byte limit before returning tx JSON.
+        const metaJson = JSON.stringify(metaObj);
+        const metaBytes = new TextEncoder().encode(metaJson).length;
         if (metaBytes > 1024) {
-          console.warn(`Metadata ${metaBytes} bytes, trimming to fit 1024 limit`);
-          if (metaObj.d) {
-            metaObj.d = (metaObj.d as string).substring(0, 60) + '…';
-            metaJson = JSON.stringify(metaObj);
-            metaBytes = new TextEncoder().encode(metaJson).length;
-          }
-          if (metaBytes > 1024) {
-            delete metaObj.us;
-            metaJson = JSON.stringify(metaObj);
-            metaBytes = new TextEncoder().encode(metaJson).length;
-          }
-          if (metaBytes > 1024) {
-            delete metaObj.i;
-            metaJson = JSON.stringify(metaObj);
-            metaBytes = new TextEncoder().encode(metaJson).length;
-          }
-          if (metaBytes > 1024 && metaObj.ai) {
-            const aiObj = metaObj.ai as Record<string, unknown>;
-            for (const key of ['contact', 'country', 'zip', 'address', 'city', 'state']) {
-              delete aiObj[key];
-              metaJson = JSON.stringify(metaObj);
-              if (new TextEncoder().encode(metaJson).length <= 1024) break;
-            }
-          }
-          metaJson = JSON.stringify(metaObj);
-          console.log(`Trimmed metadata to ${new TextEncoder().encode(metaJson).length} bytes`);
+          return new Response(JSON.stringify({
+            error: 'MPToken metadata exceeds the 1024-byte XRPL limit. Shorten the inputs and try again.',
+          }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
         }
 
         txJson.MPTokenMetadata = toHex(metaJson);
@@ -305,17 +364,33 @@ Deno.serve(async (req) => {
     } else {
       // IOU — TrustSet or Payment
       const { currency_code, amount, destination, step } = params || {};
+      const currencyResult = parseLimitedString(currency_code, MAX_MPT_FIELD_LENGTHS.currency_code, 'currency_code', true);
+      const destinationResult = parseLimitedString(destination, MAX_MPT_FIELD_LENGTHS.destination, 'destination', true);
 
-      if (!currency_code || typeof currency_code !== 'string' || currency_code.length < 3 || currency_code.length > 20) {
+      if (currencyResult.error) {
+        return new Response(JSON.stringify({ error: currencyResult.error }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      if (destinationResult.error) {
+        return new Response(JSON.stringify({ error: destinationResult.error }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      const cleanCurrency = currencyResult.value!;
+      const cleanDestination = destinationResult.value!;
+
+      if (cleanCurrency.length < 3 || cleanCurrency.length > 20) {
         return new Response(JSON.stringify({ error: 'Currency code must be 3–20 characters.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
       // XRPL currency: 3-char standard, or 40-char hex (160-bit) for non-standard codes like "RLUSD"
-      const normalizedCurrency = currency_code.length === 3
-        ? currency_code.toUpperCase()
-        : toHex(currency_code.toUpperCase()).padEnd(40, '0').slice(0, 40);
+      const normalizedCurrency = cleanCurrency.length === 3
+        ? cleanCurrency.toUpperCase()
+        : toHex(cleanCurrency.toUpperCase()).padEnd(40, '0').slice(0, 40);
       if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
         return new Response(JSON.stringify({ error: 'Invalid amount.' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -323,14 +398,14 @@ Deno.serve(async (req) => {
       }
 
       if (step === 'trustset') {
-        if (!destination || !isValidXRPLAddress(destination)) {
+        if (!cleanDestination || !isValidXRPLAddress(cleanDestination)) {
           return new Response(JSON.stringify({ error: 'Valid destination address required for TrustSet.' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
         }
         txJson = {
           TransactionType: 'TrustSet',
-          Account: destination,
+          Account: cleanDestination,
           LimitAmount: {
             currency: normalizedCurrency,
             issuer: wallet_address,
@@ -339,7 +414,7 @@ Deno.serve(async (req) => {
           Fee: feeDrops,
         };
       } else {
-        if (!destination || !isValidXRPLAddress(destination)) {
+        if (!cleanDestination || !isValidXRPLAddress(cleanDestination)) {
           return new Response(JSON.stringify({ error: 'Valid destination address required.' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           });
@@ -347,7 +422,7 @@ Deno.serve(async (req) => {
         txJson = {
           TransactionType: 'Payment',
           Account: wallet_address,
-          Destination: destination,
+          Destination: cleanDestination,
           Amount: {
             currency: normalizedCurrency,
             issuer: wallet_address,
