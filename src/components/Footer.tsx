@@ -15,7 +15,8 @@ const Footer = () => {
       { label: "Help Center", href: "#" },
       { label: "AI Assistant", href: "#" },
       { label: "Contact Us", href: "#" },
-      { label: "Community Forum", href: "#" }
+      { label: "Community Forum", href: "#" },
+      { label: "MO Deed Fraud Protection", href: "/protection/deed-fraud" }
     ],
     Membership: [
       { label: "Get Membership", href: "/pricing" },
