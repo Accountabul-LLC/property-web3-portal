@@ -26,6 +26,7 @@ import {
 
 type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
 type CampaignNetwork = 'mainnet' | 'testnet'
+type CampaignType = 'escrow' | 'direct'
 
 interface Campaign {
   id: string
@@ -35,11 +36,12 @@ interface Campaign {
   image_url: string | null
   gallery_urls: string[]
   video_url: string | null
+  campaign_type: CampaignType
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
-  release_date: string
+  release_date: string | null
   status: CampaignStatus
   submitted_by_email: string | null
   submission_notes: string | null
@@ -96,6 +98,7 @@ export default function AdminCauses() {
     goal_amount: '',
     recipient_wallet_address: '',
     release_date: '',
+    campaign_type: 'escrow' as CampaignType,
     network: 'testnet' as CampaignNetwork,
     status: 'under_review' as CampaignStatus,
     submitted_by_email: user?.email ?? '',
@@ -330,7 +333,7 @@ export default function AdminCauses() {
       if (!createForm.title.trim()) throw new Error('Title is required')
       if (!createForm.description.trim()) throw new Error('Description is required')
       if (!createForm.recipient_wallet_address.trim()) throw new Error('Recipient wallet is required')
-      if (!createForm.release_date) throw new Error('Release date is required')
+      if (createForm.campaign_type === 'escrow' && !createForm.release_date) throw new Error('Release date is required')
 
       const { data, error } = await supabase.functions.invoke('campaign-admin', {
         body: {
@@ -341,7 +344,8 @@ export default function AdminCauses() {
           video_url: createForm.video_url.trim() || null,
           goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
           recipient_wallet_address: createForm.recipient_wallet_address.trim(),
-          release_date: new Date(createForm.release_date).toISOString(),
+          release_date: createForm.campaign_type === 'escrow' ? new Date(createForm.release_date!).toISOString() : null,
+          campaign_type: createForm.campaign_type,
           status: createForm.status === 'active' ? 'active' : 'under_review',
           network: createForm.network,
           submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
@@ -361,6 +365,7 @@ export default function AdminCauses() {
         goal_amount: '',
         recipient_wallet_address: '',
         release_date: '',
+        campaign_type: 'escrow',
         network: 'testnet',
         status: 'under_review',
         submitted_by_email: user?.email ?? '',
@@ -483,14 +488,32 @@ export default function AdminCauses() {
 
 
               <div className="space-y-2">
-                <Label htmlFor="cause-release">Release Date</Label>
-                <Input
-                  id="cause-release"
-                  type="datetime-local"
-                  value={createForm.release_date}
-                  onChange={(e) => setCreateForm((prev) => ({ ...prev, release_date: e.target.value }))}
-                />
+                <Label htmlFor="cause-type">Campaign Type</Label>
+                <select
+                  id="cause-type"
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={createForm.campaign_type}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, campaign_type: e.target.value as CampaignType }))}
+                >
+                  <option value="escrow">Time-locked escrow</option>
+                  <option value="direct">Evergreen direct</option>
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Escrow campaigns release on a future date. Direct campaigns stay open and send donations straight to the recipient.
+                </p>
               </div>
+
+              {createForm.campaign_type === 'escrow' && (
+                <div className="space-y-2">
+                  <Label htmlFor="cause-release">Release Date</Label>
+                  <Input
+                    id="cause-release"
+                    type="datetime-local"
+                    value={createForm.release_date}
+                    onChange={(e) => setCreateForm((prev) => ({ ...prev, release_date: e.target.value }))}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="cause-goal">Goal Amount (XRP)</Label>
@@ -837,9 +860,12 @@ export default function AdminCauses() {
           {filtered.map((campaign) => {
             const isExpanded = expandedId === campaign.id
             const badge = STATUS_BADGE[campaign.status]
-            const canRelease = isCauseReleaseReady(campaign.release_date, now)
-            const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now)
-            const releaseUnlockAt = formatCauseReleaseUnlockTimestamp(campaign.release_date)
+            const isDirectCampaign = campaign.campaign_type === 'direct'
+            const canRelease = !isDirectCampaign && isCauseReleaseReady(campaign.release_date, now)
+            const releaseCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_type)
+            const releaseUnlockAt = isDirectCampaign
+              ? 'No unlock time'
+              : formatCauseReleaseUnlockTimestamp(campaign.release_date)
             const isProcessing = processing === campaign.id
 
             return (
@@ -908,7 +934,7 @@ export default function AdminCauses() {
                         </Button>
                       </>
                     )}
-                    {campaign.status === 'active' && campaign.donor_count > 0 && (
+                    {campaign.status === 'active' && campaign.donor_count > 0 && !isDirectCampaign && (
                       <span title={canRelease ? 'Ready to release now' : `Unlocks at ${releaseUnlockAt}`}>
                         <Button
                           size="sm"
@@ -1015,12 +1041,14 @@ export default function AdminCauses() {
                           <div className="flex-1">
                             <p className="text-sm font-medium">Escrow Release</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {canRelease
-                                ? `Ready to release now. ${campaign.donor_count} escrow(s) can be released to the recipient.`
-                                : `Unlocks in ${releaseCountdown.replace('Unlocks in ', '')}. Exact unlock time: ${releaseUnlockAt}.`
+                              {isDirectCampaign
+                                ? 'Direct campaigns send donations straight to the recipient and do not use escrow release.'
+                                : canRelease
+                                  ? `Ready to release now. ${campaign.donor_count} escrow(s) can be released to the recipient.`
+                                  : `Unlocks in ${releaseCountdown.replace('Unlocks in ', '')}. Exact unlock time: ${releaseUnlockAt}.`
                               }
                             </p>
-                            {campaign.donor_count > 0 && (
+                            {campaign.donor_count > 0 && !isDirectCampaign && (
                               <span title={canRelease ? 'Ready to release now' : `Unlocks at ${releaseUnlockAt}`}>
                                 <Button
                                   size="sm"

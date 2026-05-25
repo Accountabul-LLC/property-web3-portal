@@ -132,7 +132,7 @@ Deno.serve(async (req) => {
 
       const { data: campaignForPayload, error: campaignForPayloadErr } = await svc
         .from('campaigns')
-        .select('network, release_date')
+        .select('network, release_date, campaign_type')
         .eq('id', donationRow.campaign_id)
         .maybeSingle()
 
@@ -146,6 +146,7 @@ Deno.serve(async (req) => {
           purpose: 'CAMPAIGN_DONATION',
           campaign_id: donationRow.campaign_id,
           campaign_network: campaignForPayload?.network ?? 'mainnet',
+          campaign_type: campaignForPayload?.campaign_type ?? 'escrow',
           intended_user_id: donationRow.donor_user_id,
           donor_user_id: donationRow.donor_user_id,
           donor_wallet_address: donationRow.donor_wallet_address,
@@ -176,8 +177,11 @@ Deno.serve(async (req) => {
     }
 
     // Already settled — return cached status without re-querying Xaman
+    const isDirectDonation = (payloadRow.metadata as any)?.purpose === 'CAMPAIGN_DONATION_DIRECT'
+      || (payloadRow.metadata as any)?.campaign_type === 'direct'
+
     if (payloadRow.status === 'signed') {
-      return new Response(JSON.stringify({ status: 'escrowed' }), {
+      return new Response(JSON.stringify({ status: isDirectDonation ? 'released' : 'escrowed' }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -251,7 +255,7 @@ Deno.serve(async (req) => {
 
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('recipient_wallet_address')
+      .select('recipient_wallet_address, campaign_type')
       .eq('id', meta.campaign_id)
       .maybeSingle()
 
@@ -321,7 +325,8 @@ Deno.serve(async (req) => {
     const txAmount = typeof txData.Amount === 'string' ? txData.Amount : String(txData.Amount ?? '')
     const txDestination = txData.Destination ?? ''
 
-    if (txData.TransactionType !== 'EscrowCreate' || txAmount !== expectedDrops || txDestination !== campaign.recipient_wallet_address) {
+    const expectedType = campaign.campaign_type === 'direct' ? 'Payment' : 'EscrowCreate'
+    if (txData.TransactionType !== expectedType || txAmount !== expectedDrops || txDestination !== campaign.recipient_wallet_address) {
       return new Response(JSON.stringify({
         error: 'Validated XRPL transaction did not match the expected escrow payload',
       }), {
@@ -331,6 +336,7 @@ Deno.serve(async (req) => {
 
     const now = new Date().toISOString()
 
+    const newDonationStatus = campaign.campaign_type === 'direct' ? 'released' : 'escrowed'
     await Promise.all([
       svc.from('xaman_payloads').update({
         status: 'signed',
@@ -338,16 +344,16 @@ Deno.serve(async (req) => {
         signed_at: now,
       }).eq('uuid', xaman_uuid),
       svc.from('campaign_donations').update({
-        escrow_status: 'escrowed',
+        escrow_status: newDonationStatus,
         escrow_tx_hash: txHash,
-        escrow_sequence: escrowSequence,
+        escrow_sequence: campaign.campaign_type === 'direct' ? null : escrowSequence,
         updated_at: now,
       }).eq('xaman_payload_uuid', xaman_uuid),
     ])
 
     await logAppAudit(svc, {
       area: 'causes',
-      action: 'escrowed',
+      action: campaign.campaign_type === 'direct' ? 'direct_donation_released' : 'escrowed',
       entityType: 'campaign_donation',
       actorId: user.id,
       metadata: {
@@ -362,7 +368,7 @@ Deno.serve(async (req) => {
     console.log(`Donation escrowed: campaign=${meta.campaign_id} amount=${meta.amount_xrp} XRP tx=${txHash} seq=${escrowSequence}`)
 
     return new Response(JSON.stringify({
-      status: 'escrowed',
+      status: newDonationStatus,
       tx_hash: txHash,
       escrow_sequence: escrowSequence,
       amount_xrp: meta.amount_xrp,

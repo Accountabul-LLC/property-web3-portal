@@ -1,14 +1,23 @@
 export const CAUSES_RELEASE_SAFETY_BUFFER_MS = 10_000
 
-export function getCauseReleaseUnlockAt(releaseDate: string): number {
+export type CauseCampaignType = 'escrow' | 'direct'
+
+export function getCauseReleaseUnlockAt(releaseDate: string | null | undefined): number {
+  if (!releaseDate) return Number.POSITIVE_INFINITY
   return new Date(releaseDate).getTime() + CAUSES_RELEASE_SAFETY_BUFFER_MS
 }
 
-export function isCauseReleaseReady(releaseDate: string, now = Date.now()): boolean {
+export function isCauseReleaseReady(releaseDate: string | null | undefined, now = Date.now()): boolean {
+  if (!releaseDate) return false
   return now >= getCauseReleaseUnlockAt(releaseDate)
 }
 
-export function formatCauseReleaseCountdown(releaseDate: string, now = Date.now()): string {
+export function formatCauseReleaseCountdown(
+  releaseDate: string | null | undefined,
+  now = Date.now(),
+  campaignType: CauseCampaignType = 'escrow',
+): string {
+  if (campaignType === 'direct' || !releaseDate) return 'Direct donations stay open'
   const remaining = getCauseReleaseUnlockAt(releaseDate) - now
   if (remaining <= 0) return 'Ready to release \u2713'
 
@@ -24,7 +33,8 @@ export function formatCauseReleaseCountdown(releaseDate: string, now = Date.now(
   return `Unlocks in ${seconds}s`
 }
 
-export function formatCauseReleaseUnlockTimestamp(releaseDate: string): string {
+export function formatCauseReleaseUnlockTimestamp(releaseDate: string | null | undefined): string {
+  if (!releaseDate) return 'No unlock time'
   const unlockAt = getCauseReleaseUnlockAt(releaseDate)
   return new Date(unlockAt).toLocaleString(undefined, {
     year: 'numeric',

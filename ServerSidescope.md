@@ -13,6 +13,7 @@ This file defines the trust boundary for Accountabul / Property Web3 Portal.
 These actions must not be performed by direct browser writes:
 
 - Campaign create, update, review, delete, and release actions
+- Campaign type selection and all evergreen/direct donation paths
 - Donation release and escrow settlement
 - Action item create, update, delete, and GitHub sync actions
 - Agent integration toggle actions
@@ -54,6 +55,7 @@ The browser can safely:
 The following client-side writes were identified and moved or are intended to stay server-side:
 
 - Causes campaign writes and donation release flows
+- Escrow and direct campaign donation flows
 - Action item management and GitHub sync
 - Integration toggles
 - XRPL issuer wallet registration

@@ -16,7 +16,8 @@ function progressPct(raised: number, goal: number | null) {
 
 export default function CauseCard({ campaign }: { campaign: Campaign }) {
   const navigate = useNavigate()
-  const days = daysUntil(campaign.release_date)
+  const isDirectCampaign = campaign.campaign_type === 'direct'
+  const days = campaign.release_date ? daysUntil(campaign.release_date) : 0
   const pct = progressPct(campaign.total_raised, campaign.goal_amount)
 
   return (
@@ -43,7 +44,7 @@ export default function CauseCard({ campaign }: { campaign: Campaign }) {
         <div className="absolute bottom-3 left-3">
           <Badge variant="secondary" className="bg-black/60 text-white border-0 backdrop-blur-sm flex items-center gap-1 text-xs">
             <Lock className="w-3 h-3" />
-            XRPL Escrow
+            {isDirectCampaign ? 'Direct Donation' : 'XRPL Escrow'}
           </Badge>
         </div>
       </div>
@@ -90,7 +91,7 @@ export default function CauseCard({ campaign }: { campaign: Campaign }) {
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="w-3.5 h-3.5" />
-            {days > 0 ? `${days}d until release` : 'Funds released'}
+            {isDirectCampaign ? 'Open-ended' : (days > 0 ? `${days}d until release` : 'Funds released')}
           </span>
         </div>
 

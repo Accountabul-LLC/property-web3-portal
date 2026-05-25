@@ -167,12 +167,15 @@ export default function CauseDetail() {
     )
   }
 
-  const unlockCountdown = formatCauseReleaseCountdown(campaign.release_date, now)
+  const unlockCountdown = formatCauseReleaseCountdown(campaign.release_date, now, campaign.campaign_type)
   const unlockTimestamp = formatCauseReleaseUnlockTimestamp(campaign.release_date)
-  const releaseReady = isCauseReleaseReady(campaign.release_date, now)
-  const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  })
+  const isDirectCampaign = campaign.campaign_type === 'direct'
+  const releaseReady = isDirectCampaign ? false : isCauseReleaseReady(campaign.release_date, now)
+  const releaseDate = campaign.release_date
+    ? new Date(campaign.release_date).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric',
+      })
+    : null
   const explorerUrl = `${explorerBase(campaign.network)}/accounts/${campaign.recipient_wallet_address}`
   const pct = campaign.goal_amount
     ? Math.min(100, Math.round((campaign.total_raised / campaign.goal_amount) * 100))
@@ -208,7 +211,7 @@ export default function CauseDetail() {
               <div className="flex items-center gap-2 mb-3 flex-wrap">
                 <Badge variant="secondary" className="flex items-center gap-1">
                   <Lock className="w-3 h-3" />
-                  XRPL Escrow
+                  {isDirectCampaign ? 'Direct Donation' : 'XRPL Escrow'}
                 </Badge>
                 {campaign.status === 'completed' && (
                   <Badge className="bg-green-600 text-white">Funded</Badge>
@@ -246,14 +249,22 @@ export default function CauseDetail() {
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 space-y-2">
               <p className="font-medium text-sm text-foreground flex items-center gap-2">
                 <Lock className="w-4 h-4 text-primary" />
-                How your donation is protected
+                {isDirectCampaign ? 'How your donation works' : 'How your donation is protected'}
               </p>
-              <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
-                <li>You sign an EscrowCreate transaction in Xaman — funds leave your wallet immediately</li>
-                <li>Funds are locked on the XRP Ledger, not in a bank account or platform wallet</li>
-                <li>On <strong>{releaseDate}</strong>, EscrowFinish is called — funds go directly to the recipient</li>
-                <li>No human can touch the funds between those two events</li>
-              </ol>
+              {isDirectCampaign ? (
+                <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
+                  <li>You sign a Payment transaction in Xaman — funds leave your wallet immediately</li>
+                  <li>The payment goes straight to the recipient wallet on the XRP Ledger</li>
+                  <li>No platform wallet can reroute or intercept the funds</li>
+                </ol>
+              ) : (
+                <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
+                  <li>You sign an EscrowCreate transaction in Xaman — funds leave your wallet immediately</li>
+                  <li>Funds are locked on the XRP Ledger, not in a bank account or platform wallet</li>
+                  <li>On <strong>{releaseDate}</strong>, EscrowFinish is called — funds go directly to the recipient</li>
+                  <li>No human can touch the funds between those two events</li>
+                </ol>
+              )}
             </div>
 
             {campaign.video_url && (
@@ -354,7 +365,7 @@ export default function CauseDetail() {
                     </span>
                     {raisedUsd !== null && (
                       <span className="text-xs font-semibold text-primary uppercase tracking-wider mt-0.5">
-                        {formatUsd(raisedUsd)} in escrow
+                        {isDirectCampaign ? `${formatUsd(raisedUsd)} sent directly` : `${formatUsd(raisedUsd)} in escrow`}
                       </span>
                     )}
                   </div>
@@ -398,20 +409,22 @@ export default function CauseDetail() {
                   </p>
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
-                  <p className="text-xl font-bold text-foreground" title={unlockTimestamp}>
-                    {releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', '')}
+                  <p className="text-xl font-bold text-foreground" title={isDirectCampaign ? 'Direct donations stay open' : unlockTimestamp}>
+                    {isDirectCampaign ? 'Open' : (releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', ''))}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
-                    <Calendar className="w-3 h-3" /> unlock window
+                    <Calendar className="w-3 h-3" /> {isDirectCampaign ? 'open-ended' : 'unlock window'}
                   </p>
                 </div>
               </div>
 
               <div className="text-xs text-muted-foreground flex items-center gap-1.5 bg-muted/30 rounded-lg p-2.5">
                 <Lock className="w-3.5 h-3.5 text-primary flex-shrink-0" />
-                {campaign.status === 'completed' || releaseReady
-                  ? 'Ready to release to the recipient.'
-                  : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
+                {isDirectCampaign
+                  ? 'Direct donations are sent straight to the recipient after signing.'
+                  : campaign.status === 'completed' || releaseReady
+                    ? 'Ready to release to the recipient.'
+                    : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
               </div>
 
               {campaign.status !== 'completed' && !releaseReady && (

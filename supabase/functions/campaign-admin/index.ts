@@ -72,12 +72,13 @@ Deno.serve(async (req) => {
       const title = String(body?.title ?? '').trim()
       const description = String(body?.description ?? '').trim()
       const recipientWalletAddress = String(body?.recipient_wallet_address ?? '').trim()
-      const releaseDate = String(body?.release_date ?? '').trim()
+      const releaseDate = body?.release_date == null ? '' : String(body?.release_date ?? '').trim()
       const imageUrl = String(body?.image_url ?? '').trim()
       const videoUrl = String(body?.video_url ?? '').trim()
       const galleryUrls = Array.isArray(body?.gallery_urls) ? body.gallery_urls.filter((url: unknown) => typeof url === 'string') : []
       const status = String(body?.status ?? 'under_review')
       const network = String(body?.network ?? 'testnet')
+      const campaignType = String(body?.campaign_type ?? 'escrow')
       const goalAmountRaw = body?.goal_amount
       const submittedByEmail = String(body?.submitted_by_email ?? '').trim()
       const submissionNotes = String(body?.submission_notes ?? '').trim()
@@ -86,7 +87,13 @@ Deno.serve(async (req) => {
       if (title.length < 10 || title.length > 100) throw new Error('Title must be between 10 and 100 characters')
       if (description.length < 50 || description.length > 5000) throw new Error('Description must be between 50 and 5000 characters')
       if (!isValidRAddress(recipientWalletAddress)) throw new Error('Must be a valid XRPL r-address')
-      if (!releaseDate || Number.isNaN(new Date(releaseDate).getTime())) throw new Error('Release date is invalid')
+      if (!['escrow', 'direct'].includes(campaignType)) throw new Error('campaign_type must be escrow or direct')
+      if (campaignType === 'escrow' && (!releaseDate || Number.isNaN(new Date(releaseDate).getTime()))) {
+        throw new Error('Release date is invalid')
+      }
+      if (campaignType === 'direct' && releaseDate && Number.isNaN(new Date(releaseDate).getTime())) {
+        throw new Error('Release date is invalid')
+      }
       if (!['under_review', 'active'].includes(status)) throw new Error('Status must be under_review or active')
       if (!['testnet', 'mainnet', 'devnet'].includes(network)) throw new Error('Network is invalid')
 
@@ -102,7 +109,8 @@ Deno.serve(async (req) => {
           slug: `${slugify(title)}-${Date.now().toString(36)}`,
           description,
           recipient_wallet_address: recipientWalletAddress,
-          release_date: new Date(releaseDate).toISOString(),
+          release_date: campaignType === 'direct' ? null : new Date(releaseDate).toISOString(),
+          campaign_type: campaignType,
           goal_amount: goalAmount,
           image_url: imageUrl || null,
           video_url: videoUrl || null,
@@ -179,6 +187,26 @@ Deno.serve(async (req) => {
       if (body?.gallery_urls !== undefined) {
         if (!Array.isArray(body.gallery_urls)) throw new Error('gallery_urls must be an array')
         updates.gallery_urls = body.gallery_urls.filter((url: unknown) => typeof url === 'string')
+      }
+      if (body?.campaign_type !== undefined) {
+        const campaignType = String(body.campaign_type ?? '').trim()
+        if (!['escrow', 'direct'].includes(campaignType)) throw new Error('campaign_type must be escrow or direct')
+        if (current.campaign_type === 'direct' && campaignType === 'escrow') {
+          throw new Error('Direct campaigns cannot be converted back to escrow once created')
+        }
+        if (current.donor_count > 0 || Number(current.total_raised) > 0) {
+          throw new Error('Campaign type cannot be changed after donations exist')
+        }
+        updates.campaign_type = campaignType
+      }
+      if (body?.release_date !== undefined) {
+        const releaseDate = body.release_date == null ? '' : String(body.release_date ?? '').trim()
+        if (releaseDate) {
+          if (Number.isNaN(new Date(releaseDate).getTime())) throw new Error('Release date is invalid')
+          updates.release_date = new Date(releaseDate).toISOString()
+        } else {
+          updates.release_date = null
+        }
       }
 
       if (Object.keys(updates).length === 0) {

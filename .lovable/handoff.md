@@ -21,6 +21,9 @@ Notes:
   - `campaign-submit` for public cause applications
   - `campaign-admin` for admin create/update/review actions
   - direct browser writes to `campaigns` and `campaign_donations` should stay blocked
+- Campaigns now support two server-owned donation modes:
+  - `escrow` for time-locked causes
+  - `direct` for evergreen donation hubs that use `Payment` instead of `EscrowCreate`
 - Campaign lifecycle events now write to `app_audit_log` server-side for traceability.
 - App-wide server-side scope is documented in [`ServerSidescope.md`](../ServerSidescope.md).
 - Debate transcript/session saves now go through `debate-session-save` instead of direct browser inserts.

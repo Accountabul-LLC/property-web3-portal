@@ -29,6 +29,7 @@ type Props = {
 export default function DonateModal({ campaign, open, onClose }: Props) {
   const { wallets, activeWallet, setActiveWallet, activeNetwork } = useActiveWallet()
   const campaignNetwork = (campaign.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet'
+  const isDirectCampaign = campaign.campaign_type === 'direct'
   // Balance is fetched on the user's selected network so they can verify funds before signing.
   const { data: portfolio, isLoading: balanceLoading } = useXRPLPortfolio(
     activeWallet?.address ?? null,
@@ -36,8 +37,9 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   )
   const networkMismatch = activeNetwork !== campaignNetwork
   const spendableXrp = portfolio?.spendable_xrp ?? 0
-  // Reserve ~1 XRP headroom for the new escrow object reserve + fee
-  const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - 1) * 1_000_000) / 1_000_000), [spendableXrp])
+  const reserveXrp = isDirectCampaign ? 0 : 1
+  // Escrow campaigns need extra reserve for the escrow object; direct payments do not.
+  const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - reserveXrp) * 1_000_000) / 1_000_000), [spendableXrp, reserveXrp])
 
   const [step, setStep] = useState<Step>('form')
   const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
@@ -54,9 +56,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   const insufficientFunds = asset === 'XRP' && !!amount && !Number.isNaN(amt) && amt > maxDonatable
   const balanceReady = !balanceLoading && !!activeWallet
 
-  const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric',
-  })
+  const releaseDate = campaign.release_date
+    ? new Date(campaign.release_date).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    : null
 
   function resetAndClose() {
     if (pollInterval) clearInterval(pollInterval)
@@ -141,10 +147,10 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
         })
         const json = await res.json()
 
-        if (json.status === 'escrowed') {
+        if (json.status === 'escrowed' || json.status === 'released') {
           clearInterval(interval)
           setStep('done')
-          toast.success('Donation locked in escrow! Thank you.')
+          toast.success(json.status === 'released' ? 'Donation sent! Thank you.' : 'Donation locked in escrow! Thank you.')
         } else if (json.status === 'failed') {
           clearInterval(interval)
           setStep('form')
@@ -190,9 +196,18 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex gap-3">
               <Lock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your donation is locked on the <strong>XRP Ledger</strong> until{' '}
-                <strong>{releaseDate}</strong>, then sent directly to the recipient's wallet.
-                You sign the transaction in your connected wallet — no platform holds your funds.
+                {isDirectCampaign ? (
+                  <>
+                    Your donation is sent directly to the recipient's wallet after you sign the
+                    payment in Xaman. No platform wallet holds your funds.
+                  </>
+                ) : (
+                  <>
+                    Your donation is locked on the <strong>XRP Ledger</strong> until{' '}
+                    <strong>{releaseDate}</strong>, then sent directly to the recipient's wallet.
+                    You sign the transaction in your connected wallet — no platform holds your funds.
+                  </>
+                )}
               </p>
             </div>
 
@@ -297,7 +312,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               />
               {insufficientFunds ? (
                 <p className="text-xs text-destructive">
-                  Not enough XRP. Available to donate: {maxDonatable} XRP (≈1 XRP reserved on-ledger).
+                  Not enough XRP. Available to donate: {maxDonatable} XRP{isDirectCampaign ? '' : ' (≈1 XRP reserved on-ledger)'}.
                 </p>
               ) : (
                 <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
@@ -336,7 +351,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
         {step === 'qr' && (
           <div className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Scan with your wallet app to sign the escrow transaction.
+              Scan with your wallet app to sign the {isDirectCampaign ? 'payment' : 'escrow'} transaction.
             </p>
             {qrUrl ? (
               <img src={qrUrl} alt="Xaman QR Code" className="mx-auto w-52 h-52 rounded-lg" />
@@ -373,7 +388,9 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             <div>
               <p className="font-semibold text-lg">Thank you!</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Your donation is locked in escrow on the XRP Ledger. It will be released to the recipient on {releaseDate}.
+                {isDirectCampaign
+                  ? 'Your donation was sent directly to the recipient after signing.'
+                  : `Your donation is locked in escrow on the XRP Ledger. It will be released to the recipient on ${releaseDate}.`}
               </p>
             </div>
             <Button onClick={resetAndClose} className="w-full">Close</Button>

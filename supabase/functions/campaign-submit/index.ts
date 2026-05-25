@@ -103,6 +103,7 @@ Deno.serve(async (req) => {
         description,
         recipient_wallet_address: recipientWalletAddress,
         goal_amount: goalAmount,
+        campaign_type: 'escrow',
         release_date: parsedReleaseDate.toISOString(),
         image_url: imageUrl || null,
         submitted_by_user_id: user.id,

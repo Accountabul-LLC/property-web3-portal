@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
 
     const { data: campaign } = await svc
       .from('campaigns')
-      .select('id, title, status, release_date, recipient_wallet_address, network')
+      .select('id, title, status, campaign_type, release_date, recipient_wallet_address, network')
       .eq('id', campaign_id)
       .maybeSingle()
 

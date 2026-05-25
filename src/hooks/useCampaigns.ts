@@ -10,10 +10,11 @@ export type Campaign = {
   gallery_urls: string[]
   video_url: string | null
   network: 'mainnet' | 'testnet'
+  campaign_type: 'escrow' | 'direct'
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
-  release_date: string
+  release_date: string | null
   status: 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
   submitted_by_user_id: string | null
   submitted_by_email: string | null
@@ -31,7 +32,7 @@ export type MyDonation = {
   escrow_status: 'pending' | 'escrowed' | 'released' | 'cancelled'
   donor_message: string | null
   created_at: string
-  campaigns: Pick<Campaign, 'id' | 'title' | 'slug' | 'release_date' | 'network' | 'currency' | 'recipient_wallet_address'> | null
+  campaigns: Pick<Campaign, 'id' | 'title' | 'slug' | 'release_date' | 'campaign_type' | 'network' | 'currency' | 'recipient_wallet_address'> | null
 }
 
 export function useCampaigns() {
@@ -89,7 +90,7 @@ export function useMyDonations(userId?: string) {
         .from('campaign_donations')
         .select(`
           id, amount, currency, escrow_status, donor_message, created_at,
-          campaigns (id, title, slug, release_date, network, currency, recipient_wallet_address)
+          campaigns (id, title, slug, release_date, campaign_type, network, currency, recipient_wallet_address)
         `)
         .eq('donor_user_id', userId)
         .order('created_at', { ascending: false })

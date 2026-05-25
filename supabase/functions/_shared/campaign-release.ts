@@ -12,9 +12,10 @@ export type CampaignReleaseCampaign = {
   id: string
   title: string
   status: string
-  release_date: string
+  release_date: string | null
   recipient_wallet_address: string
   network?: string | null
+  campaign_type?: string | null
 }
 
 export type CampaignReleaseDonation = {
@@ -74,6 +75,17 @@ export async function releaseCampaignEscrows(opts: {
     signerAlgorithm = 'secp256k1',
     allowManualFallback = true,
   } = opts
+
+  if (campaign.campaign_type === 'direct') {
+    return {
+      released_count: 0,
+      manual_count: 0,
+      error_count: 0,
+      total_donations: 0,
+      campaign_completed: false,
+      results: [],
+    }
+  }
 
   const { data: donations, error: donationError } = await svc
     .from('campaign_donations')

@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, network, recipient_wallet_address, release_date, currency')
+      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency')
       .eq('id', campaign_id)
       .maybeSingle()
 
@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
-    if (new Date(campaign.release_date) <= new Date()) {
+    if (campaign.campaign_type !== 'direct' && (!campaign.release_date || new Date(campaign.release_date) <= new Date())) {
       return new Response(JSON.stringify({ error: 'Campaign release date has already passed' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -153,19 +153,30 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── Build EscrowCreate tx ─────────────────────────────────
-    const finishAfter = toXrplTime(campaign.release_date)
+    const isDirectCampaign = campaign.campaign_type === 'direct'
+    const finishAfter = isDirectCampaign || !campaign.release_date ? null : toXrplTime(campaign.release_date)
     const drops = toDrops(xrpAmount)
 
-    const txjson = {
-      TransactionType: 'EscrowCreate',
-      Account: wallet.wallet_address,
-      Amount: drops,
-      Destination: campaign.recipient_wallet_address,
-      FinishAfter: finishAfter,
-    }
+    const txjson = isDirectCampaign
+      ? {
+          TransactionType: 'Payment',
+          Account: wallet.wallet_address,
+          Amount: drops,
+          Destination: campaign.recipient_wallet_address,
+        }
+      : {
+          TransactionType: 'EscrowCreate',
+          Account: wallet.wallet_address,
+          Amount: drops,
+          Destination: campaign.recipient_wallet_address,
+          FinishAfter: finishAfter,
+        }
 
-    console.log(`Building EscrowCreate: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops) | FinishAfter: ${finishAfter}`)
+    console.log(
+      isDirectCampaign
+        ? `Building Payment: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops)`
+        : `Building EscrowCreate: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops) | FinishAfter: ${finishAfter}`,
+    )
 
     // ── Send to Xaman ─────────────────────────────────────────
     const xamanPayload = {
@@ -180,10 +191,11 @@ Deno.serve(async (req) => {
       custom_meta: {
         identifier: `donation_${campaign_id.slice(0, 8)}_${Date.now().toString(36)}`,
         blob: JSON.stringify({
-          purpose: 'CAMPAIGN_DONATION',
+          purpose: isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW',
           campaign_id,
           campaign_title: campaign.title,
           amount_xrp: xrpAmount,
+          campaign_type: campaign.campaign_type ?? 'escrow',
         }),
       },
     }
@@ -214,7 +226,7 @@ Deno.serve(async (req) => {
       wallet_address: wallet.wallet_address,
       network: campaign.network,
       metadata: {
-        purpose: 'CAMPAIGN_DONATION',
+        purpose: isDirectCampaign ? 'CAMPAIGN_DONATION_DIRECT' : 'CAMPAIGN_DONATION_ESCROW',
         campaign_id,
         campaign_network: campaign.network,
         intended_user_id: user.id,
@@ -225,6 +237,7 @@ Deno.serve(async (req) => {
         finish_after: finishAfter,
         donor_message: donor_message ?? null,
         is_anonymous: is_anonymous ?? false,
+        campaign_type: campaign.campaign_type ?? 'escrow',
       },
     })
     if (payloadInsertErr) {
@@ -304,6 +317,7 @@ Deno.serve(async (req) => {
       amount_xrp: xrpAmount,
       recipient: campaign.recipient_wallet_address,
       release_date: campaign.release_date,
+      campaign_type: campaign.campaign_type ?? 'escrow',
     }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
