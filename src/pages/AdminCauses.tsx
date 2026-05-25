@@ -393,7 +393,11 @@ export default function AdminCauses() {
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, recipient_wallet_address: e.target.value }))}
                   placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
                 />
+                <p className="text-xs text-muted-foreground">
+                  The beneficiary's XRPL address — donations sit in on-chain escrow until the release date, then settle to this wallet. This is not an intermediary or platform wallet.
+                </p>
               </div>
+
 
               <div className="space-y-2">
                 <Label htmlFor="cause-release">Release Date</Label>
