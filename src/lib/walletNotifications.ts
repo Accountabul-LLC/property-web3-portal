@@ -8,7 +8,11 @@ export type NotificationKind =
   | 'escrow_released'
   | 'escrow_refunded'
   | 'escrow_incoming'
-  | 'payment_sent';
+  | 'payment_sent'
+  | 'donation_sent'
+  | 'donation_pledged'
+  | 'donation_received'
+  | 'donation_delivered';
 
 export interface WalletNotification {
   id: string;

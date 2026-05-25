@@ -10,6 +10,7 @@ import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
 import { humanizeTx } from '@/lib/txLabels';
+import { useDonationLookup, donationLabel } from '@/hooks/useDonationLookup';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 import NetworkToggle from '@/components/NetworkToggle';
@@ -65,6 +66,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
   const network: 'mainnet' | 'testnet' = resolvedNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const isTestnet = network === 'testnet';
   const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
+  const { data: donationLookup } = useDonationLookup(displayAddress);
   const [isFunding, setIsFunding] = useState(false);
 
   const explorerBase = network === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
@@ -1016,11 +1018,14 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                         <ArrowUpRight className="w-4 h-4 text-destructive" />
                       );
 
-                      const txLabel = humanizeTx({
-                        type: tx.type,
-                        direction: tx.direction,
-                        is_swap: tx.is_swap,
-                      });
+                      const donationCtx = donationLookup?.get(tx.hash);
+                      const txLabel = donationCtx
+                        ? donationLabel(donationCtx)
+                        : humanizeTx({
+                            type: tx.type,
+                            direction: tx.direction,
+                            is_swap: tx.is_swap,
+                          });
 
                       // Show swap details
                       let amountLine = '';
