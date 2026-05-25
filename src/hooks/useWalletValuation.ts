@@ -27,6 +27,7 @@ export function useWalletValuation(wallet: TreasuryWalletConfig): WalletValuatio
         total += Number(t.balance) * meta.price;
       }
     }
+    total += sumMptIssuerUsd(data.mpt_issuances);
     return total;
   }, [data, tokenMetaData]);
 
