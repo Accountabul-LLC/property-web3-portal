@@ -30,7 +30,7 @@ function useWalletNotifications(address: string | null, network: 'mainnet' | 'te
 }
 
 export function NotificationBell() {
-  const { activeAddress, activeNetwork, user: _user } = useActiveWallet() as any;
+  const { activeAddress, activeNetwork } = useActiveWallet();
   const network: 'mainnet' | 'testnet' = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const { items, unread } = useWalletNotifications(activeAddress, network);
 
