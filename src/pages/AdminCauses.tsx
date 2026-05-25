@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
+import { AcceptedAssetsPicker, type SupportedAsset } from '@/components/causes/AcceptedAssetsPicker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   formatCauseReleaseCountdown,
@@ -958,31 +959,13 @@ export default function AdminCauses() {
                 )}
               </div>
 
-              {/* Accepted assets whitelist */}
-              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                <Label>Accepted donation assets</Label>
-                <p className="text-xs text-muted-foreground">
-                  Donors using the platform can only send these. XRP is always accepted. RLUSD requires the recipient to have an RLUSD trustline and is only supported on direct (evergreen) campaigns.
-                </p>
-                <div className="flex gap-4 pt-1">
-                  <label className="flex items-center gap-2 text-sm opacity-70">
-                    <input type="checkbox" checked disabled className="h-4 w-4" />
-                    XRP <span className="text-xs text-muted-foreground">(always)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editForm.accepted_assets.includes('RLUSD')}
-                      onChange={(e) => setEditForm((p) => ({
-                        ...p,
-                        accepted_assets: e.target.checked ? ['XRP', 'RLUSD'] : ['XRP'],
-                      }))}
-                      className="h-4 w-4"
-                    />
-                    RLUSD
-                  </label>
-                </div>
+              <div>
+                <AcceptedAssetsPicker
+                  value={editForm.accepted_assets as SupportedAsset[]}
+                  onChange={(next) => setEditForm((p) => ({ ...p, accepted_assets: next }))}
+                />
               </div>
+
 
               {/* Visibility toggle — applied on Save Changes */}
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
@@ -1110,6 +1093,12 @@ export default function AdminCauses() {
                           Hidden
                         </span>
                       )}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide bg-primary/10 text-primary border border-primary/20">
+                        {(campaign.accepted_assets && campaign.accepted_assets.length > 0
+                          ? campaign.accepted_assets
+                          : ['XRP']
+                        ).join(' · ')}
+                      </span>
                       <span className="text-xs text-muted-foreground">
                         Submitted {new Date(campaign.created_at).toLocaleDateString()}
                       </span>
