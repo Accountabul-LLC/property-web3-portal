@@ -16,7 +16,7 @@ import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
-  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2,
 } from 'lucide-react'
 
 type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
@@ -28,6 +28,7 @@ interface Campaign {
   slug: string
   description: string
   image_url: string | null
+  gallery_urls: string[]
   video_url: string | null
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
@@ -78,6 +79,18 @@ export default function AdminCauses() {
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    goal_amount: '',
+    image_url: '',
+    gallery_urls: [] as string[],
+  })
+  const [uploadingEditCover, setUploadingEditCover] = useState(false)
+  const [uploadingEditGallery, setUploadingEditGallery] = useState(false)
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
@@ -204,16 +217,15 @@ export default function AdminCauses() {
     }
   }
 
-  async function handleImageUpload(file: File) {
+  async function uploadCauseImage(file: File): Promise<string | null> {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file')
-      return
+      return null
     }
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be under 5MB')
-      return
+      return null
     }
-    setUploadingImage(true)
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
       const path = `causes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
@@ -222,15 +234,87 @@ export default function AdminCauses() {
         .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type })
       if (upErr) throw upErr
       const { data } = supabase.storage.from('campaign-images').getPublicUrl(path)
-      setCreateForm((prev) => ({ ...prev, image_url: data.publicUrl }))
-      toast.success('Image uploaded')
+      return data.publicUrl
     } catch (err: any) {
       console.error('Image upload failed:', err)
       toast.error(err.message || 'Failed to upload image')
-    } finally {
-      setUploadingImage(false)
+      return null
     }
   }
+
+  async function handleImageUpload(file: File) {
+    setUploadingImage(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setCreateForm((prev) => ({ ...prev, image_url: url }))
+      toast.success('Image uploaded')
+    }
+    setUploadingImage(false)
+  }
+
+  function openEdit(c: Campaign) {
+    setEditId(c.id)
+    setEditForm({
+      title: c.title,
+      description: c.description,
+      goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
+      image_url: c.image_url ?? '',
+      gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+    })
+    setEditOpen(true)
+  }
+
+  async function handleEditCoverUpload(file: File) {
+    setUploadingEditCover(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setEditForm((prev) => ({ ...prev, image_url: url }))
+      toast.success('Cover image uploaded')
+    }
+    setUploadingEditCover(false)
+  }
+
+  async function handleEditGalleryUpload(file: File) {
+    setUploadingEditGallery(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setEditForm((prev) => ({ ...prev, gallery_urls: [...prev.gallery_urls, url] }))
+      toast.success('Gallery image added')
+    }
+    setUploadingEditGallery(false)
+  }
+
+  async function handleSaveEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!editId) return
+    setEditing(true)
+    try {
+      if (!editForm.title.trim()) throw new Error('Title is required')
+      if (!editForm.description.trim()) throw new Error('Description is required')
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          title: editForm.title.trim(),
+          description: editForm.description.trim(),
+          goal_amount: editForm.goal_amount ? Number(editForm.goal_amount) : null,
+          image_url: editForm.image_url.trim() || null,
+          gallery_urls: editForm.gallery_urls,
+        } as any)
+        .eq('id', editId) as any
+      if (error) throw error
+      toast.success('Campaign updated')
+      setEditOpen(false)
+      setEditId(null)
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaign'] })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update campaign')
+    } finally {
+      setEditing(false)
+    }
+  }
+
 
   async function handleCreateCampaign(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -547,6 +631,171 @@ export default function AdminCauses() {
           </DialogContent>
         </Dialog>
 
+        {/* Edit Campaign Dialog */}
+        <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditId(null) }}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-primary" />
+                Edit Cause
+              </DialogTitle>
+              <DialogDescription>
+                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions.
+              </DialogDescription>
+            </DialogHeader>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Title</Label>
+                <Input
+                  id="edit-title"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-goal">Goal Amount (XRP)</Label>
+                <Input
+                  id="edit-goal"
+                  type="number"
+                  min="0"
+                  step="0.000001"
+                  value={editForm.goal_amount}
+                  onChange={(e) => setEditForm((p) => ({ ...p, goal_amount: e.target.value }))}
+                  placeholder="e.g. 1000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  You can extend or lower the goal at any time. Donations already in escrow are unaffected.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  id="edit-description"
+                  rows={5}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Cover Image</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    value={editForm.image_url}
+                    onChange={(e) => setEditForm((p) => ({ ...p, image_url: e.target.value }))}
+                    placeholder="https://… or upload →"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={uploadingEditCover}
+                    onClick={() => document.getElementById('edit-cover-file')?.click()}
+                  >
+                    {uploadingEditCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span className="ml-2">Upload</span>
+                  </Button>
+                  <input
+                    id="edit-cover-file"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleEditCoverUpload(f)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+                {editForm.image_url && (
+                  <div className="relative inline-block mt-2">
+                    <img
+                      src={editForm.image_url}
+                      alt="Cover preview"
+                      className="h-24 w-full max-w-xs object-cover rounded-md border border-border"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setEditForm((p) => ({ ...p, image_url: '' }))}
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow"
+                      title="Remove cover"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Gallery ({editForm.gallery_urls.length})</Label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={uploadingEditGallery}
+                    onClick={() => document.getElementById('edit-gallery-file')?.click()}
+                  >
+                    {uploadingEditGallery ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    <span className="ml-2">Add Image</span>
+                  </Button>
+                  <input
+                    id="edit-gallery-file"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0]
+                      if (f) handleEditGalleryUpload(f)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+                {editForm.gallery_urls.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No additional images yet. Add a few to give donors a fuller picture.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {editForm.gallery_urls.map((url, idx) => (
+                      <div key={`${url}-${idx}`} className="relative group">
+                        <img
+                          src={url}
+                          alt={`Gallery ${idx + 1}`}
+                          className="h-24 w-full object-cover rounded-md border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setEditForm((p) => ({
+                            ...p,
+                            gallery_urls: p.gallery_urls.filter((_, i) => i !== idx),
+                          }))}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow"
+                          title="Remove image"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button type="button" variant="ghost" onClick={() => setEditOpen(false)} disabled={editing}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={editing}>
+                  {editing ? <><Loader2 className="w-4 h-4 animate-spin mr-1.5" /> Saving…</> : 'Save Changes'}
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+
+
+
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
@@ -629,6 +878,15 @@ export default function AdminCauses() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); openEdit(campaign) }}
+                      className="h-8 px-3"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span className="ml-1 hidden sm:inline">Edit</span>
+                    </Button>
                     {/* Quick actions */}
                     {campaign.status === 'under_review' && (
                       <>
