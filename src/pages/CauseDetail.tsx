@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +13,8 @@ import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useXrpPrice, formatUsd } from '@/hooks/useXrpPrice'
+import { supabase } from '@/integrations/supabase/client'
+
 import {
   formatCauseReleaseCountdown,
   formatCauseReleaseUnlockTimestamp,
@@ -109,6 +112,35 @@ export default function CauseDetail() {
     const timer = window.setInterval(() => setNow(Date.now()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  const queryClient = useQueryClient()
+  const campaignId = campaign?.id
+  useEffect(() => {
+    if (!campaignId) return
+    const channel = supabase
+      .channel(`campaign-${campaignId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'campaigns', filter: `id=eq.${campaignId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['campaign', slug] })
+          queryClient.invalidateQueries({ queryKey: ['campaigns'] })
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'campaign_donations', filter: `campaign_id=eq.${campaignId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['campaign-donations', campaignId] })
+          queryClient.invalidateQueries({ queryKey: ['campaign', slug] })
+        },
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [campaignId, slug, queryClient])
+
 
   if (isLoading) {
     return (
