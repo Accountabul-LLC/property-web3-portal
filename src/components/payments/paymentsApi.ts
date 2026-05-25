@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { PaymentDetailResponse, PaymentListResponse } from "./paymentTypes";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 
@@ -23,7 +24,7 @@ async function invokeGet(path: string) {
   });
 
   const text = await response.text();
-  let payload: any = null;
+  let payload: unknown = null;
   if (text) {
     try {
       payload = JSON.parse(text);
@@ -33,7 +34,7 @@ async function invokeGet(path: string) {
   }
 
   if (!response.ok) {
-    const message = typeof payload === "object" && payload && "error" in payload
+    const message = typeof payload === "object" && payload !== null && "error" in payload
       ? String(payload.error)
       : `Request failed (${response.status})`;
     throw new Error(message);
@@ -56,18 +57,9 @@ export async function fetchPayments(params: PaymentListParams = {}) {
   if (typeof params.limit === "number") searchParams.set("limit", String(params.limit));
   if (typeof params.offset === "number") searchParams.set("offset", String(params.offset));
 
-  return invokeGet(`payments-list?${searchParams.toString()}`) as Promise<{
-    success: boolean;
-    scope: "user" | "admin";
-    payments: any[];
-    limit: number;
-    offset: number;
-  }>;
+  return invokeGet(`payments-list?${searchParams.toString()}`) as Promise<PaymentListResponse>;
 }
 
 export async function fetchPaymentById(id: string) {
-  return invokeGet(`payments-get?id=${encodeURIComponent(id)}`) as Promise<{
-    success: boolean;
-    payment: any;
-  }>;
+  return invokeGet(`payments-get?id=${encodeURIComponent(id)}`) as Promise<PaymentDetailResponse>;
 }

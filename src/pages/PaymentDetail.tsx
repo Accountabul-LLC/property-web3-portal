@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchPaymentById } from "@/components/payments/paymentsApi";
+import type { PaymentProviderEventRecord, PaymentRecord } from "@/components/payments/paymentTypes";
 
 const statusStyles: Record<string, string> = {
   pending_payment: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
@@ -25,7 +26,7 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleString();
 }
 
-function stageLabel(stage: any) {
+function stageLabel(stage: PaymentProviderEventRecord) {
   return String(stage?.event_type ?? stage?.event_status ?? stage?.status ?? "unknown");
 }
 
@@ -33,7 +34,7 @@ export default function PaymentDetail() {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, loading } = useAuth();
-  const [payment, setPayment] = useState<any | null>(null);
+  const [payment, setPayment] = useState<PaymentRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const invoice = payment?.payment_invoices?.[0] ?? null;
   const events = payment?.payment_provider_events ?? [];
@@ -191,7 +192,7 @@ export default function PaymentDetail() {
                 {events.length === 0 ? (
                   <div className="py-4 text-sm text-muted-foreground">No provider events yet.</div>
                 ) : (
-                  events.map((event: any) => (
+                  events.map((event) => (
                     <div key={event.id} className="rounded-xl bg-muted/30 p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>

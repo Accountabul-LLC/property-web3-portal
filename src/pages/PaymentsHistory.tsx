@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchPayments } from "@/components/payments/paymentsApi";
+import type { PaymentRecord } from "@/components/payments/paymentTypes";
 
 const statusStyles: Record<string, string> = {
   pending_payment: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
@@ -29,7 +30,7 @@ export default function PaymentsHistory() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   const [status, setStatus] = useState<string | null>(null);
-  const [payments, setPayments] = useState<any[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const statusLabel = useMemo(() => status ?? "all", [status]);
