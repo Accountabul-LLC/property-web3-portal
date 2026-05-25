@@ -174,6 +174,23 @@ export default function MyDonations() {
                     </div>
                   </div>
 
+                  <div className="mb-4 rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider shrink-0">From your wallet</p>
+                      <code className="text-xs font-mono text-foreground break-all text-right">
+                        {donation.donor_wallet_address}
+                      </code>
+                    </div>
+                    {campaign?.recipient_wallet_address && (
+                      <div className="flex items-start justify-between gap-3 pt-2 border-t border-border/50">
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider shrink-0">To recipient</p>
+                        <code className="text-xs font-mono text-foreground break-all text-right">
+                          {campaign.recipient_wallet_address}
+                        </code>
+                      </div>
+                    )}
+                  </div>
+
                   {donation.donor_message && (
                     <div className="mb-4 rounded-lg bg-muted/40 p-3">
                       <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Your message</p>
