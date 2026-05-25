@@ -119,6 +119,27 @@ export default function AdminCauses() {
     admin_notes: '',
   })
 
+  // Restore create-form draft once on mount (if any).
+  useEffect(() => {
+    const draft = loadDraft<typeof createForm>(CREATE_DRAFT_KEY)
+    if (draft) {
+      setCreateForm((prev) => ({ ...prev, ...draft }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist create draft on every change.
+  useEffect(() => {
+    saveDraft(CREATE_DRAFT_KEY, createForm)
+  }, [createForm])
+
+  // Persist edit draft whenever it changes (only while a campaign is being edited).
+  useEffect(() => {
+    if (!editId) return
+    saveDraft(editDraftKey(editId), editForm)
+  }, [editId, editForm])
+
+
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
