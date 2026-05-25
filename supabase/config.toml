@@ -1,40 +1,43 @@
 project_id = "bmxcjxtjujhwreduwtvz"
 
+[functions.auto-issue-credential]
+verify_jwt = true
+
 [functions.campaign-donate]
-verify_jwt = false
+verify_jwt = true
 
 [functions.campaign-submit]
-verify_jwt = false
+verify_jwt = true
 
 [functions.campaign-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.action-item-admin]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-integrations]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-credential-applications]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-wallet-registrations]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-credential-ledger]
-verify_jwt = false
+verify_jwt = true
 
 [functions.issuer-wallet-register]
-verify_jwt = false
+verify_jwt = true
 
 [functions.debate-session-save]
-verify_jwt = false
+verify_jwt = true
 
 [functions.campaign-check-donation]
-verify_jwt = false
+verify_jwt = true
 
 [functions.campaign-release]
-verify_jwt = false
+verify_jwt = true
 
 [functions.places-autocomplete]
 verify_jwt = false
@@ -42,85 +45,91 @@ verify_jwt = false
 [functions.places-details]
 verify_jwt = false
 
+[functions.evaluate-credential-eligibility]
+verify_jwt = true
+
 [functions.xaman-check-payload]
 verify_jwt = true
 
 [functions.xrpl-build-payment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-build-swap]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-build-token-payment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xaman-send-payment]
 verify_jwt = true
 
 [functions.xrpl-build-mint]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-testnet-faucet]
 verify_jwt = true
 
 [functions.xrpl-submit-signed]
-verify_jwt = false
+verify_jwt = true
 
 [functions.ai-debate]
-verify_jwt = false
+verify_jwt = true
 
 [functions.github-agent]
-verify_jwt = false
+verify_jwt = true
 
 [functions.wallet-register]
-verify_jwt = false
+verify_jwt = true
 
 [functions.wallet-approve]
-verify_jwt = false
+verify_jwt = true
 
 [functions.credential-accept]
-verify_jwt = false
+verify_jwt = true
 
 [functions.compliance-check]
-verify_jwt = false
+verify_jwt = true
 
 [functions.issue-testnet-credential]
-verify_jwt = false
+verify_jwt = true
 
 [functions.revoke-credential]
-verify_jwt = false
+verify_jwt = true
 
 [functions.get-issuer-status]
-verify_jwt = false
+verify_jwt = true
 
 [functions.apply-for-credential]
-verify_jwt = false
+verify_jwt = true
 
 [functions.review-credential-application]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-credential]
-verify_jwt = false
+verify_jwt = true
 
 [functions.check-credential-payload]
-verify_jwt = false
+verify_jwt = true
 
 [functions.issue-credential]
-verify_jwt = false
+verify_jwt = true
 
 [functions.kyc-save]
-verify_jwt = false
+verify_jwt = true
 
 [functions.kyc-start]
-verify_jwt = false
+verify_jwt = true
 
 [functions.kyc-submit]
-verify_jwt = false
+verify_jwt = true
 
 [functions.kyc-admin-review]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xaman-create-payload]
+verify_jwt = true
+
+[functions.xrpl-sponsor-trustline]
 verify_jwt = true
 
 [functions.xrpl-account-data]
@@ -129,23 +138,26 @@ verify_jwt = false
 [functions.xrpl-token-meta]
 verify_jwt = false
 
+[functions.xrpl-token-search]
+verify_jwt = false
+
 [functions.wallet-audit-log]
 verify_jwt = true
 
 [functions.tokenization-pipeline]
-verify_jwt = false
+verify_jwt = true
 
 [functions.stripe-identity-create-session]
-verify_jwt = false
+verify_jwt = true
 
 [functions.stripe-identity-webhook]
 verify_jwt = false
 
 [functions.admin-reveal-signer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.admin-fund-signer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.payments-create]
 verify_jwt = true
@@ -160,4 +172,10 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.payments-reconcile]
+verify_jwt = false
+
+[functions.campaign-release-due]
+verify_jwt = false
+
+[functions.xrp-price]
 verify_jwt = false
