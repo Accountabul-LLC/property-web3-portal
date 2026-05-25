@@ -10,7 +10,8 @@ export type Campaign = {
   gallery_urls: string[]
   video_url: string | null
   network: 'mainnet' | 'testnet'
-  campaign_type: 'escrow' | 'direct'
+  campaign_mode: 'scheduled' | 'evergreen'
+  default_release_offset_days: number | null
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
