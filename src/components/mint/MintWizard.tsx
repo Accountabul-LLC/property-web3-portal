@@ -64,7 +64,7 @@ const MintWizard: React.FC = () => {
   const canProceedToReview = () => {
     if (tokenType === 'nft') return nftParams.uri.trim().length > 0;
     if (tokenType === 'mpt') return true; // all optional
-    return iouParams.currency_code.length === 3 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
+    return iouParams.currency_code.length >= 3 && iouParams.currency_code.length <= 20 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
   };
 
   const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';

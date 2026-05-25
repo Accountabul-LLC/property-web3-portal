@@ -1,6 +1,8 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { Sparkles } from 'lucide-react';
 
 export interface IOUParams {
   currency_code: string;
@@ -14,19 +16,35 @@ interface IOUFormProps {
 }
 
 const IOUForm: React.FC<IOUFormProps> = ({ params, onChange }) => {
+  const applyRlusdPreset = () => {
+    onChange({ ...params, currency_code: 'RLUSD', amount: '10000' });
+  };
+
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-dashed border-primary/40 bg-primary/5 p-3 flex items-center justify-between gap-3">
+        <div className="text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Quick preset:</span> Mint a mock <span className="font-mono">RLUSD</span> on Testnet to play with stablecoin flows.
+        </div>
+        <Button type="button" size="sm" variant="outline" onClick={applyRlusdPreset}>
+          <Sparkles className="w-3.5 h-3.5 mr-1" />
+          Test RLUSD
+        </Button>
+      </div>
+
       <div>
-        <Label htmlFor="iou-currency">Currency Code (3 chars)</Label>
+        <Label htmlFor="iou-currency">Currency Code</Label>
         <Input
           id="iou-currency"
-          maxLength={3}
-          placeholder="e.g. USD, ABC"
+          maxLength={20}
+          placeholder="e.g. USD, ABC, RLUSD"
           value={params.currency_code}
           onChange={e => onChange({ ...params, currency_code: e.target.value.toUpperCase() })}
-          className="mt-1 uppercase"
+          className="mt-1 uppercase font-mono"
         />
-        <p className="text-xs text-muted-foreground mt-1">Standard 3-letter currency code</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          3 chars = standard XRPL currency. 4–20 chars (e.g. <span className="font-mono">RLUSD</span>) auto-encode to non-standard hex.
+        </p>
       </div>
       <div>
         <Label htmlFor="iou-amount">Amount to Issue</Label>
