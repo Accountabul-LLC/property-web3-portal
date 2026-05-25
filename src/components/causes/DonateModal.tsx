@@ -240,13 +240,19 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                     <span className="text-xs text-muted-foreground">{shortAddr(activeWallet.address)}</span>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                   {balanceLoading ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading balance…</>
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading {campaignNetwork} balance…</>
                   ) : (
-                    <>Available: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</>
+                    <>
+                      <span className={campaignNetwork === 'mainnet' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
+                        {campaignNetwork === 'mainnet' ? '● Mainnet' : '● Testnet'}
+                      </span>
+                      balance: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP
+                    </>
                   )}
                 </p>
+
               </div>
             )}
 
