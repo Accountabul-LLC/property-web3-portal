@@ -32,10 +32,11 @@ export default function Pricing() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
       <Navigation />
 
-      <main className="flex-1">
+      <main className="flex-1 w-full overflow-x-hidden">
+
         {/* Hero */}
         <div className="text-center py-16 px-4">
           <Badge variant="secondary" className="mb-4">Membership Plans</Badge>
@@ -173,9 +174,10 @@ export default function Pricing() {
           )}
 
           {/* Trust line */}
-          <p className="text-center text-sm text-muted-foreground mt-10">
+          <p className="text-center text-xs sm:text-sm text-muted-foreground mt-10 px-4 break-words">
             All plans include XRPL-backed security · Cancel anytime · Missouri deed monitoring powered by BatchData + Regrid
           </p>
+
         </div>
       </main>
 
