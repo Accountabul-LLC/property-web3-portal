@@ -163,7 +163,7 @@ const MintWizard: React.FC = () => {
             console.error('[MintWizard] Failed to create property listing:', propErr);
             toast.error('Token minted but marketplace listing failed. Contact support.');
           }
-          if (newProp && typeof newProp === 'object' && 'id' in newProp) linkedPropertyId = String(newProp.id);
+          if (newProp && typeof newProp === 'object' && 'id' in (newProp as any)) linkedPropertyId = String((newProp as any).id);
         }
 
         // Save mint record as validated
