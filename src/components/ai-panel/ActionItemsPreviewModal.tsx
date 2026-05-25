@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
+import { callAdminEdgeFunction } from '@/lib/adminEdge';
 import { Loader2, Github, FileCode, ArrowRight, ListChecks, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DebateTurnData } from '@/hooks/useDebateSession';
@@ -152,20 +153,21 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const selectedItems = indices.map(i => items[i]);
-      const rows = selectedItems.map(item => ({
-        created_by: session.user.id,
-        source_thread_id: sessionId || null,
-        source_type: 'debate',
-        title: item.title,
-        description: item.description,
-        priority: item.priority.toUpperCase(),
-        files_json: JSON.stringify(item.files || []),
-        expected_outcome: item.expected_outcome || '',
-        status: 'open',
-        github_sync_status: 'none',
-      }));
-      const { error } = await supabase.from('action_items' as any).insert(rows as any);
-      if (error) throw error;
+      const { success } = await callAdminEdgeFunction<{ success: boolean }>('action-item-admin', {
+        action: 'create_many',
+        items: selectedItems.map(item => ({
+          source_thread_id: sessionId || null,
+          source_type: 'debate',
+          title: item.title,
+          description: item.description,
+          priority: item.priority.toUpperCase(),
+          files_json: item.files || [],
+          expected_outcome: item.expected_outcome || '',
+          status: 'open',
+          github_sync_status: 'none',
+        })),
+      });
+      if (!success) throw new Error('Failed to save action items');
       setSaved(true);
       toast.success(`${selectedItems.length} action items saved`);
     } catch (e) {
@@ -179,21 +181,22 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
   const insertAndGetIds = async (userId: string) => {
     const indices = Array.from(selected);
     const selectedItems = indices.map(i => items[i]);
-    const rows = selectedItems.map(item => ({
-      created_by: userId,
-      source_thread_id: sessionId || null,
-      source_type: 'debate',
-      title: item.title,
-      description: item.description,
-      priority: item.priority.toUpperCase(),
-      files_json: JSON.stringify(item.files || []),
-      expected_outcome: item.expected_outcome || '',
-      status: 'open',
-      github_sync_status: 'none',
-    }));
-    const { data, error } = await supabase.from('action_items' as any).insert(rows as any).select('id');
-    if (error) throw error;
-    return { ids: data as any[] | null, items: selectedItems };
+    const data = await callAdminEdgeFunction<{ success: boolean; items: { id: string }[] }>('action-item-admin', {
+      action: 'create_many',
+      items: selectedItems.map(item => ({
+        created_by: userId,
+        source_thread_id: sessionId || null,
+        source_type: 'debate',
+        title: item.title,
+        description: item.description,
+        priority: item.priority.toUpperCase(),
+        files_json: item.files || [],
+        expected_outcome: item.expected_outcome || '',
+        status: 'open',
+        github_sync_status: 'none',
+      })),
+    });
+    return { ids: data.items ?? null, items: selectedItems };
   };
 
   const buildIssueBody = (action: ActionItem): string => {
@@ -275,15 +278,15 @@ export default function ActionItemsPreviewModal({ open, onOpenChange, topic, tur
           const data = await res.json();
 
           if (dbRow?.id && data.url) {
-            await (supabase.from('action_items' as any) as any)
-              .update({
-                github_issue_url: data.url,
-                github_issue_number: data.number,
-                github_sync_status: 'synced',
-                github_repo: 'JibreelMuhammad/property-web3-portal',
-                pushed_at: new Date().toISOString(),
-              })
-              .eq('id', dbRow.id);
+            await callAdminEdgeFunction('action-item-admin', {
+              action: 'sync_github',
+              id: dbRow.id,
+              github_issue_url: data.url,
+              github_issue_number: data.number,
+              github_sync_status: 'synced',
+              github_repo: 'JibreelMuhammad/property-web3-portal',
+              pushed_at: new Date().toISOString(),
+            });
           }
           pushed++;
         } catch { /* continue */ }

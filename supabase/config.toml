@@ -9,6 +9,18 @@ verify_jwt = false
 [functions.campaign-admin]
 verify_jwt = false
 
+[functions.action-item-admin]
+verify_jwt = false
+
+[functions.admin-integrations]
+verify_jwt = false
+
+[functions.issuer-wallet-register]
+verify_jwt = false
+
+[functions.debate-session-save]
+verify_jwt = false
+
 [functions.campaign-check-donation]
 verify_jwt = false
 

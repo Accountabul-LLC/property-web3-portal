@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamAccess } from '@/hooks/useTeamAccess';
 import { supabase } from '@/integrations/supabase/client';
+import { callAdminEdgeFunction } from '@/lib/adminEdge';
 import Navigation from '@/components/Navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -158,11 +159,12 @@ export default function ActionItems() {
   const updateStatus = async (id: string, newStatus: string) => {
     setBusyIds(prev => new Set(prev).add(id));
     try {
-      const { error } = await supabase
-        .from('action_items')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
+      const { success } = await callAdminEdgeFunction<{ success: boolean }>('action-item-admin', {
+        action: 'update_status',
+        id,
+        status: newStatus,
+      });
+      if (!success) throw new Error('Failed to update');
       setItems(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
       toast.success(`Status → ${newStatus.replace('_', ' ')}`);
     } catch { toast.error('Failed to update'); }
@@ -172,8 +174,11 @@ export default function ActionItems() {
   const deleteItem = async (id: string) => {
     setBusyIds(prev => new Set(prev).add(id));
     try {
-      const { error } = await supabase.from('action_items').delete().eq('id', id);
-      if (error) throw error;
+      const { success } = await callAdminEdgeFunction<{ success: boolean }>('action-item-admin', {
+        action: 'delete',
+        id,
+      });
+      if (!success) throw new Error('Failed to delete');
       setItems(prev => prev.filter(i => i.id !== id));
       toast.success('Item deleted');
     } catch { toast.error('Failed to delete'); }
@@ -241,13 +246,15 @@ export default function ActionItems() {
       if (!res.ok) throw new Error('GitHub push failed');
       const data = await res.json();
 
-      await supabase.from('action_items').update({
+      await callAdminEdgeFunction('action-item-admin', {
+        action: 'sync_github',
+        id: item.id,
         github_issue_url: data.url,
         github_issue_number: data.number,
         github_sync_status: 'synced',
         github_repo: `${GITHUB_OWNER}/${GITHUB_REPO}`,
         pushed_at: new Date().toISOString(),
-      } as any).eq('id', item.id);
+      });
 
       setItems(prev => prev.map(i => i.id === item.id
         ? { ...i, github_issue_url: data.url, github_issue_number: data.number, github_sync_status: 'synced' } : i));
@@ -282,12 +289,13 @@ export default function ActionItems() {
           const data = await res.json();
 
           if (data.state === 'closed') {
-            await supabase.from('action_items').update({
+            await callAdminEdgeFunction('action-item-admin', {
+              action: 'update_status',
+              id: item.id,
               status: 'done',
               completion_signal: `GitHub issue #${item.github_issue_number} closed at ${data.closed_at}`,
-              updated_at: new Date().toISOString(),
-            }).eq('id', item.id);
-            setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'done', completion_signal: `closed` } : i));
+            });
+            setItems(prev => prev.map(i => i.id === item.id ? { ...i, status: 'done' } : i));
             completed++;
           }
         } catch { /* continue */ }

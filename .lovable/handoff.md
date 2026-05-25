@@ -22,3 +22,5 @@ Notes:
   - `campaign-admin` for admin create/update/review actions
   - direct browser writes to `campaigns` and `campaign_donations` should stay blocked
 - Campaign lifecycle events now write to `app_audit_log` server-side for traceability.
+- App-wide server-side scope is documented in [`ServerSidescope.md`](../ServerSidescope.md).
+- Debate transcript/session saves now go through `debate-session-save` instead of direct browser inserts.

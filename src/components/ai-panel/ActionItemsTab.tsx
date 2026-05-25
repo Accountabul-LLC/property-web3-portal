@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { callAdminEdgeFunction } from '@/lib/adminEdge';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
@@ -88,11 +89,12 @@ export default function ActionItemsTab({ refreshKey }: Props) {
   const updateStatus = async (id: string, newStatus: string) => {
     setBusyIds(prev => new Set(prev).add(id));
     try {
-      const { error } = await supabase
-        .from('action_items')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
+      const { success } = await callAdminEdgeFunction<{ success: boolean }>('action-item-admin', {
+        action: 'update_status',
+        id,
+        status: newStatus,
+      });
+      if (!success) throw new Error('Failed to update status');
       setItems(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
       toast.success(`Status → ${newStatus.replace('_', ' ')}`);
     } catch {
@@ -105,8 +107,11 @@ export default function ActionItemsTab({ refreshKey }: Props) {
   const deleteItem = async (id: string) => {
     setBusyIds(prev => new Set(prev).add(id));
     try {
-      const { error } = await supabase.from('action_items').delete().eq('id', id);
-      if (error) throw error;
+      const { success } = await callAdminEdgeFunction<{ success: boolean }>('action-item-admin', {
+        action: 'delete',
+        id,
+      });
+      if (!success) throw new Error('Failed to delete');
       setItems(prev => prev.filter(i => i.id !== id));
       toast.success('Item deleted');
     } catch {
@@ -153,14 +158,15 @@ export default function ActionItemsTab({ refreshKey }: Props) {
       if (!res.ok) throw new Error('GitHub push failed');
       const data = await res.json();
 
-      await supabase
-        .from('action_items')
-        .update({
-          github_issue_url: data.url,
-          github_issue_number: data.number,
-          github_sync_status: 'synced',
-        })
-        .eq('id', item.id);
+      await callAdminEdgeFunction('action-item-admin', {
+        action: 'sync_github',
+        id: item.id,
+        github_issue_url: data.url,
+        github_issue_number: data.number,
+        github_sync_status: 'synced',
+        github_repo: 'JibreelMuhammad/property-web3-portal',
+        pushed_at: new Date().toISOString(),
+      });
 
       setItems(prev =>
         prev.map(i =>

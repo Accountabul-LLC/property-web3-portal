@@ -61,9 +61,13 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
   };
 
   const handleSave = async () => {
-    await saveSession(params);
-    toast.success('Conversation saved');
-    onSaved?.();
+    try {
+      await saveSession(params);
+      toast.success('Conversation saved');
+      onSaved?.();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save conversation');
+    }
   };
 
   const handleNewChat = () => {

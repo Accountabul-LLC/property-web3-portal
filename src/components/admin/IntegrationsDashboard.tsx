@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { callAdminEdgeFunction } from '@/lib/adminEdge';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIAgents, type AIAgent } from '@/hooks/useAIAgents';
 import { Switch } from '@/components/ui/switch';
@@ -65,20 +66,11 @@ export default function IntegrationsDashboard() {
     setToggling(agent.id);
 
     try {
-      // Upsert integration
-      const { error: upsertErr } = await supabase.from('agent_integrations' as any).upsert(
-        { agent_id: agent.id, integration_type: 'github', enabled: newEnabled, updated_at: new Date().toISOString() },
-        { onConflict: 'agent_id,integration_type' }
-      );
-      if (upsertErr) throw upsertErr;
-
-      // Insert audit log
-      await supabase.from('integration_audit_log' as any).insert({
+      await callAdminEdgeFunction('admin-integrations', {
+        action: 'toggle',
         agent_id: agent.id,
         integration_type: 'github',
-        action: newEnabled ? 'enabled' : 'disabled',
-        actor_id: user.id,
-        metadata: { agent_name: agent.name },
+        enabled: newEnabled,
       });
 
       toast.success(`GitHub ${newEnabled ? 'enabled' : 'disabled'} for ${agent.name}`);
@@ -96,18 +88,10 @@ export default function IntegrationsDashboard() {
     setTogglingGlobal(true);
 
     try {
-      const { error: upsertErr } = await supabase.from('agent_integrations' as any).upsert(
-        { agent_id: '00000000-0000-0000-0000-000000000000', integration_type: 'github', enabled: newConnected, updated_at: new Date().toISOString() },
-        { onConflict: 'agent_id,integration_type' }
-      );
-      if (upsertErr) throw upsertErr;
-
-      await supabase.from('integration_audit_log' as any).insert({
-        agent_id: null,
+      await callAdminEdgeFunction('admin-integrations', {
+        action: 'global_toggle',
         integration_type: 'github',
-        action: newConnected ? 'connected' : 'disconnected',
-        actor_id: user.id,
-        metadata: { scope: 'global' },
+        enabled: newConnected,
       });
 
       toast.success(`GitHub integration ${newConnected ? 'connected' : 'disconnected'}`);

@@ -207,22 +207,33 @@ export function useDebateSession() {
   }
 
   async function saveSession(params: DebateParams) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
     const transcript = turns.map(t => ({
       speaker: t.speaker,
       turn: t.turn,
       text: t.text,
     }));
 
-    await supabase.from('ai_debate_sessions').insert({
-      user_id: user.id,
-      topic: params.topic,
-      mode: params.mode,
-      rounds: params.rounds,
-      transcript: transcript as unknown as import('@/integrations/supabase/types').Json,
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/debate-session-save`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic: params.topic,
+        mode: params.mode,
+        rounds: params.rounds,
+        transcript,
+      }),
+    })
+
+    if (!res.ok) {
+      const text = await res.text()
+      throw new Error(text || 'Failed to save session')
+    }
   }
 
   function loadTranscript(transcript: Array<{ speaker: string; turn: number; text: string }>) {
