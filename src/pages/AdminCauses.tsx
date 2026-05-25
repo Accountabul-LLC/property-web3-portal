@@ -22,7 +22,7 @@ import {
 import { loadDraft, saveDraft, clearDraft } from '@/lib/draftStorage'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
-  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw, Eye, EyeOff,
 } from 'lucide-react'
 
 type EditFormShape = {
@@ -60,6 +60,9 @@ interface Campaign {
   total_raised: number
   donor_count: number
   created_at: string
+  visibility: 'public' | 'hidden'
+  hidden_at: string | null
+  hidden_reason: string | null
 }
 
 const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }> = {
@@ -85,7 +88,7 @@ export default function AdminCauses() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('all')
+  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'hidden' | 'all'>('all')
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -258,6 +261,47 @@ export default function AdminCauses() {
       setProcessing(null)
     }
   }
+
+
+
+  async function handleSetVisibility(campaign: Campaign, next: 'public' | 'hidden') {
+    if (next === 'hidden') {
+      const reason = window.prompt('Optional reason for hiding this cause (visible to admins only):', '') ?? ''
+      // If user clicks Cancel, prompt returns null → coalesced to '' above, treat as proceed with empty reason.
+      setProcessing(campaign.id)
+      try {
+        const { data, error } = await supabase.functions.invoke('campaign-admin', {
+          body: { action: 'set_visibility', campaign_id: campaign.id, visibility: 'hidden', reason },
+        })
+        if (error) throw error
+        if (!data?.success) throw new Error(data?.error || 'Failed to hide cause')
+        toast.success('Cause hidden from public view')
+        qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+        qc.invalidateQueries({ queryKey: ['campaigns'] })
+      } catch (err: any) {
+        toast.error(err.message)
+      } finally {
+        setProcessing(null)
+      }
+      return
+    }
+    setProcessing(campaign.id)
+    try {
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: { action: 'set_visibility', campaign_id: campaign.id, visibility: 'public' },
+      })
+      if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Failed to show cause')
+      toast.success('Cause is public again')
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
 
   async function uploadCauseImage(file: File): Promise<string | null> {
     if (!file.type.startsWith('image/')) {
@@ -443,6 +487,7 @@ export default function AdminCauses() {
   const filtered = campaigns?.filter((c) => {
     if (activeTab === 'under_review') return c.status === 'under_review'
     if (activeTab === 'active') return c.status === 'active'
+    if (activeTab === 'hidden') return c.visibility === 'hidden'
     return true
   }) ?? []
 
@@ -450,6 +495,7 @@ export default function AdminCauses() {
     under_review: campaigns?.filter(c => c.status === 'under_review').length ?? 0,
     active:       campaigns?.filter(c => c.status === 'active').length ?? 0,
     completed:    campaigns?.filter(c => c.status === 'completed').length ?? 0,
+    hidden:       campaigns?.filter(c => c.visibility === 'hidden').length ?? 0,
     all:          campaigns?.length ?? 0,
   }
   const totalRaised = campaigns?.reduce((sum, c) => sum + (Number(c.total_raised) || 0), 0) ?? 0
@@ -894,7 +940,7 @@ export default function AdminCauses() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
-          {([['all', 'All'], ['active', 'Active'], ['under_review', 'Under Review']] as const).map(([key, label]) => (
+          {([['all', 'All'], ['active', 'Active'], ['under_review', 'Under Review'], ['hidden', 'Hidden']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
@@ -960,6 +1006,12 @@ export default function AdminCauses() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                         {badge.label}
                       </span>
+                      {campaign.visibility === 'hidden' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <EyeOff className="w-3 h-3" />
+                          Hidden
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         Submitted {new Date(campaign.created_at).toLocaleDateString()}
                       </span>
@@ -989,6 +1041,21 @@ export default function AdminCauses() {
                     >
                       <Pencil className="w-3.5 h-3.5" />
                       <span className="ml-1 hidden sm:inline">Edit</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); handleSetVisibility(campaign, campaign.visibility === 'hidden' ? 'public' : 'hidden') }}
+                      disabled={!!isProcessing}
+                      className="h-8 px-3"
+                      title={campaign.visibility === 'hidden' ? 'Make public again' : 'Hide from public view'}
+                    >
+                      {campaign.visibility === 'hidden'
+                        ? <Eye className="w-3.5 h-3.5" />
+                        : <EyeOff className="w-3.5 h-3.5" />}
+                      <span className="ml-1 hidden sm:inline">
+                        {campaign.visibility === 'hidden' ? 'Show' : 'Hide'}
+                      </span>
                     </Button>
                     {/* Quick actions */}
                     {campaign.status === 'under_review' && (
@@ -1063,6 +1130,26 @@ export default function AdminCauses() {
                       <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Full Description</p>
                       <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{campaign.description}</p>
                     </div>
+
+                    {campaign.visibility === 'hidden' && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+                          <EyeOff className="w-3.5 h-3.5" />
+                          Hidden from public
+                        </p>
+                        <div className="text-sm bg-card border border-border rounded-lg p-3 space-y-1">
+                          {campaign.hidden_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Hidden on {new Date(campaign.hidden_at).toLocaleString()}
+                            </p>
+                          )}
+                          <p className="text-foreground whitespace-pre-line">
+                            {campaign.hidden_reason || 'No reason recorded.'}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
 
                     {campaign.submission_notes && (
                       <div>

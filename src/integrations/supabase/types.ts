@@ -354,6 +354,9 @@ export type Database = {
           donor_count: number
           gallery_urls: string[]
           goal_amount: number | null
+          hidden_at: string | null
+          hidden_by: string | null
+          hidden_reason: string | null
           id: string
           image_url: string | null
           network: string
@@ -369,6 +372,7 @@ export type Database = {
           total_raised: number
           updated_at: string
           video_url: string | null
+          visibility: string
         }
         Insert: {
           admin_notes?: string | null
@@ -382,6 +386,9 @@ export type Database = {
           donor_count?: number
           gallery_urls?: string[]
           goal_amount?: number | null
+          hidden_at?: string | null
+          hidden_by?: string | null
+          hidden_reason?: string | null
           id?: string
           image_url?: string | null
           network?: string
@@ -397,6 +404,7 @@ export type Database = {
           total_raised?: number
           updated_at?: string
           video_url?: string | null
+          visibility?: string
         }
         Update: {
           admin_notes?: string | null
@@ -410,6 +418,9 @@ export type Database = {
           donor_count?: number
           gallery_urls?: string[]
           goal_amount?: number | null
+          hidden_at?: string | null
+          hidden_by?: string | null
+          hidden_reason?: string | null
           id?: string
           image_url?: string | null
           network?: string
@@ -425,6 +436,7 @@ export type Database = {
           total_raised?: number
           updated_at?: string
           video_url?: string | null
+          visibility?: string
         }
         Relationships: []
       }
