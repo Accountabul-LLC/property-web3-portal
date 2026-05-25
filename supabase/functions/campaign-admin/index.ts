@@ -321,7 +321,59 @@ Deno.serve(async (req) => {
       })
     }
 
-    return new Response(JSON.stringify({ error: `Unsupported action: ${action}` }), {
+    if (action === 'set_visibility') {
+      const campaignId = String(body?.campaign_id ?? '').trim()
+      const visibility = String(body?.visibility ?? '').trim()
+      const reason = String(body?.reason ?? '').trim()
+      if (!campaignId) throw new Error('campaign_id is required')
+      if (!['public', 'hidden'].includes(visibility)) throw new Error("visibility must be 'public' or 'hidden'")
+
+      const { data: current, error: fetchError } = await svc
+        .from('campaigns')
+        .select('*')
+        .eq('id', campaignId)
+        .maybeSingle()
+      if (fetchError) throw fetchError
+      if (!current) throw new Error('Campaign not found')
+
+      const updates: Record<string, unknown> = visibility === 'hidden'
+        ? {
+            visibility: 'hidden',
+            hidden_at: new Date().toISOString(),
+            hidden_by: user.id,
+            hidden_reason: reason || null,
+          }
+        : {
+            visibility: 'public',
+            hidden_at: null,
+            hidden_by: null,
+            hidden_reason: null,
+          }
+
+      const { data: campaign, error } = await svc
+        .from('campaigns')
+        .update(updates)
+        .eq('id', campaignId)
+        .select('*')
+        .single()
+      if (error) throw error
+
+      await logAppAudit(svc, {
+        area: 'causes',
+        action: visibility === 'hidden' ? 'hidden' : 'unhidden',
+        entityType: 'campaign',
+        entityId: campaign.id,
+        actorId: user.id,
+        beforeState: current,
+        afterState: campaign,
+        metadata: { origin: 'campaign-admin', visibility, reason: reason || null },
+      })
+
+      return new Response(JSON.stringify({ success: true, campaign }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
       status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (error) {
