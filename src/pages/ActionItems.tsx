@@ -385,7 +385,7 @@ export default function ActionItems() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="p-12 text-center">
-              <Filter className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <Filter className="w-10 h-10 text-muted-foreground mx-auto mb-3" aria-hidden="true" />
               <p className="text-sm text-muted-foreground">
                 {items.length === 0
                   ? 'No action items yet. Generate them from the AI Panel.'
