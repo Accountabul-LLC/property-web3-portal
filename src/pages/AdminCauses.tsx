@@ -259,7 +259,10 @@ export default function AdminCauses() {
       toast.error(err.message)
     } finally {
       setProcessing(null)
+    }
   }
+
+
 
   async function handleSetVisibility(campaign: Campaign, next: 'public' | 'hidden') {
     if (next === 'hidden') {
