@@ -242,7 +242,7 @@ const Navigation = () => {
             className="fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto">
+            <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
