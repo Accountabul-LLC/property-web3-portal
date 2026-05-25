@@ -290,27 +290,88 @@ Deno.serve(async (req) => {
 
     const isDirectCampaign = campaign.campaign_type === 'direct'
     const finishAfter = isDirectCampaign || !campaign.release_date ? null : toXrplTime(campaign.release_date)
-    const drops = toDrops(xrpAmount)
 
-    const txjson = isDirectCampaign
-      ? {
-          TransactionType: 'Payment',
-          Account: wallet.wallet_address,
-          Amount: drops,
-          Destination: campaign.recipient_wallet_address,
-        }
-      : {
-          TransactionType: 'EscrowCreate',
-          Account: wallet.wallet_address,
-          Amount: drops,
-          Destination: campaign.recipient_wallet_address,
-          FinishAfter: finishAfter,
-        }
+    // Build the txjson depending on requested currency.
+    let txjson: Record<string, unknown>
+    let amountLogLabel: string
+
+    if (isRlusd) {
+      const rlusdIssuer = RLUSD_ISSUER[recipientNetwork]
+      if (!rlusdIssuer) {
+        return new Response(JSON.stringify({ error: `RLUSD is not available on ${recipientNetwork}.` }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Recipient must have an RLUSD trustline; otherwise the payment will fail.
+      const linesRes = await xrplRpc(recipientNetwork, 'account_lines', [{
+        account: campaign.recipient_wallet_address,
+        peer: rlusdIssuer,
+        ledger_index: 'validated',
+      }])
+      const recipientHasTrustline = Array.isArray(linesRes?.result?.lines)
+        && linesRes.result.lines.some((l: { currency?: string }) => l?.currency === RLUSD_CURRENCY_HEX || l?.currency === 'RLUSD')
+      if (!recipientHasTrustline) {
+        return new Response(JSON.stringify({
+          error: "Recipient hasn't set up an RLUSD trustline yet — ask them to add one, or donate in XRP instead.",
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      // Donor must hold enough RLUSD on a trustline to the same issuer.
+      const donorLinesRes = await xrplRpc(recipientNetwork, 'account_lines', [{
+        account: wallet.wallet_address,
+        peer: rlusdIssuer,
+        ledger_index: 'validated',
+      }])
+      const donorLine = Array.isArray(donorLinesRes?.result?.lines)
+        ? donorLinesRes.result.lines.find((l: { currency?: string }) => l?.currency === RLUSD_CURRENCY_HEX || l?.currency === 'RLUSD')
+        : null
+      const donorBalance = donorLine ? parseFloat(donorLine.balance ?? '0') : 0
+      if (!donorLine || donorBalance < donationAmount) {
+        return new Response(JSON.stringify({
+          error: donorLine
+            ? `Insufficient RLUSD balance — you have ${donorBalance} RLUSD, this donation needs ${donationAmount}.`
+            : "Your wallet doesn't have an RLUSD trustline. Add one in Xaman, then try again.",
+        }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      txjson = {
+        TransactionType: 'Payment',
+        Account: wallet.wallet_address,
+        Destination: campaign.recipient_wallet_address,
+        Amount: {
+          currency: RLUSD_CURRENCY_HEX,
+          issuer: rlusdIssuer,
+          value: String(donationAmount),
+        },
+      }
+      amountLogLabel = `${donationAmount} RLUSD`
+    } else {
+      // XRP path (escrow or direct).
+      const drops = toDrops(donationAmount)
+      txjson = isDirectCampaign
+        ? {
+            TransactionType: 'Payment',
+            Account: wallet.wallet_address,
+            Amount: drops,
+            Destination: campaign.recipient_wallet_address,
+          }
+        : {
+            TransactionType: 'EscrowCreate',
+            Account: wallet.wallet_address,
+            Amount: drops,
+            Destination: campaign.recipient_wallet_address,
+            FinishAfter: finishAfter,
+          }
+      amountLogLabel = `${donationAmount} XRP (${drops} drops)`
+    }
 
     console.log(
-      isDirectCampaign
-        ? `Building Payment: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops)`
-        : `Building EscrowCreate: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${xrpAmount} XRP (${drops} drops) | FinishAfter: ${finishAfter}`,
+      `Building ${(txjson as { TransactionType: string }).TransactionType}: ${wallet.wallet_address} → ${campaign.recipient_wallet_address} | ${amountLogLabel}${finishAfter ? ` | FinishAfter: ${finishAfter}` : ''}`,
     )
 
     // ── Send to Xaman ─────────────────────────────────────────
