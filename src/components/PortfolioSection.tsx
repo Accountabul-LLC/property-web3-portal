@@ -8,6 +8,7 @@ import { useXRPLPortfolio, type MPTIssuance, type MPTHolding } from '@/hooks/use
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
+import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 import NetworkToggle from '@/components/NetworkToggle';
