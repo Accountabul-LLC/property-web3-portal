@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { LayoutDashboard, ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
+import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import Navigation from "@/components/Navigation";
@@ -44,11 +44,6 @@ export default function Payments() {
   const updateDraft = (field: keyof PaymentDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value } as PaymentDraft));
   };
-
-  const request = useMemo(
-    () => buildPaymentCheckoutRequest(draft, rail, idempotencyKey),
-    [draft, rail, idempotencyKey],
-  );
 
   const handleCheckout = async (nextRail: PaymentRail) => {
     const amount = Number(draft.amount);
@@ -133,7 +128,7 @@ export default function Payments() {
                 location attachment. The browser only prepares the request. Settlement stays server-side.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
               <Badge variant="outline" className="rounded-full px-3 py-1">
                 <ReceiptText className="mr-2 h-3.5 w-3.5" />
                 Invoice and payment flows
@@ -143,8 +138,8 @@ export default function Payments() {
                 No browser settlement logic
               </Badge>
               <Badge variant="outline" className="rounded-full px-3 py-1">
-                <LayoutDashboard className="mr-2 h-3.5 w-3.5" />
-                Backend handoff ready
+                <WalletCards className="mr-2 h-3.5 w-3.5" />
+                Wallet and card rails
               </Badge>
               <Link
                 to="/payments/history"
@@ -190,29 +185,19 @@ export default function Payments() {
           <PaymentComposer draft={draft} busy={busy} onChange={updateDraft} onCheckout={handleCheckout} />
 
           <div className="space-y-6">
-            <PaymentSummary draft={draft} request={request} response={response} rail={rail} status={status} />
+            <PaymentSummary draft={draft} response={response} rail={rail} status={status} />
             <Card className="border-border/70 bg-card/90 shadow-card">
               <CardHeader>
-                <CardTitle className="text-xl">Read-only support snapshot</CardTitle>
-                <CardDescription>Observational data only. No privileged browser actions are exposed here.</CardDescription>
+                <CardTitle className="text-xl">After you continue</CardTitle>
+                <CardDescription>The finished payment will show up in your history for review and support.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 md:grid-cols-2">
-                <div className="rounded-xl bg-muted/40 p-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Browser status</div>
-                  <div className="mt-1 font-medium">{busy ? "Preparing handoff" : "Idle"}</div>
-                </div>
-                <div className="rounded-xl bg-muted/40 p-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Session state</div>
-                  <div className="mt-1 font-medium">{response ? "Ready" : "Draft only"}</div>
-                </div>
-                <div className="rounded-xl bg-muted/40 p-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Reference</div>
-                  <div className="mt-1 font-medium">{draft.invoiceNumber || "None"}</div>
-                </div>
-                <div className="rounded-xl bg-muted/40 p-3">
-                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Contract mode</div>
-                  <div className="mt-1 font-medium">Thin client only</div>
-                </div>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>
+                  Card payments open a secure Stripe checkout. Wallet payments prepare a wallet request for signing.
+                </p>
+                <p>
+                  You can come back later to see the payment status, invoice number, and any reconciliation updates.
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -227,45 +212,10 @@ export default function Payments() {
             </p>
           </div>
           <PaymentRailCards
-            response={response}
             busy={busy}
             activeRail={rail}
             onCheckout={handleCheckout}
           />
-        </section>
-
-        <section id="contract" className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_420px]">
-          <Card className="border-border/70 bg-card/90 shadow-card">
-            <CardHeader>
-              <CardTitle className="text-xl">Backend contract shape</CardTitle>
-              <CardDescription>
-                This is the exact payload the frontend prepares before handing the request to the payments edge
-                function.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <pre className="overflow-auto rounded-2xl border border-border bg-muted/30 p-4 text-xs leading-6 text-muted-foreground">
-{JSON.stringify(request, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border/70 bg-card/90 shadow-card">
-            <CardHeader>
-              <CardTitle className="text-xl">Next dependency</CardTitle>
-              <CardDescription>The frontend is ready. The backend endpoint owns settlement and reconciliation.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm text-muted-foreground">
-              <p>
-                `payments-create` should return the payment and invoice records plus a provider payload. For Stripe, that
-                means the `client_secret`. For XRPL, that means the wallet request details.
-              </p>
-              <p>
-                Until then, this page remains a thin request builder and read-only preview. No settlement is performed in
-                the browser.
-              </p>
-            </CardContent>
-          </Card>
         </section>
       </main>
 

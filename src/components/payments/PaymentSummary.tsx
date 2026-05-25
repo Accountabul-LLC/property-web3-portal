@@ -1,14 +1,13 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { CheckCircle2, Clock3, ShieldCheck, WalletCards } from "lucide-react";
+import { CheckCircle2, Clock3, WalletCards } from "lucide-react";
 
-import type { PaymentCheckoutRequest, PaymentCheckoutResponse, PaymentDraft, PaymentRail } from "./paymentTypes";
+import type { PaymentCheckoutResponse, PaymentDraft, PaymentRail } from "./paymentTypes";
 import { formatPaymentAmount, formatPaymentAttachment } from "./paymentUtils";
 
 type PaymentSummaryProps = {
   draft: PaymentDraft;
-  request: PaymentCheckoutRequest;
   response: PaymentCheckoutResponse | null;
   rail: PaymentRail;
   status: "idle" | "preparing" | "ready" | "error";
@@ -23,7 +22,7 @@ function JsonLine({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PaymentSummary({ draft, request, response, rail, status }: PaymentSummaryProps) {
+export function PaymentSummary({ draft, response, rail, status }: PaymentSummaryProps) {
   const ready = status === "ready" && !!response;
   const payment = response?.payment ?? null;
   const invoice = response?.invoice ?? null;
@@ -71,41 +70,29 @@ export function PaymentSummary({ draft, request, response, rail, status }: Payme
 
         <Separator />
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Backend contract preview
-          </div>
-          <pre className="overflow-auto rounded-2xl border border-border bg-muted/30 p-4 text-xs leading-6 text-muted-foreground">
-{JSON.stringify(request, null, 2)}
-          </pre>
-        </div>
-
-        <Separator />
-
         <div className="grid gap-3 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Clock3 className="h-4 w-4 text-primary" />
-              Session status
+              What happens next
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {ready
-                ? `Payment ${payment?.id ?? "record"} is ready with invoice ${invoice?.invoice_number ?? "pending"}.`
-                : "No settlement happens here. The browser only prepares the request payload."}
+                ? `Your ${draft.flow} is ready. Continue in the selected rail to complete it and track it in history.`
+                : "Review the details and pick a payment rail to create the request."}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-sm font-medium">
               <CheckCircle2 className="h-4 w-4 text-primary" />
-              Provider payload
+              Confirmation
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {provider?.provider === "stripe"
-                ? "Stripe creates the payment intent server-side and returns the client secret to the browser."
+                ? "Stripe prepares the secure card checkout session server-side."
                 : provider?.provider === "xrpl"
-                  ? "XRPL returns a wallet request that the connected wallet can sign."
-                  : "The backend has not returned a provider payload yet."}
+                  ? "XRPL prepares a wallet request for the connected wallet to sign."
+                  : "The backend has not returned a payment session yet."}
             </p>
           </div>
         </div>
@@ -116,12 +103,9 @@ export function PaymentSummary({ draft, request, response, rail, status }: Payme
             <div className="grid gap-3 md:grid-cols-2">
               <JsonLine label="Payment status" value={payment?.status ?? "pending"} />
               <JsonLine label="Invoice status" value={invoice?.status ?? "open"} />
-              <JsonLine label="Provider" value={provider?.provider ?? "pending"} />
-              <JsonLine label="Provider state" value={provider?.status ?? "pending"} />
+              <JsonLine label="Reference" value={invoice?.invoice_number ?? payment?.id ?? "pending"} />
+              <JsonLine label="Rail" value={provider?.provider ?? "pending"} />
             </div>
-            <pre className="overflow-auto rounded-2xl border border-border bg-muted/30 p-4 text-xs leading-6 text-muted-foreground">
-{JSON.stringify(response, null, 2)}
-            </pre>
           </div>
         ) : null}
       </CardContent>
