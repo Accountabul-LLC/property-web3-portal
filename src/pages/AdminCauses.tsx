@@ -74,7 +74,7 @@ export default function AdminCauses() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [rejectionReason, setRejectionReason] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('under_review')
+  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('all')
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
@@ -551,7 +551,7 @@ export default function AdminCauses() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
-          {([['under_review', 'Under Review'], ['active', 'Active'], ['all', 'All']] as const).map(([key, label]) => (
+          {([['all', 'All'], ['active', 'Active'], ['under_review', 'Under Review']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
