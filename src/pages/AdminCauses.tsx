@@ -60,6 +60,9 @@ interface Campaign {
   total_raised: number
   donor_count: number
   created_at: string
+  visibility: 'public' | 'hidden'
+  hidden_at: string | null
+  hidden_reason: string | null
 }
 
 const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }> = {
