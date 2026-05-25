@@ -50,9 +50,10 @@ const TokenAvatar = ({ issuer, currency, size = 10 }: { issuer?: string; currenc
 interface PortfolioSectionProps {
   overrideAddress?: string | null;
   isReadOnly?: boolean;
+  focusTxHash?: string | null;
 }
 
-const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSectionProps) => {
+const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = null }: PortfolioSectionProps) => {
   const queryClient = useQueryClient();
   const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
