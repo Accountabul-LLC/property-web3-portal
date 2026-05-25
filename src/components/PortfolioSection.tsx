@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets, Gem } from 'lucide-react';
+import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets, Gem, Copy, Check } from 'lucide-react';
 import { useXRPLPortfolio, type MPTIssuance, type MPTHolding } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
@@ -92,6 +92,19 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const [expandedToken, setExpandedToken] = useState<string | null>(null);
   const [mptSortMode, setMptSortMode] = useState<'newest' | 'alpha' | 'supply'>('newest');
   const [mptSearchQuery, setMptSearchQuery] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = async () => {
+    if (!displayAddress) return;
+    try {
+      await navigator.clipboard.writeText(displayAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success('Address copied to clipboard');
+    } catch {
+      toast.error('Failed to copy address');
+    }
+  };
 
   // Fetch enriched metadata for all token holdings
   const { data: tokenMetaData } = useTokenMeta(
@@ -206,15 +219,28 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
             {!isReadOnly && activeWallet?.label && activeWallet.label !== activeWallet.xamanName && (
               <span className="text-foreground">· {activeWallet.label}</span>
             )}
-            <a
-              href={`${explorerBase}/accounts/${displayAddress}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1"
-            >
-              {displayAddress}
-              <ExternalLink className="w-3 h-3" />
-            </a>
+            <div className="flex items-center gap-1.5">
+              <a
+                href={`${explorerBase}/accounts/${displayAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1"
+              >
+                {shortenAddress(displayAddress || '')}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+              <button
+                onClick={handleCopyAddress}
+                className="inline-flex items-center justify-center p-1 rounded hover:bg-muted transition-colors"
+                title="Copy address"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-green-500" />
+                ) : (
+                  <Copy className="w-3 h-3 text-muted-foreground hover:text-foreground" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
         {!isReadOnly && (
