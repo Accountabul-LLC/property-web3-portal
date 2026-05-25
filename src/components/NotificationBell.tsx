@@ -106,15 +106,44 @@ export function NotificationBell() {
     if (user) await markAllServerNotificationsRead(user.id);
   };
 
+  const resolveWalletAddress = async (item: UnifiedItem): Promise<string | null> => {
+    if (item.wallet_address) return item.wallet_address;
+    if (item.source === 'server' && item.donation_id) {
+      const { data } = await supabase
+        .from('campaign_donations')
+        .select('donor_wallet_address')
+        .eq('id', item.donation_id)
+        .maybeSingle();
+      return data?.donor_wallet_address ?? null;
+    }
+    return null;
+  };
+
   const handleClick = async (item: UnifiedItem) => {
+    // Mark read first
     if (item.source === 'server') {
       await markServerNotificationRead((item.raw as ServerNotification).id);
     } else if (activeAddress) {
       markRead(activeAddress, network, (item.raw as WalletNotification).id);
     }
-    if (item.tx_hash) {
-      window.open(explorerUrl(item.network, item.tx_hash), '_blank');
+
+    // Match the notification's network if we're on a different one
+    if (item.network !== network) {
+      setActiveNetwork(item.network);
     }
+
+    // Resolve target wallet and auto-switch
+    const targetAddress = await resolveWalletAddress(item);
+    if (targetAddress && targetAddress !== activeAddress) {
+      const owned = wallets.find((w) => w.address === targetAddress);
+      if (owned) setActiveWallet(targetAddress);
+    }
+
+    // Navigate to portfolio with tx focus
+    const params = new URLSearchParams();
+    if (targetAddress) params.set('account', targetAddress);
+    if (item.tx_hash) params.set('tx', item.tx_hash);
+    navigate(`/portfolio${params.toString() ? `?${params.toString()}` : ''}`);
   };
 
   return (
