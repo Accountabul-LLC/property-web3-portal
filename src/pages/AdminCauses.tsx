@@ -407,6 +407,7 @@ export default function AdminCauses() {
     try {
       if (!editForm.title.trim()) throw new Error('Title is required')
       if (!editForm.description.trim()) throw new Error('Description is required')
+      const current = campaigns?.find((x) => x.id === editId)
       const { data, error } = await supabase.functions.invoke('campaign-admin', {
         body: {
           action: 'update',
@@ -420,6 +421,25 @@ export default function AdminCauses() {
       })
       if (error) throw error
       if (!data?.success) throw new Error(data?.error || 'Failed to update campaign')
+
+      // Apply visibility change as part of Save Changes (if toggled)
+      const prevVisibility = current?.visibility ?? 'public'
+      const nextVisibility = editForm.visibility
+      const nextReason = editForm.hidden_reason.trim()
+      const reasonChanged = nextVisibility === 'hidden' && nextReason !== (current?.hidden_reason ?? '')
+      if (nextVisibility !== prevVisibility || reasonChanged) {
+        const { data: visData, error: visErr } = await supabase.functions.invoke('campaign-admin', {
+          body: {
+            action: 'set_visibility',
+            campaign_id: editId,
+            visibility: nextVisibility,
+            reason: nextVisibility === 'hidden' ? (nextReason || null) : null,
+          },
+        })
+        if (visErr) throw visErr
+        if (!visData?.success) throw new Error(visData?.error || 'Failed to update visibility')
+      }
+
       toast.success('Campaign updated')
       if (editId) clearDraft(editDraftKey(editId))
       setEditHasDraft(false)
