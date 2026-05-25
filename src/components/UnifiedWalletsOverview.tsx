@@ -193,7 +193,7 @@ export default function UnifiedWalletsOverview() {
                   <>
                     {s.hasUsd && (
                       <p className="text-sm font-semibold">
-                        ${s.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        ${s.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     )}
                     <p className={`text-[11px] ${s.hasUsd ? 'text-muted-foreground' : 'text-sm font-semibold text-foreground'}`}>
