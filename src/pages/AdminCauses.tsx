@@ -14,6 +14,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
+import { AcceptedAssetsPicker, type SupportedAsset } from '@/components/causes/AcceptedAssetsPicker'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import {
   formatCauseReleaseCountdown,
