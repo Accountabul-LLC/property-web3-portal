@@ -37,6 +37,7 @@ import Payments from "./pages/Payments";
 import PaymentsHistory from "./pages/PaymentsHistory";
 import PaymentDetail from "./pages/PaymentDetail";
 import Pricing from "./pages/Pricing";
+import DeedProtection from "./pages/DeedProtection";
 import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="/causes/apply" element={<CauseApply />} />
               <Route path="/causes/my-donations" element={<MyDonations />} />
               <Route path="/causes/:slug" element={<CauseDetail />} />
+              <Route path="/protection/deed-fraud" element={<DeedProtection />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
