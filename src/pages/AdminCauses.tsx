@@ -274,14 +274,16 @@ export default function AdminCauses() {
   const counts = {
     under_review: campaigns?.filter(c => c.status === 'under_review').length ?? 0,
     active:       campaigns?.filter(c => c.status === 'active').length ?? 0,
+    completed:    campaigns?.filter(c => c.status === 'completed').length ?? 0,
     all:          campaigns?.length ?? 0,
   }
+  const totalRaised = campaigns?.reduce((sum, c) => sum + (Number(c.total_raised) || 0), 0) ?? 0
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Navigation />
 
-      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+      <main className="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         <button
           onClick={() => navigate('/admin')}
           className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
@@ -290,15 +292,43 @@ export default function AdminCauses() {
           Admin Dashboard
         </button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Heart className="w-5 h-5 text-primary" />
+        {/* Header with inline Add CTA */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Heart className="w-5 h-5 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">Causes Management</h1>
+              <p className="text-sm text-muted-foreground">Review submissions, approve campaigns, trigger escrow release</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">Causes Management</h1>
-            <p className="text-sm text-muted-foreground">Review submissions, approve campaigns, trigger escrow release</p>
-          </div>
+          <Button onClick={() => setAddOpen(true)} className="h-10 gap-1.5 self-start sm:self-auto">
+            <Plus className="w-4 h-4" />
+            Add Cause
+          </Button>
         </div>
+
+        {/* Stats summary */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Under Review</p>
+            <p className="text-2xl font-semibold mt-1">{counts.under_review}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Heart className="w-3.5 h-3.5" /> Active</p>
+            <p className="text-2xl font-semibold mt-1">{counts.active}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Check className="w-3.5 h-3.5" /> Completed</p>
+            <p className="text-2xl font-semibold mt-1">{counts.completed}</p>
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5"><Wallet className="w-3.5 h-3.5" /> Total Raised</p>
+            <p className="text-2xl font-semibold mt-1">{totalRaised.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">XRP</span></p>
+          </Card>
+        </div>
+
 
         <Card className="p-5 mb-8">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
