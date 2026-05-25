@@ -280,6 +280,23 @@ export function useMyData() {
 - Localhost audit: no service worker or app-level localhost redirect found; only Vite server config bound broadly to port 8080.
 - Updated Vite dev server so Lovable sandbox still exposes `::`, while local development defaults to `127.0.0.1:5173` with non-strict port fallback and optional `PORT` override.
 
+### 2026-05-24 | codex
+- Added `docs/CAUSES_PRODUCT.md` as the Causes product brief.
+- Gated `CauseApply` so signed-out users see a sign-in prompt instead of a form that would fail RLS.
+- Updated `campaign-release` and the admin release toast to distinguish released, manual-signing, and error outcomes.
+
+### 2026-05-24 | codex
+- Added a network-aware `network` field to Causes campaigns and a migration to backfill and constrain it.
+- Built the `My Donations` page and wired `/causes/my-donations` into the app so signed-in users can review their donations.
+- Added search and status filtering on the Causes listing page.
+- Rendered campaign video URLs on the detail page and switched explorer links to use the campaign network instead of hardcoded testnet.
+- Exposed `My Donations` in the main navigation for signed-in users so the donor history page is discoverable from the app chrome.
+- Added a Causes product comparison section to the brief covering Lovable baseline, product-standard upgrades, and remaining hardening work.
+
+### 2026-05-24 | codex
+- Hardened Causes donations so the donor wallet network must match the campaign network before a payload is created.
+- Updated donation polling to wait for a validated XRPL EscrowCreate that matches the expected recipient and amount before marking a donation as escrowed.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements

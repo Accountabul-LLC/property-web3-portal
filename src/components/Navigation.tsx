@@ -52,6 +52,7 @@ const Navigation = () => {
   // shortLabel used between lg (1024px) and xl (1280px) to prevent overflow
   const navItems = [
     { path: '/causes',       label: 'Causes',       shortLabel: 'Causes',  icon: Heart },
+    ...(user ? [{ path: '/causes/my-donations', label: 'My Donations', shortLabel: 'Donations', icon: Coins }] : []),
     { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },
     { path: '/professionals', label: 'Professionals', shortLabel: 'Pros',  icon: Users },

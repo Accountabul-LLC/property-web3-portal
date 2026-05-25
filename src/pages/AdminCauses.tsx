@@ -25,6 +25,7 @@ interface Campaign {
   slug: string
   description: string
   image_url: string | null
+  network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
@@ -45,6 +46,12 @@ const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }>
   rejected:     { label: 'Rejected',     className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
 }
 
+function explorerBase(network?: string | null) {
+  return network === 'testnet'
+    ? 'https://testnet.xrpl.org'
+    : 'https://livenet.xrpl.org'
+}
+
 export default function AdminCauses() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
@@ -59,7 +66,7 @@ export default function AdminCauses() {
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('campaigns')
         .select('*')
         .order('created_at', { ascending: false }) as any
@@ -85,7 +92,7 @@ export default function AdminCauses() {
   async function handleApprove(id: string) {
     setProcessing(id)
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('campaigns')
         .update({
           status: 'active',
@@ -111,7 +118,7 @@ export default function AdminCauses() {
     }
     setProcessing(id)
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('campaigns')
         .update({
           status: 'rejected',
@@ -150,7 +157,15 @@ export default function AdminCauses() {
       )
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Release failed')
-      toast.success(`Release initiated — ${json.released_count} escrow(s) finishing`)
+      if (json.campaign_completed) {
+        toast.success(`All escrow released for ${campaign.title}`)
+      } else if ((json.manual_count ?? 0) > 0 && (json.released_count ?? 0) === 0) {
+        toast.info(`Release prepared for manual signing — ${json.manual_count} escrow(s) waiting`)
+      } else if ((json.manual_count ?? 0) > 0) {
+        toast.info(`${json.released_count} escrow(s) released, ${json.manual_count} still need manual signing`)
+      } else {
+        toast.success(`Released ${json.released_count} escrow(s)`)
+      }
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
     } catch (err: any) {
       toast.error(err.message)
@@ -326,7 +341,7 @@ export default function AdminCauses() {
                         <div className="flex items-center gap-2">
                           <code className="text-xs font-mono break-all">{campaign.recipient_wallet_address}</code>
                           <a
-                            href={`https://testnet.xrpl.org/accounts/${campaign.recipient_wallet_address}`}
+                            href={`${explorerBase(campaign.network)}/accounts/${campaign.recipient_wallet_address}`}
                             target="_blank" rel="noopener noreferrer"
                             className="text-primary hover:opacity-70 flex-shrink-0"
                           >

@@ -4,11 +4,10 @@
  * Triggers EscrowFinish for all escrowed donations on a campaign whose
  * release_date has passed. Funds go directly from escrow to recipient wallet.
  *
- * For testnet: auto-signs EscrowFinish using the platform signing wallet if
- *   configured (CAMPAIGN_RELEASE_SIGNER_SEED). Falls back to building the
- *   tx JSON for manual submission if no signer is configured.
- *
- * For mainnet: builds EscrowFinish tx JSON and sends to admin's Xaman for signing.
+ * Uses the network stored on the original Xaman payload so the release path
+ * matches the donation path. If a testnet signer is configured, the function
+ * can auto-submit EscrowFinish; otherwise it returns transaction JSON for
+ * manual signing.
  *
  * Body: { campaign_id }
  * Returns: { released_count, results[] }
@@ -17,7 +16,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.com',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
@@ -94,7 +93,7 @@ Deno.serve(async (req) => {
 
     const { data: campaign } = await svc
       .from('campaigns')
-      .select('id, title, status, release_date, recipient_wallet_address, network')
+      .select('id, title, status, release_date, recipient_wallet_address')
       .eq('id', campaign_id)
       .maybeSingle() as any
 
@@ -117,7 +116,7 @@ Deno.serve(async (req) => {
     // ── Fetch all escrowed donations ──────────────────────────
     const { data: donations } = await svc
       .from('campaign_donations')
-      .select('id, donor_wallet_address, amount, escrow_tx_hash, escrow_sequence')
+      .select('id, donor_wallet_address, amount, escrow_tx_hash, escrow_sequence, xaman_payload_uuid')
       .eq('campaign_id', campaign_id)
       .eq('escrow_status', 'escrowed') as any
 
@@ -135,7 +134,6 @@ Deno.serve(async (req) => {
 
     // Optional platform signer for testnet auto-release
     const signerSeed = Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
-    const network: string = campaign.network ?? 'testnet'
 
     const results: any[] = []
 
@@ -146,6 +144,14 @@ Deno.serve(async (req) => {
         continue
       }
 
+      const { data: xamanPayload } = await svc
+        .from('xaman_payloads')
+        .select('network')
+        .eq('uuid', donation.xaman_payload_uuid)
+        .maybeSingle() as any
+
+      const network = xamanPayload?.network ?? 'mainnet'
+
       const finishTx: Record<string, unknown> = {
         TransactionType: 'EscrowFinish',
         Account: campaign.recipient_wallet_address, // recipient finishes the escrow
@@ -154,7 +160,7 @@ Deno.serve(async (req) => {
       }
 
       // Testnet auto-sign path
-      if (signerSeed && network !== 'mainnet') {
+      if (signerSeed && network === 'testnet') {
         try {
           const { Wallet } = await import('npm:xrpl@3.1.0')
           const signerWallet = Wallet.fromSeed(signerSeed)
@@ -222,9 +228,13 @@ Deno.serve(async (req) => {
     }
 
     const releasedCount = results.filter(r => r.status === 'released').length
+    const manualCount = results.filter(r => r.status === 'pending_manual').length
+    const errorCount = results.filter(r => r.status === 'error').length
 
     return new Response(JSON.stringify({
       released_count: releasedCount,
+      manual_count: manualCount,
+      error_count: errorCount,
       total_donations: donations.length,
       campaign_completed: allReleased,
       results,

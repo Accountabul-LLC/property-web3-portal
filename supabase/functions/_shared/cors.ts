@@ -1,6 +1,7 @@
 const DEFAULT_ALLOWED_ORIGINS = [
-  'https://preview--property-web3-portal.lovable.app',
-  'https://accountabul.lovable.app',
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+  Deno.env.get('APP_URL') ?? 'https://accountabul.com',
 ];
 
 function loadAllowedOrigins() {

@@ -20,7 +20,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.com',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, recipient_wallet_address, release_date, currency')
+      .select('id, title, slug, status, network, recipient_wallet_address, release_date, currency')
       .eq('id', campaign_id)
       .maybeSingle()
 
@@ -102,6 +102,11 @@ Deno.serve(async (req) => {
     }
     if (campaign.status !== 'active') {
       return new Response(JSON.stringify({ error: `Campaign is not accepting donations (status: ${campaign.status})` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (campaign.network !== 'mainnet' && campaign.network !== 'testnet') {
+      return new Response(JSON.stringify({ error: 'Campaign network is not configured' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -123,6 +128,13 @@ Deno.serve(async (req) => {
 
     if (!wallet) {
       return new Response(JSON.stringify({ error: 'No active wallet connected. Please connect your Xaman wallet first.' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+    if (wallet.network !== campaign.network) {
+      return new Response(JSON.stringify({
+        error: `Connected wallet network (${wallet.network ?? 'unknown'}) must match the campaign network (${campaign.network}).`,
+      }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -148,7 +160,7 @@ Deno.serve(async (req) => {
         submit: true,
         expire: 300,
         return_url: {
-          web: `${Deno.env.get('APP_URL') ?? 'https://accountabul.lovable.app'}/causes/${campaign.slug}`,
+          web: `${Deno.env.get('APP_URL') ?? 'https://accountabul.com'}/causes/${campaign.slug}`,
         },
       },
       custom_meta: {
@@ -186,10 +198,11 @@ Deno.serve(async (req) => {
       uuid: xamanData.uuid,
       status: 'pending',
       intended_user_id: user.id,
-      network: wallet.network ?? 'mainnet',
+      network: campaign.network,
       metadata: {
         purpose: 'CAMPAIGN_DONATION',
         campaign_id,
+        campaign_network: campaign.network,
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
         amount_xrp: xrpAmount,

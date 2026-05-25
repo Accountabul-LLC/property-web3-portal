@@ -8,6 +8,7 @@ export type Campaign = {
   description: string
   image_url: string | null
   video_url: string | null
+  network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
@@ -22,11 +23,21 @@ export type Campaign = {
   updated_at: string
 }
 
+export type MyDonation = {
+  id: string
+  amount: number
+  currency: string
+  escrow_status: 'pending' | 'escrowed' | 'released' | 'cancelled'
+  donor_message: string | null
+  created_at: string
+  campaigns: Pick<Campaign, 'id' | 'title' | 'slug' | 'release_date' | 'network' | 'currency' | 'recipient_wallet_address'> | null
+}
+
 export function useCampaigns() {
   return useQuery({
     queryKey: ['campaigns'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('campaigns')
         .select('*')
         .in('status', ['active', 'completed'])
@@ -42,7 +53,7 @@ export function useCampaign(slug: string) {
   return useQuery({
     queryKey: ['campaign', slug],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('campaigns')
         .select('*')
         .eq('slug', slug)
@@ -59,7 +70,7 @@ export function useCampaignDonations(campaignId: string) {
   return useQuery({
     queryKey: ['campaign-donations', campaignId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('campaign_donations')
         .select('id, donor_wallet_address, amount, currency, donor_message, is_anonymous, escrow_status, created_at')
         .eq('campaign_id', campaignId)
@@ -75,20 +86,22 @@ export function useCampaignDonations(campaignId: string) {
   })
 }
 
-export function useMyDonations() {
+export function useMyDonations(userId?: string) {
   return useQuery({
-    queryKey: ['my-donations'],
+    queryKey: ['my-donations', userId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('campaign_donations')
         .select(`
           id, amount, currency, escrow_status, donor_message, created_at,
-          campaigns (id, title, slug, release_date)
+          campaigns (id, title, slug, release_date, network, currency, recipient_wallet_address)
         `)
+        .eq('donor_user_id', userId)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return data
+      return data as MyDonation[]
     },
+    enabled: !!userId,
     staleTime: 15_000,
   })
 }

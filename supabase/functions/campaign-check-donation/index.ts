@@ -19,7 +19,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app',
+  'Access-Control-Allow-Origin': Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.com',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 }
 
@@ -163,33 +163,60 @@ Deno.serve(async (req) => {
       })
     }
 
-    // ── Signed ────────────────────────────────────────────────
+
+    // Signed payloads must be validated on-ledger before we mark escrowed.
     const meta: any = payloadRow.metadata ?? {}
     const network = payloadRow.network ?? 'mainnet'
 
-    // Try to get escrow sequence from XRPL ledger (needed later for EscrowFinish)
+    const { data: campaign, error: campaignErr } = await svc
+      .from('campaigns')
+      .select('recipient_wallet_address')
+      .eq('id', meta.campaign_id)
+      .maybeSingle()
+
+    if (campaignErr) throw campaignErr
+    if (!campaign) {
+      return new Response(JSON.stringify({ error: 'Campaign not found for donation payload' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     let escrowSequence: number | null = null
+    let txData: any = null
     if (txHash) {
-      const txData = await fetchXrplTx(txHash, network)
+      txData = await fetchXrplTx(txHash, network)
       if (txData?.Sequence !== undefined) {
         escrowSequence = txData.Sequence
-      } else if (txData?.result?.Sequence !== undefined) {
-        escrowSequence = txData.result.Sequence
       }
       console.log(`Fetched escrow sequence from XRPL: ${escrowSequence}`)
+    }
+
+    if (!txData || txData.validated !== true) {
+      return new Response(JSON.stringify({ status: 'pending' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const expectedDrops = String(meta.drops ?? Math.round(Number(meta.amount_xrp ?? 0) * 1_000_000))
+    const txAmount = typeof txData.Amount === 'string' ? txData.Amount : String(txData.Amount ?? '')
+    const txDestination = txData.Destination ?? ''
+
+    if (txData.TransactionType !== 'EscrowCreate' || txAmount !== expectedDrops || txDestination !== campaign.recipient_wallet_address) {
+      return new Response(JSON.stringify({
+        error: 'Validated XRPL transaction did not match the expected escrow payload',
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     const now = new Date().toISOString()
 
     await Promise.all([
-      // Mark xaman_payloads as signed
       svc.from('xaman_payloads').update({
         status: 'signed',
         wallet_address: xamanData.response?.account ?? null,
         signed_at: now,
       }).eq('uuid', xaman_uuid),
-
-      // Update donation to escrowed — trigger fires to update campaign stats
       svc.from('campaign_donations').update({
         escrow_status: 'escrowed',
         escrow_tx_hash: txHash,

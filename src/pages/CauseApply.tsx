@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -46,14 +46,6 @@ export default function CauseApply() {
   const { user, loading } = useAuth()
   const [submitted, setSubmitted] = useState(false)
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth', { state: { next: '/causes/apply' }, replace: true })
-    }
-  }, [user, loading, navigate])
-
-  if (loading) return null
-
   const minDate = new Date()
   minDate.setDate(minDate.getDate() + 30)
 
@@ -75,7 +67,7 @@ export default function CauseApply() {
     try {
       const slug = slugify(values.title) + '-' + Date.now().toString(36)
 
-      const { error } = await (supabase as any).from('campaigns').insert({
+      const { error } = await supabase.from('campaigns').insert({
         title: values.title,
         slug,
         description: values.description,
@@ -94,6 +86,43 @@ export default function CauseApply() {
     } catch (err: any) {
       toast.error(err.message || 'Failed to submit. Please try again.')
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <Navigation />
+
+        <main className="flex-1 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex items-center">
+          <div className="w-full bg-card border border-border rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground mb-3">Sign in to submit a cause</h1>
+            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+              Campaign submissions are reviewed by the Accountabul civil division, and
+              submissions must be tied to a signed-in account.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button onClick={() => navigate('/auth')}>Sign In</Button>
+              <Button variant="outline" onClick={() => navigate('/causes')}>
+                Back to Causes
+              </Button>
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    )
   }
 
   if (submitted) {
