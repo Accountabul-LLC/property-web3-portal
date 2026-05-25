@@ -404,6 +404,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useActiveWallet() {
   const ctx = useContext(ActiveWalletContext);
   if (!ctx) throw new Error('useActiveWallet must be used within ActiveWalletProvider');
