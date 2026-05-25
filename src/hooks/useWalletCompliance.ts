@@ -50,8 +50,11 @@ export function useWalletCompliance(walletAddress: string | null | undefined) {
       )
 
       if (res.status === 401 || res.status === 403) {
-        // Session expired or invalid — sign out so the UI redirects to /auth
-        await supabase.auth.signOut()
+        // Session expired or revoked on the server — clear locally and bounce to /auth
+        await supabase.auth.signOut({ scope: 'local' })
+        if (typeof window !== 'undefined' && window.location.pathname !== '/auth') {
+          window.location.assign('/auth')
+        }
         return null
       }
 
