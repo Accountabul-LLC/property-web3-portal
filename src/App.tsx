@@ -29,6 +29,7 @@ import Credentials from "./pages/Credentials";
 import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
 import NotFound from "./pages/NotFound";
+import { RouteSeo } from "./components/RouteSeo";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
         <TooltipProvider>
           <Sonner />
           <BrowserRouter>
+            <RouteSeo />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<Auth />} />
