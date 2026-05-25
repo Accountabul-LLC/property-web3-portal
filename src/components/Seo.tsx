@@ -1,4 +1,4 @@
-import { Helmet } from "react-helmet-async";
+import { useEffect } from "react";
 
 const SITE_URL = "https://property-web3-portal.lovable.app";
 
@@ -9,19 +9,46 @@ interface SeoProps {
   noindex?: boolean;
 }
 
+function setMeta(selector: string, attr: string, value: string, create: () => HTMLElement) {
+  let el = document.head.querySelector<HTMLElement>(selector);
+  if (!el) {
+    el = create();
+    document.head.appendChild(el);
+  }
+  el.setAttribute(attr, value);
+}
+
 export const Seo = ({ title, description, path, noindex }: SeoProps) => {
-  const url = `${SITE_URL}${path}`;
-  return (
-    <Helmet>
-      <title>{title}</title>
-      <meta name="description" content={description} />
-      <link rel="canonical" href={url} />
-      <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
-      <meta property="og:url" content={url} />
-      <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
-      {noindex && <meta name="robots" content="noindex,nofollow" />}
-    </Helmet>
-  );
+  useEffect(() => {
+    const url = `${SITE_URL}${path}`;
+    document.title = title;
+
+    const ensureMeta = (key: string, attr: "name" | "property", value: string) => {
+      let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(attr, key);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", value);
+    };
+
+    ensureMeta("description", "name", description);
+    ensureMeta("og:title", "property", title);
+    ensureMeta("og:description", "property", description);
+    ensureMeta("og:url", "property", url);
+    ensureMeta("twitter:title", "name", title);
+    ensureMeta("twitter:description", "name", description);
+    ensureMeta("robots", "name", noindex ? "noindex,nofollow" : "index,follow");
+
+    let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.setAttribute("rel", "canonical");
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute("href", url);
+  }, [title, description, path, noindex]);
+
+  return null;
 };
