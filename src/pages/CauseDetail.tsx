@@ -265,6 +265,15 @@ export default function CauseDetail() {
           {/* Right: sticky donate panel */}
           <div className="lg:col-span-1">
             <div className="sticky top-24 bg-card border border-border rounded-xl p-6 space-y-5">
+              {isXrp && xrpPrice ? (
+                <div className="flex items-center justify-between text-xs px-2.5 py-1.5 rounded-full bg-muted/60 border border-border">
+                  <span className="text-muted-foreground">XRP price</span>
+                  <span className="font-medium text-foreground inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    {formatUsd(xrpPrice)}
+                  </span>
+                </div>
+              ) : null}
               {/* Stats */}
               <div>
                 <p className="text-3xl font-bold text-foreground">
