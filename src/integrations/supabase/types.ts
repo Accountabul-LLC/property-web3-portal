@@ -339,6 +339,13 @@ export type Database = {
             referencedRelation: "campaigns"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaign_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campaigns: {
@@ -1921,6 +1928,78 @@ export type Database = {
       }
     }
     Views: {
+      campaigns_public: {
+        Row: {
+          accepted_assets: string[] | null
+          campaign_mode: string | null
+          created_at: string | null
+          currency: string | null
+          default_release_offset_days: number | null
+          description: string | null
+          donor_count: number | null
+          gallery_urls: string[] | null
+          goal_amount: number | null
+          id: string | null
+          image_url: string | null
+          network: string | null
+          recipient_wallet_address: string | null
+          release_date: string | null
+          slug: string | null
+          status: string | null
+          title: string | null
+          total_raised: number | null
+          updated_at: string | null
+          video_url: string | null
+          visibility: string | null
+        }
+        Insert: {
+          accepted_assets?: string[] | null
+          campaign_mode?: string | null
+          created_at?: string | null
+          currency?: string | null
+          default_release_offset_days?: number | null
+          description?: string | null
+          donor_count?: number | null
+          gallery_urls?: string[] | null
+          goal_amount?: number | null
+          id?: string | null
+          image_url?: string | null
+          network?: string | null
+          recipient_wallet_address?: string | null
+          release_date?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          total_raised?: number | null
+          updated_at?: string | null
+          video_url?: string | null
+          visibility?: string | null
+        }
+        Update: {
+          accepted_assets?: string[] | null
+          campaign_mode?: string | null
+          created_at?: string | null
+          currency?: string | null
+          default_release_offset_days?: number | null
+          description?: string | null
+          donor_count?: number | null
+          gallery_urls?: string[] | null
+          goal_amount?: number | null
+          id?: string | null
+          image_url?: string | null
+          network?: string | null
+          recipient_wallet_address?: string | null
+          release_date?: string | null
+          slug?: string | null
+          status?: string | null
+          title?: string | null
+          total_raised?: number | null
+          updated_at?: string | null
+          video_url?: string | null
+          visibility?: string | null
+        }
+        Relationships: []
+      }
       user_wallets_safe: {
         Row: {
           avatar_url: string | null
