@@ -164,16 +164,22 @@ Deno.serve(async (req) => {
     // ── Parse + validate body ─────────────────────────────────
     const body = await req.json()
     const { campaign_id, amount, donor_message, is_anonymous } = body
+    const requestedCurrency = String(body?.currency ?? 'XRP').toUpperCase().trim()
 
     if (!campaign_id || !amount) {
       return new Response(JSON.stringify({ error: 'Missing campaign_id or amount' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+    if (!['XRP', 'RLUSD'].includes(requestedCurrency)) {
+      return new Response(JSON.stringify({ error: `Unsupported currency: ${requestedCurrency}` }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
-    const xrpAmount = parseFloat(amount)
-    if (isNaN(xrpAmount) || xrpAmount < 1) {
-      return new Response(JSON.stringify({ error: 'Minimum donation is 1 XRP' }), {
+    const donationAmount = parseFloat(amount)
+    if (isNaN(donationAmount) || donationAmount < 1) {
+      return new Response(JSON.stringify({ error: `Minimum donation is 1 ${requestedCurrency}` }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -181,7 +187,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency')
+      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency, accepted_assets')
       .eq('id', campaign_id)
       .maybeSingle()
 
