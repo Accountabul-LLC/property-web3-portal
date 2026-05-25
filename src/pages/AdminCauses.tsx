@@ -368,6 +368,8 @@ export default function AdminCauses() {
       if (error) throw error
       if (!data?.success) throw new Error(data?.error || 'Failed to update campaign')
       toast.success('Campaign updated')
+      if (editId) clearDraft(editDraftKey(editId))
+      setEditHasDraft(false)
       setEditOpen(false)
       setEditId(null)
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
