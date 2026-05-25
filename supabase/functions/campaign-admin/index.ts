@@ -136,6 +136,7 @@ Deno.serve(async (req) => {
           gallery_urls: galleryUrls,
           network,
           currency: 'XRP',
+          accepted_assets: acceptedAssets,
           submitted_by_user_id: null,
           submitted_by_email: submittedByEmail || null,
           submission_notes: submissionNotes || null,
