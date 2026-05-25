@@ -959,31 +959,13 @@ export default function AdminCauses() {
                 )}
               </div>
 
-              {/* Accepted assets whitelist */}
-              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2">
-                <Label>Accepted donation assets</Label>
-                <p className="text-xs text-muted-foreground">
-                  Donors using the platform can only send these. XRP is always accepted. RLUSD requires the recipient to have an RLUSD trustline and is only supported on direct (evergreen) campaigns.
-                </p>
-                <div className="flex gap-4 pt-1">
-                  <label className="flex items-center gap-2 text-sm opacity-70">
-                    <input type="checkbox" checked disabled className="h-4 w-4" />
-                    XRP <span className="text-xs text-muted-foreground">(always)</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editForm.accepted_assets.includes('RLUSD')}
-                      onChange={(e) => setEditForm((p) => ({
-                        ...p,
-                        accepted_assets: e.target.checked ? ['XRP', 'RLUSD'] : ['XRP'],
-                      }))}
-                      className="h-4 w-4"
-                    />
-                    RLUSD
-                  </label>
-                </div>
+              <div>
+                <AcceptedAssetsPicker
+                  value={editForm.accepted_assets as SupportedAsset[]}
+                  onChange={(next) => setEditForm((p) => ({ ...p, accepted_assets: next }))}
+                />
               </div>
+
 
               {/* Visibility toggle — applied on Save Changes */}
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
