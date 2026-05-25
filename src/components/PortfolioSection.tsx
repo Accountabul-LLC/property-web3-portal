@@ -10,6 +10,7 @@ import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
 import { humanizeTx } from '@/lib/txLabels';
+import { useDonationLookup, donationLabel } from '@/hooks/useDonationLookup';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 import NetworkToggle from '@/components/NetworkToggle';
