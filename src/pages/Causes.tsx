@@ -165,35 +165,6 @@ export default function Causes() {
             </div>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-            <div className="rounded-3xl border border-border bg-card/80 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Donation cards are the product.</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    These cards show impact, progress, and timing before the user has to click into details.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="rounded-3xl border border-border bg-card/80 p-4 sm:p-5 shadow-sm">
-              <div className="flex items-start gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ChevronRight className="w-5 h-5 text-primary" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-foreground">Submission is secondary.</p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Keep the admin/apply path accessible, but don't let it compete with the live campaigns.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <div className="mb-6 rounded-2xl border border-border bg-card/70 p-4 sm:p-5">
           <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
