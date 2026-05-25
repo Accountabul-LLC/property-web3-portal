@@ -271,9 +271,13 @@ export default function CauseDetail() {
                   {campaign.total_raised.toLocaleString()}
                   <span className="text-lg font-normal text-muted-foreground ml-1">{campaign.currency}</span>
                 </p>
+                {raisedUsd !== null && (
+                  <p className="text-sm text-muted-foreground mt-0.5">≈ {formatUsd(raisedUsd)} USD</p>
+                )}
                 {campaign.goal_amount && (
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    of {campaign.goal_amount.toLocaleString()} {campaign.currency} goal
+                    of {campaign.goal_amount.toLocaleString()} {campaign.currency}
+                    {goalUsd !== null && <span> (≈ {formatUsd(goalUsd)})</span>} goal
                   </p>
                 )}
               </div>
