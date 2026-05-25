@@ -32,15 +32,6 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 60)
-}
-
 export default function CauseApply() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
@@ -65,23 +56,21 @@ export default function CauseApply() {
 
   async function onSubmit(values: FormValues) {
     try {
-      const slug = slugify(values.title) + '-' + Date.now().toString(36)
-
-      const { error } = await supabase.from('campaigns').insert({
-        title: values.title,
-        slug,
-        description: values.description,
-        recipient_wallet_address: values.recipient_wallet_address,
-        goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
-        release_date: new Date(values.release_date).toISOString(),
-        image_url: values.image_url || null,
-        submitted_by_user_id: user?.id ?? null,
-        submitted_by_email: values.contact_email,
-        submission_notes: values.submission_notes,
-        status: 'under_review',
+      const { data, error } = await supabase.functions.invoke('campaign-submit', {
+        body: {
+          title: values.title,
+          description: values.description,
+          recipient_wallet_address: values.recipient_wallet_address,
+          goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
+          release_date: new Date(values.release_date).toISOString(),
+          image_url: values.image_url || null,
+          contact_email: values.contact_email,
+          submission_notes: values.submission_notes,
+        },
       })
 
       if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Failed to submit')
       setSubmitted(true)
     } catch (err: any) {
       toast.error(err.message || 'Failed to submit. Please try again.')

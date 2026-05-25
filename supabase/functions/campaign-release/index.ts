@@ -17,6 +17,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { releaseCampaignEscrows } from '../_shared/campaign-release.ts'
+import { logAppAudit } from '../_shared/app-audit.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -116,6 +117,25 @@ Deno.serve(async (req) => {
       signerSeed,
       signerAlgorithm,
       allowManualFallback: true,
+    })
+
+    await logAppAudit(svc, {
+      area: 'causes',
+      action: 'release_attempted',
+      entityType: 'campaign',
+      entityId: campaign.id,
+      actorId: user.id,
+      afterState: {
+        released_count: result.released_count,
+        manual_count: result.manual_count,
+        error_count: result.error_count,
+        total_donations: result.total_donations,
+        campaign_completed: result.campaign_completed,
+      },
+      metadata: {
+        origin: 'campaign-release',
+        network,
+      },
     })
 
 

@@ -17,6 +17,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { logAppAudit } from '../_shared/app-audit.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -226,6 +227,18 @@ Deno.serve(async (req) => {
           .eq('xaman_payload_uuid', xaman_uuid),
       ])
 
+      await logAppAudit(svc, {
+        area: 'causes',
+        action: newStatus,
+        entityType: 'campaign_donation',
+        actorId: user.id,
+        metadata: {
+          origin: 'campaign-check-donation',
+          xaman_uuid,
+          status: newStatus,
+        },
+      })
+
       return new Response(JSON.stringify({ status: newStatus }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
@@ -280,6 +293,20 @@ Deno.serve(async (req) => {
           .eq('xaman_payload_uuid', xaman_uuid),
       ])
 
+      await logAppAudit(svc, {
+        area: 'causes',
+        action: 'escrow_failed',
+        entityType: 'campaign_donation',
+        actorId: user.id,
+        metadata: {
+          origin: 'campaign-check-donation',
+          xaman_uuid,
+          campaign_id: meta.campaign_id,
+          tx_hash: txHash,
+          engine_result: engineResult,
+        },
+      })
+
       return new Response(JSON.stringify({
         status: 'failed',
         engine_result: engineResult,
@@ -317,6 +344,20 @@ Deno.serve(async (req) => {
         updated_at: now,
       }).eq('xaman_payload_uuid', xaman_uuid),
     ])
+
+    await logAppAudit(svc, {
+      area: 'causes',
+      action: 'escrowed',
+      entityType: 'campaign_donation',
+      actorId: user.id,
+      metadata: {
+        origin: 'campaign-check-donation',
+        xaman_uuid,
+        campaign_id: meta.campaign_id,
+        tx_hash: txHash,
+        escrow_sequence: escrowSequence,
+      },
+    })
 
     console.log(`Donation escrowed: campaign=${meta.campaign_id} amount=${meta.amount_xrp} XRP tx=${txHash} seq=${escrowSequence}`)
 

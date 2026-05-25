@@ -18,6 +18,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { logAppAudit } from '../_shared/app-audit.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -273,6 +274,25 @@ Deno.serve(async (req) => {
       console.error('Failed to create donation row:', donErr)
       throw donErr
     }
+
+    await logAppAudit(svc, {
+      area: 'causes',
+      action: 'donation_initiated',
+      entityType: 'campaign_donation',
+      entityId: donationRow.id,
+      actorId: user.id,
+      afterState: {
+        campaign_id,
+        donor_wallet_address: wallet.wallet_address,
+        amount_xrp: xrpAmount,
+        status: 'pending',
+      },
+      metadata: {
+        origin: 'campaign-donate',
+        xaman_uuid: xamanData.uuid,
+        network: campaign.network,
+      },
+    })
 
     return new Response(JSON.stringify({
       success: true,

@@ -62,15 +62,6 @@ function explorerBase(network?: string | null) {
     : 'https://livenet.xrpl.org'
 }
 
-function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, '-')
-    .slice(0, 60)
-}
-
 export default function AdminCauses() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
@@ -146,15 +137,11 @@ export default function AdminCauses() {
   async function handleApprove(id: string) {
     setProcessing(id)
     try {
-      const { error } = await supabase
-        .from('campaigns')
-        .update({
-          status: 'active',
-          approved_by: user!.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', id) as any
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: { action: 'review', campaign_id: id, decision: 'approve' },
+      })
       if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Approval failed')
       toast.success('Campaign approved and now live')
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
       qc.invalidateQueries({ queryKey: ['campaigns'] })
@@ -172,14 +159,16 @@ export default function AdminCauses() {
     }
     setProcessing(id)
     try {
-      const { error } = await supabase
-        .from('campaigns')
-        .update({
-          status: 'rejected',
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: {
+          action: 'review',
+          campaign_id: id,
+          decision: 'reject',
           rejection_reason: rejectionReason,
-        })
-        .eq('id', id) as any
+        },
+      })
       if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Rejection failed')
       toast.success('Campaign rejected')
       setRejectionReason('')
       setExpandedId(null)
@@ -307,17 +296,19 @@ export default function AdminCauses() {
     try {
       if (!editForm.title.trim()) throw new Error('Title is required')
       if (!editForm.description.trim()) throw new Error('Description is required')
-      const { error } = await supabase
-        .from('campaigns')
-        .update({
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: {
+          action: 'update',
+          campaign_id: editId,
           title: editForm.title.trim(),
           description: editForm.description.trim(),
           goal_amount: editForm.goal_amount ? Number(editForm.goal_amount) : null,
           image_url: editForm.image_url.trim() || null,
           gallery_urls: editForm.gallery_urls,
-        } as any)
-        .eq('id', editId) as any
+        },
+      })
       if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Failed to update campaign')
       toast.success('Campaign updated')
       setEditOpen(false)
       setEditId(null)
@@ -341,33 +332,25 @@ export default function AdminCauses() {
       if (!createForm.recipient_wallet_address.trim()) throw new Error('Recipient wallet is required')
       if (!createForm.release_date) throw new Error('Release date is required')
 
-      const insertRow: Record<string, unknown> = {
-        title: createForm.title.trim(),
-        slug: `${slugify(createForm.title)}-${Date.now().toString(36)}`,
-        description: createForm.description.trim(),
-        image_url: createForm.image_url.trim() || null,
-        video_url: createForm.video_url.trim() || null,
-        goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
-        currency: 'XRP',
-        recipient_wallet_address: createForm.recipient_wallet_address.trim(),
-        release_date: new Date(createForm.release_date).toISOString(),
-        status: createForm.status === 'approved' ? 'active' : createForm.status,
-        network: createForm.network,
-        submitted_by_user_id: user?.id,
-        submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
-        submission_notes: createForm.submission_notes.trim() || null,
-        admin_notes: createForm.admin_notes.trim() || null,
-      }
-
-      if (createForm.status !== 'under_review') {
-        insertRow.approved_by = user?.id ?? null
-        insertRow.approved_at = new Date().toISOString()
-      }
-
-      const { error } = await supabase
-        .from('campaigns')
-        .insert(insertRow as any)
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: {
+          action: 'create',
+          title: createForm.title.trim(),
+          description: createForm.description.trim(),
+          image_url: createForm.image_url.trim() || null,
+          video_url: createForm.video_url.trim() || null,
+          goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
+          recipient_wallet_address: createForm.recipient_wallet_address.trim(),
+          release_date: new Date(createForm.release_date).toISOString(),
+          status: createForm.status === 'active' ? 'active' : 'under_review',
+          network: createForm.network,
+          submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
+          submission_notes: createForm.submission_notes.trim() || null,
+          admin_notes: createForm.admin_notes.trim() || null,
+        },
+      })
       if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Failed to create campaign')
 
       toast.success(`Campaign created: ${createForm.title}`)
       setCreateForm({

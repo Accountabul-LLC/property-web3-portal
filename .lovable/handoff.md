@@ -17,3 +17,8 @@ Notes:
   - the release signer seed lives in Supabase secrets
   - the auto-release cron calls `campaign-release-due` with the dedicated cron secret
 - Browser-held wallet secrets are testnet-only convenience data. Do not extend that path to production wallets or Causes release flows.
+- Campaign submission and admin mutations now go through edge functions:
+  - `campaign-submit` for public cause applications
+  - `campaign-admin` for admin create/update/review actions
+  - direct browser writes to `campaigns` and `campaign_donations` should stay blocked
+- Campaign lifecycle events now write to `app_audit_log` server-side for traceability.

@@ -3,6 +3,12 @@ project_id = "bmxcjxtjujhwreduwtvz"
 [functions.campaign-donate]
 verify_jwt = false
 
+[functions.campaign-submit]
+verify_jwt = false
+
+[functions.campaign-admin]
+verify_jwt = false
+
 [functions.campaign-check-donation]
 verify_jwt = false
 
