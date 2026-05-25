@@ -22,7 +22,7 @@ import {
 import { loadDraft, saveDraft, clearDraft } from '@/lib/draftStorage'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
-  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw, Eye, EyeOff,
 } from 'lucide-react'
 
 type EditFormShape = {
