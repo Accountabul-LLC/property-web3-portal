@@ -255,6 +255,7 @@ export default function AdminCauses() {
         submission_notes: '',
         admin_notes: '',
       })
+      setAddOpen(false)
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
       qc.invalidateQueries({ queryKey: ['campaigns'] })
     } catch (err: any) {
