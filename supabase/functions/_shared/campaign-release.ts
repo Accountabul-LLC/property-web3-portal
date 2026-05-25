@@ -169,6 +169,18 @@ export async function releaseCampaignEscrows(opts: {
         })
         .eq('id', donation.id)
 
+      try {
+        await dispatchReleaseNotifications({
+          svc,
+          campaign,
+          donation,
+          txHash,
+          network,
+        })
+      } catch (notifyErr) {
+        console.error('notification dispatch failed:', notifyErr)
+      }
+
       results.push({
         donation_id: donation.id,
         status: 'released',
