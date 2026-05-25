@@ -174,9 +174,10 @@ export default function Pricing() {
           )}
 
           {/* Trust line */}
-          <p className="text-center text-sm text-muted-foreground mt-10">
+          <p className="text-center text-xs sm:text-sm text-muted-foreground mt-10 px-4 break-words">
             All plans include XRPL-backed security · Cancel anytime · Missouri deed monitoring powered by BatchData + Regrid
           </p>
+
         </div>
       </main>
 
