@@ -194,7 +194,7 @@ const AdminCredentials = () => {
   async function runIssueCredential(appId: string) {
     setActionLoading(appId + 'issue_cred')
     try {
-      const result = await callEdgeFunction('issue-credential', { application_id: appId })
+      const result = await callEdgeFunction<{ message?: string }>('issue-credential', { application_id: appId })
       toast.success(result.message ?? 'Credential issued')
       qc.invalidateQueries({ queryKey: ['admin-credential-applications'] })
     } catch (err) {
