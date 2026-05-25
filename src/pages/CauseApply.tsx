@@ -26,18 +26,27 @@ const schema = z.object({
     .string()
     .regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Must be a valid XRPL r-address (starts with r)'),
   goal_amount: z.string().optional(),
-  accept_rlusd: z.boolean().default(false),
-  release_date: z.string().min(1, 'Please select a release date'),
+  accepted_assets: z.array(z.enum(['XRP', 'RLUSD'])).min(1).default(['XRP']),
+  release_date: z.string().optional(),
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   contact_email: z.string().email('Must be a valid email'),
   submission_notes: z.string().min(20, 'Please tell us more about this cause (min 20 chars)').max(2000),
-})
+}).refine(
+  (data) => {
+    // Release date required only in scheduled (XRP-only) mode
+    const isDirect = data.accepted_assets.some((a) => a !== 'XRP')
+    if (isDirect) return true
+    return !!data.release_date
+  },
+  { message: 'Please select a release date', path: ['release_date'] },
+)
 
 type FormValues = z.infer<typeof schema>
 
 export default function CauseApply() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
+  const { activeAddress } = useActiveWallet()
   const [submitted, setSubmitted] = useState(false)
 
   const minDate = new Date()
@@ -50,7 +59,7 @@ export default function CauseApply() {
       description: '',
       recipient_wallet_address: '',
       goal_amount: '',
-      accept_rlusd: false,
+      accepted_assets: ['XRP'],
       release_date: '',
       image_url: '',
       contact_email: user?.email ?? '',
@@ -58,16 +67,38 @@ export default function CauseApply() {
     },
   })
 
+  const acceptedAssets = form.watch('accepted_assets')
+  const recipientAddress = form.watch('recipient_wallet_address')
+  const isDirectMode = acceptedAssets.some((a) => a !== 'XRP')
+  const recipientDiffersFromConnected =
+    !!activeAddress && !!recipientAddress && recipientAddress !== activeAddress
+
+  // Default recipient to connected wallet once known (if user hasn't typed yet)
+  useEffect(() => {
+    if (activeAddress && !form.getValues('recipient_wallet_address')) {
+      form.setValue('recipient_wallet_address', activeAddress, { shouldValidate: false })
+    }
+  }, [activeAddress, form])
+
+  // Clear release_date when switching to direct mode
+  useEffect(() => {
+    if (isDirectMode && form.getValues('release_date')) {
+      form.setValue('release_date', '', { shouldValidate: false })
+    }
+  }, [isDirectMode, form])
+
   async function onSubmit(values: FormValues) {
     try {
+      const isDirect = values.accepted_assets.some((a) => a !== 'XRP')
       const { data, error } = await supabase.functions.invoke('campaign-submit', {
         body: {
           title: values.title,
           description: values.description,
           recipient_wallet_address: values.recipient_wallet_address,
           goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
-          accepted_assets: values.accept_rlusd ? ['XRP', 'RLUSD'] : ['XRP'],
-          release_date: new Date(values.release_date).toISOString(),
+          accepted_assets: values.accepted_assets,
+          campaign_mode: isDirect ? 'evergreen' : 'scheduled',
+          release_date: isDirect ? null : new Date(values.release_date!).toISOString(),
           image_url: values.image_url || null,
           contact_email: values.contact_email,
           submission_notes: values.submission_notes,
