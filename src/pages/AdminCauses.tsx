@@ -551,7 +551,7 @@ export default function AdminCauses() {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
-          {([['under_review', 'Under Review'], ['active', 'Active'], ['all', 'All']] as const).map(([key, label]) => (
+          {([['all', 'All'], ['active', 'Active'], ['under_review', 'Under Review']] as const).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveTab(key)}
