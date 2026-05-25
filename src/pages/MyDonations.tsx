@@ -146,7 +146,7 @@ export default function MyDonations() {
                   <div className="flex items-start justify-between gap-4 mb-4">
                     <div className="min-w-0">
                       <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-                        {campaign?.campaign_type === 'direct'
+                        {campaign?.campaign_mode === 'evergreen'
                           ? 'Direct donation'
                           : campaign?.release_date
                             ? `Release ${formatDate(campaign.release_date)}`
@@ -186,7 +186,7 @@ export default function MyDonations() {
                   <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Lock className="w-3.5 h-3.5 text-primary" />
-                      {campaign?.campaign_type === 'direct' ? 'XRPL direct donation' : 'XRPL escrow donation'}
+                      {campaign?.campaign_mode === 'evergreen' ? 'XRPL direct donation' : 'XRPL escrow donation'}
                     </div>
                     <div className="flex flex-col sm:flex-row gap-2">
                       {campaign && (
