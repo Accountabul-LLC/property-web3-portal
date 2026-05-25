@@ -79,6 +79,18 @@ export default function AdminCauses() {
   const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [editOpen, setEditOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editId, setEditId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    goal_amount: '',
+    image_url: '',
+    gallery_urls: [] as string[],
+  })
+  const [uploadingEditCover, setUploadingEditCover] = useState(false)
+  const [uploadingEditGallery, setUploadingEditGallery] = useState(false)
   const [createForm, setCreateForm] = useState({
     title: '',
     description: '',
