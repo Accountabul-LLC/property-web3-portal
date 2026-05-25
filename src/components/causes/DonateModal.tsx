@@ -20,6 +20,7 @@ type Props = {
 
 export default function DonateModal({ campaign, open, onClose }: Props) {
   const [step, setStep] = useState<Step>('form')
+  const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
   const [amount, setAmount] = useState('')
   const [message, setMessage] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
