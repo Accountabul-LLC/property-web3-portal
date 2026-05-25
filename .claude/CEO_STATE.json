@@ -1,191 +1,318 @@
 {
-  "schema_version": "1.0",
+  "schema_version": "1.1",
   "project_name": "Accountabul",
   "repo_name": "property-web3-portal",
-  "last_updated": "2026-05-24T00:00:00Z",
-  
+  "last_updated": "2026-05-25T00:00:00Z",
+  "audit_date": "2026-05-25",
+  "overall_completeness": "~75% production-ready",
+
   "current_phase": {
-    "name": "Phase 1 - Provider Foundation",
-    "status": "in_progress",
+    "name": "Phase 2 - Hardening + New Features",
+    "status": "planning",
     "priority": "high",
-    "description": "Build AI provider abstraction layer for multi-provider support (OpenAI, Anthropic, Google, local models)"
+    "description": "Core platform is built. Phase 2 focuses on fixing half-done features, closing security gaps, and building next features (Pools/AMM, Notifications, enhanced Swap, etc.)."
   },
+
+  "completed_work": [
+    {
+      "id": "done_001",
+      "name": "Authentication + Role System",
+      "description": "Supabase Auth (email/Google), user_roles table, admin gate",
+      "status": "complete"
+    },
+    {
+      "id": "done_002",
+      "name": "KYC Flow",
+      "description": "Full Stripe Identity integration: kyc-start, kyc-save, kyc-submit, kyc-admin-review, stripe-identity-webhook. Status polling, admin review UI.",
+      "status": "complete"
+    },
+    {
+      "id": "done_003",
+      "name": "Wallet Compliance Layer",
+      "description": "wallet-register, wallet-approve, compliance-check. WalletRegistrationPanel, TradeGuard. XRPL Credentials (ACCOUNTABUL_TRADE_APPROVED). Full 6-step flow.",
+      "status": "complete"
+    },
+    {
+      "id": "done_004",
+      "name": "Credentials System",
+      "description": "Credential type registry, eligibility engine, apply-for-credential, auto-issue-credential, credential-accept, review-credential-application, revoke-credential, issue-testnet-credential. Full admin UI.",
+      "status": "complete"
+    },
+    {
+      "id": "done_005",
+      "name": "Swap Engine",
+      "description": "xrpl-build-swap with PathFind, xrpl-sponsor-trustline, property token pricing, Xaman signing flow, TokenPickerDialog.",
+      "status": "complete"
+    },
+    {
+      "id": "done_006",
+      "name": "Campaigns / Causes",
+      "description": "campaign-donate (XRPL EscrowCreate), campaign-check-donation (Xaman poll), campaign-release (escrow finish). CauseApply, CauseDetail, DonateModal.",
+      "status": "complete"
+    },
+    {
+      "id": "done_007",
+      "name": "GitHub Agent",
+      "description": "github-agent edge function: JWT signing, installation tokens, file tree, file read, issue CRUD, PR creation, memory (store/recall). Bidirectional sync with action_items table.",
+      "status": "complete"
+    },
+    {
+      "id": "done_008",
+      "name": "AI Panel (Debate)",
+      "description": "ai-debate edge function streaming with Claude/GPT/Gemini. Round-based turns, transcript summarization, action item generation → action_items table, GitHub sync. Admin-only gate.",
+      "status": "complete"
+    },
+    {
+      "id": "done_009",
+      "name": "Action Items",
+      "description": "ActionItems page: CRUD, priority/status filters, GitHub issue push, closed-issue poll-back to mark done.",
+      "status": "complete"
+    },
+    {
+      "id": "done_010",
+      "name": "Property Tokenization Pipeline",
+      "description": "tokenization-pipeline edge function: GET /mine, GET / (admin), PATCH status. Draft→submitted→under_review→approved/rejected workflow.",
+      "status": "complete"
+    },
+    {
+      "id": "done_011",
+      "name": "Security Hardening",
+      "description": "CORS locked to APP_ALLOWED_ORIGIN. RLS policies tightened (xaman_payloads, wallet tables). wallet_secret column dropped. Stripe webhook dev-fallback removed. Faucet gated behind JWT.",
+      "status": "complete"
+    },
+    {
+      "id": "done_012",
+      "name": "Mint Wizard",
+      "description": "MintWizard: MPT/NFT/IOU form steps. xrpl-build-mint edge function builds and submits via Xaman. MintStatus polling.",
+      "status": "complete"
+    }
+  ],
 
   "active_workstreams": [
     {
-      "id": "ws_001",
-      "name": "Supabase Provider Schema",
-      "department": "Supabase",
-      "status": "pending",
-      "priority": "critical",
-      "tasks": [
-        {
-          "id": "t_001",
-          "description": "Create ai_providers table migration",
-          "status": "not_started",
-          "files": ["supabase/migrations/20260524_ai_providers.sql"],
-          "approval_required": true,
-          "approval_type": "schema_change"
-        },
-        {
-          "id": "t_002",
-          "description": "Create provider_connections table migration",
-          "status": "not_started",
-          "files": ["supabase/migrations/20260524_provider_connections.sql"],
-          "approval_required": true,
-          "approval_type": "schema_change"
-        },
-        {
-          "id": "t_003",
-          "description": "Create ai_task_defaults table migration",
-          "status": "not_started",
-          "files": ["supabase/migrations/20260524_ai_task_defaults.sql"],
-          "approval_required": true,
-          "approval_type": "schema_change"
-        },
-        {
-          "id": "t_004",
-          "description": "Seed ai_providers with OpenAI, Anthropic, Google, Ollama",
-          "status": "blocked",
-          "blocked_by": ["t_001"],
-          "approval_required": false
-        }
-      ]
-    },
-    {
-      "id": "ws_002",
-      "name": "Edge Functions - Provider Integration",
+      "id": "ws_fix_001",
+      "name": "Campaign Release — Network Hardcoding Fix",
       "department": "Backend",
-      "status": "pending",
+      "status": "ready",
       "priority": "high",
+      "description": "campaign-release/index.ts:138 hardcodes network='testnet'. Mainnet donations can never auto-release. Must read network from campaign or donation row.",
       "tasks": [
         {
-          "id": "t_005",
-          "description": "Create test-ai-provider edge function",
+          "id": "t_fix_001a",
+          "description": "Add network column to campaign_donations (or read from campaigns) — confirm which table owns it",
           "status": "not_started",
-          "files": ["supabase/functions/test-ai-provider/index.ts"],
-          "approval_required": false
+          "approval_required": true,
+          "approval_type": "schema_change"
         },
         {
-          "id": "t_006",
-          "description": "Refactor generate-post to use provider resolution",
+          "id": "t_fix_001b",
+          "description": "Update campaign-release to read network from DB row instead of hardcoding testnet",
           "status": "not_started",
-          "files": ["supabase/functions/generate-post/index.ts"],
-          "approval_required": true,
-          "approval_type": "core_business_logic"
+          "files": ["supabase/functions/campaign-release/index.ts"],
+          "approval_required": false,
+          "depends_on": ["t_fix_001a"]
         }
       ]
     },
     {
-      "id": "ws_003",
-      "name": "Settings UI - Provider Management",
+      "id": "ws_fix_002",
+      "name": "CauseApply — Auth Gate for Logged-Out Users",
       "department": "Frontend",
-      "status": "pending",
-      "priority": "high",
+      "status": "ready",
+      "priority": "medium",
+      "description": "Guest users can fill the entire cause application form but hit an RLS error on submit. Need to redirect unauthenticated users to login before they reach the form.",
       "tasks": [
         {
-          "id": "t_007",
-          "description": "Add Providers section to SettingsPage",
+          "id": "t_fix_002a",
+          "description": "Add auth gate to CauseApply: redirect to /auth?next=/causes/apply if not authenticated",
           "status": "not_started",
-          "files": ["src/pages/SettingsPage.tsx"],
+          "files": ["src/pages/CauseApply.tsx", "src/pages/Causes.tsx"],
           "approval_required": false
+        }
+      ]
+    },
+    {
+      "id": "ws_fix_003",
+      "name": "Treasury — Remove Demo Wallet Address",
+      "department": "Frontend",
+      "status": "ready",
+      "priority": "medium",
+      "description": "src/config/treasuryWallets.ts contains 'rABULTokenTreasuryWa11etDemoXXXXXX' — a fake address. Either replace with real wallet addresses or gate the page behind admin and add a setup notice.",
+      "tasks": [
+        {
+          "id": "t_fix_003a",
+          "description": "Replace demo wallet addresses with real treasury wallet addresses, or replace with an empty-state UI instructing admin to configure them",
+          "status": "not_started",
+          "files": ["src/config/treasuryWallets.ts", "src/pages/Treasury.tsx"],
+          "approval_required": false
+        }
+      ]
+    },
+    {
+      "id": "ws_sec_001",
+      "name": "AI Panel — Repo File Path Filtering",
+      "department": "Backend",
+      "status": "ready",
+      "priority": "medium",
+      "description": "ai-debate calls github-agent to fetch arbitrary file paths. An admin could request .env files, secrets in comments, etc. Whitelist safe paths (src/, supabase/functions/, docs/).",
+      "tasks": [
+        {
+          "id": "t_sec_001a",
+          "description": "Add path allowlist to github-agent edge function for file read calls; reject paths outside src/, supabase/, docs/",
+          "status": "not_started",
+          "files": ["supabase/functions/github-agent/index.ts"],
+          "approval_required": false
+        }
+      ]
+    },
+    {
+      "id": "ws_new_001",
+      "name": "Liquidity Pools (Phase 2 Feature)",
+      "department": "Backend + Frontend + Supabase",
+      "status": "planning",
+      "priority": "high",
+      "description": "Pools.tsx is 100% stub ('coming soon'). Build XRPL AMM-based liquidity pools: create pool, deposit, withdraw, view TVL and APY. Requires XRPL AMMCreate/AMMDeposit/AMMWithdraw transactions.",
+      "tasks": [
+        {
+          "id": "t_pools_001",
+          "description": "Design DB schema for liquidity_pools, pool_positions tables",
+          "status": "not_started",
+          "approval_required": true,
+          "approval_type": "schema_change"
         },
         {
-          "id": "t_008",
-          "description": "Build provider connection form components",
+          "id": "t_pools_002",
+          "description": "Build xrpl-build-amm edge function (AMMCreate, AMMDeposit, AMMWithdraw)",
           "status": "not_started",
-          "files": ["src/components/settings/ProviderConnectionForm.tsx"],
-          "approval_required": false
+          "blocked_by": ["t_pools_001"]
         },
         {
-          "id": "t_009",
-          "description": "Build task defaults editor component",
+          "id": "t_pools_003",
+          "description": "Build Pools.tsx UI: pool list, create pool modal, deposit/withdraw modal",
           "status": "not_started",
-          "files": ["src/components/settings/TaskDefaultsEditor.tsx"],
-          "approval_required": false
+          "blocked_by": ["t_pools_001", "t_pools_002"]
         }
       ]
     }
   ],
 
   "bug_backlog": {
-    "source": "blast_radius_scan",
-    "scan_date": "2026-05-24",
-    "critical": [
+    "source": "blast_radius_audit_2026-05-25",
+    "critical": [],
+    "high": [
       {
         "id": "bug_001",
-        "severity": "high",
-        "title": "Release flow not reliable end-to-end",
-        "description": "campaign-release hardcodes testnet, does not persist network on donation row, swaps signing account to platform wallet in auto-sign branch, falls back to pending_manual when no signer seed configured. Admin UI shows success toast even when nothing released.",
-        "department": "Backend",
-        "secondary_dept": "Supabase",
-        "files": [
-          "supabase/functions/campaign-release/index.ts:137",
-          "supabase/functions/campaign-release/index.ts:151",
-          "supabase/functions/campaign-release/index.ts:175",
-          "supabase/functions/campaign-release/index.ts:208",
-          "src/pages/AdminCauses.tsx:133",
-          "src/pages/AdminCauses.tsx:153"
-        ],
-        "status": "pending_triage",
-        "approval_gates": ["edge_function_logic", "database_schema"]
+        "title": "campaign-release hardcodes testnet",
+        "file": "supabase/functions/campaign-release/index.ts:138",
+        "description": "network='testnet' is hardcoded. Mainnet escrows never auto-release; always fall back to manual Xaman. Admin success toast fires even when nothing released on mainnet.",
+        "workstream": "ws_fix_001",
+        "status": "tracked"
       }
     ],
     "medium": [
       {
         "id": "bug_002",
-        "severity": "medium",
-        "title": "Public cause submission dead-end for logged-out users",
-        "description": "Causes page sends everyone to /causes/apply, but CauseApply has no auth gate and submits submitted_by_user_id: user?.id ?? null. Migration only allows authenticated inserts with submitted_by_user_id = auth.uid(). Guest can fill whole form and only discover failure after submit.",
-        "department": "Frontend",
-        "secondary_dept": "Supabase",
-        "files": [
-          "src/pages/Causes.tsx:35",
-          "src/pages/CauseApply.tsx:46",
-          "src/pages/CauseApply.tsx:66",
-          "src/pages/CauseApply.tsx:78",
-          "src/pages/CauseApply.tsx:155",
-          "supabase/migrations/20260522000000_causes_product.sql:176"
-        ],
-        "status": "pending_triage",
-        "approval_gates": ["auth_flow_change"]
+        "title": "CauseApply no auth gate — guest form submit fails silently",
+        "file": "src/pages/CauseApply.tsx:46",
+        "workstream": "ws_fix_002",
+        "status": "tracked"
+      },
+      {
+        "id": "bug_003",
+        "title": "Treasury has demo/invalid wallet addresses",
+        "file": "src/config/treasuryWallets.ts:11",
+        "workstream": "ws_fix_003",
+        "status": "tracked"
+      },
+      {
+        "id": "bug_004",
+        "title": "AI Panel allows unrestricted repo file access via github-agent",
+        "file": "supabase/functions/github-agent/index.ts",
+        "workstream": "ws_sec_001",
+        "status": "tracked"
+      },
+      {
+        "id": "bug_005",
+        "title": "Professionals page has no data source — pure placeholder",
+        "file": "src/pages/Professionals.tsx",
+        "description": "Page renders but no hook, no DB table referenced. Needs a professionals table or removal from nav.",
+        "workstream": null,
+        "status": "backlog"
+      },
+      {
+        "id": "bug_006",
+        "title": "Compliance state can go stale mid-trade",
+        "description": "useWalletCompliance caches compliance result in React Query. If a wallet is revoked server-side, the frontend won't reflect it until next refetch (30s poll). A revoked user could submit a swap in the window.",
+        "workstream": null,
+        "status": "backlog"
       }
     ],
-    "low": []
+    "low": [
+      {
+        "id": "bug_007",
+        "title": "Mint wizard lacks re-submit protection if tx is dropped",
+        "description": "If XRPL drops a submitted tx, there's no guard preventing a double-mint. Low risk on testnet, higher on mainnet.",
+        "workstream": null,
+        "status": "backlog"
+      }
+    ]
   },
+
+  "security_items": [
+    {
+      "id": "sec_001",
+      "title": "Demo wallet address in public treasury config",
+      "severity": "medium",
+      "file": "src/config/treasuryWallets.ts:11",
+      "status": "tracked_in_ws_fix_003"
+    },
+    {
+      "id": "sec_002",
+      "title": "GitHub App private key stored in Deno env",
+      "severity": "medium",
+      "file": "supabase/functions/github-agent/index.ts",
+      "description": "GITHUB_APP_PRIVATE_KEY in env. Rotate if env is ever exposed. Consider Supabase Vault.",
+      "status": "accepted_risk"
+    },
+    {
+      "id": "sec_003",
+      "title": "localStorage stores wallet context (address + network)",
+      "severity": "low",
+      "file": "src/contexts/ActiveWalletContext.tsx",
+      "description": "Wallet address and network stored in localStorage. Not private data per se, but worth noting. No secret keys stored here post wallet_secret removal.",
+      "status": "accepted_risk"
+    },
+    {
+      "id": "sec_004",
+      "title": "No file path whitelist in github-agent",
+      "severity": "medium",
+      "file": "supabase/functions/github-agent/index.ts",
+      "status": "tracked_in_ws_sec_001"
+    }
+  ],
+
+  "pending_approvals": [],
 
   "blocked_items": [
     {
       "id": "block_001",
-      "task": "Seed ai_providers table",
-      "blocker": "ai_providers table migration must be applied first",
-      "blocked_by": ["t_001"],
-      "department": "Supabase"
+      "task": "Pools UI (t_pools_003)",
+      "blocker": "Needs DB schema (t_pools_001) and AMM edge function (t_pools_002) first",
+      "blocked_by": ["t_pools_001", "t_pools_002"]
     }
   ],
 
-  "completed_work": [],
-
-  "pending_approvals": [],
-
-  "department_assignments": {
-    "Supabase": ["ws_001"],
-    "Backend": ["ws_002", "bug_001"],
-    "Frontend": ["ws_003", "bug_002"],
-    "Security": [],
-    "DevOps": [],
-    "Quality": []
-  },
-
-  "next_session_prompt": "Continue Phase 1 provider foundation work. Start with Supabase migrations (ws_001), then Backend edge functions (ws_002), then Frontend settings UI (ws_003). Process bug backlog after Phase 1 tasks are complete. Request approval for all schema changes and auth flow modifications.",
-
   "context_notes": [
-    "This is a real-world asset (RWA) tokenization platform with social hub features",
-    "Currently running on Supabase with edge functions",
-    "Frontend is React + TypeScript",
-    "User (Jibreel) runs Center Connect LLC, PNC Business Checking is primary account",
-    "User prefers autonomous development with approval gates only for irreversible actions",
-    "User has CEO Agent skill in /mnt/skills/user/ceo-agent/SKILL.md",
-    "User has Blast Radius skill in /mnt/skills/user/blast-radius/SKILL.md"
-  ]
+    "Platform is Accountabul — RWA tokenization + social hub on XRPL",
+    "Stack: React + TypeScript + Supabase (PostgreSQL + Edge Functions in Deno)",
+    "Supabase project: bmxcjxtjujhwreduwtvz (Aiagentboard)",
+    "All XRPL interactions go through edge functions — no browser XRPL calls",
+    "Wallet signing uses Xaman (QR-code) for user-facing ops; edge-function signer seed for admin auto-sign",
+    "Team access = admin role in user_roles table",
+    "Lovable auto-commits to GitHub — always pull before pushing",
+    "XRPL_TESTNET_ISSUER_SEED, ACCOUNTABUL_ISSUER_ADDRESS, APP_ALLOWED_ORIGIN, GITHUB_APP_PRIVATE_KEY must be set in Supabase Edge Function Secrets",
+    "AI Panel uses ai-debate edge function — streams NDJSON, requires OPENAI_API_KEY and ANTHROPIC_API_KEY secrets"
+  ],
+
+  "next_session_prompt": "Phase 2 audit complete. Priority order: (1) ws_fix_001 — fix campaign-release testnet hardcoding, (2) ws_fix_002 — add CauseApply auth gate, (3) ws_sec_001 — add file path whitelist to github-agent, (4) ws_fix_003 — resolve treasury demo wallets, (5) ws_new_001 — begin Pools feature design. Start with ws_fix_001 as it's a data-loss risk on mainnet."
 }
