@@ -410,10 +410,16 @@ export default function CauseDetail() {
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-xl font-bold text-foreground" title={isDirectCampaign ? 'Direct donations stay open' : unlockTimestamp}>
-                    {isDirectCampaign ? 'Open' : (releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', ''))}
+                    {isDirectCampaign
+                      ? 'Open'
+                      : campaign.status === 'completed'
+                        ? 'Complete'
+                        : releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', '')}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
-                    <Calendar className="w-3 h-3" /> {isDirectCampaign ? 'open-ended' : 'unlock window'}
+                    <Calendar className="w-3 h-3" /> {isDirectCampaign
+                      ? 'open-ended'
+                      : campaign.status === 'completed' ? 'funding round' : 'unlock window'}
                   </p>
                 </div>
               </div>
