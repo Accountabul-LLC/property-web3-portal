@@ -11,6 +11,7 @@ import { WalletConnectModal } from '@/components/WalletConnectModal'
 import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useXrpPrice, formatUsd } from '@/hooks/useXrpPrice'
 
 function daysUntil(date: string) {
   const diff = new Date(date).getTime() - Date.now()
