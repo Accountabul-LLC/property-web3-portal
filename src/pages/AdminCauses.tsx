@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react'
 
 type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
+type CampaignNetwork = 'mainnet' | 'testnet'
 
 interface Campaign {
   id: string
@@ -25,6 +27,7 @@ interface Campaign {
   slug: string
   description: string
   image_url: string | null
+  video_url: string | null
   network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
@@ -52,6 +55,15 @@ function explorerBase(network?: string | null) {
     : 'https://livenet.xrpl.org'
 }
 
+function slugify(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .slice(0, 60)
+}
+
 export default function AdminCauses() {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
@@ -62,6 +74,21 @@ export default function AdminCauses() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('under_review')
+  const [creating, setCreating] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    description: '',
+    image_url: '',
+    video_url: '',
+    goal_amount: '',
+    recipient_wallet_address: '',
+    release_date: '',
+    network: 'testnet' as CampaignNetwork,
+    status: 'under_review' as CampaignStatus,
+    submitted_by_email: user?.email ?? '',
+    submission_notes: '',
+    admin_notes: '',
+  })
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
@@ -174,6 +201,67 @@ export default function AdminCauses() {
     }
   }
 
+  async function handleCreateCampaign(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setCreating(true)
+    try {
+      if (!createForm.title.trim()) throw new Error('Title is required')
+      if (!createForm.description.trim()) throw new Error('Description is required')
+      if (!createForm.recipient_wallet_address.trim()) throw new Error('Recipient wallet is required')
+      if (!createForm.release_date) throw new Error('Release date is required')
+
+      const insertRow: Record<string, unknown> = {
+        title: createForm.title.trim(),
+        slug: `${slugify(createForm.title)}-${Date.now().toString(36)}`,
+        description: createForm.description.trim(),
+        image_url: createForm.image_url.trim() || null,
+        video_url: createForm.video_url.trim() || null,
+        goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
+        currency: 'XRP',
+        recipient_wallet_address: createForm.recipient_wallet_address.trim(),
+        release_date: new Date(createForm.release_date).toISOString(),
+        status: createForm.status,
+        network: createForm.network,
+        submitted_by_user_id: user?.id,
+        submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
+        submission_notes: createForm.submission_notes.trim() || null,
+        admin_notes: createForm.admin_notes.trim() || null,
+      }
+
+      if (createForm.status !== 'under_review') {
+        insertRow.approved_by = user?.id ?? null
+        insertRow.approved_at = new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('campaigns')
+        .insert(insertRow as any)
+      if (error) throw error
+
+      toast.success(`Campaign created: ${createForm.title}`)
+      setCreateForm({
+        title: '',
+        description: '',
+        image_url: '',
+        video_url: '',
+        goal_amount: '',
+        recipient_wallet_address: '',
+        release_date: '',
+        network: 'testnet',
+        status: 'under_review',
+        submitted_by_email: user?.email ?? '',
+        submission_notes: '',
+        admin_notes: '',
+      })
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to create campaign')
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const filtered = campaigns?.filter((c) => {
     if (activeTab === 'under_review') return c.status === 'under_review'
     if (activeTab === 'active') return c.status === 'active'
@@ -208,6 +296,159 @@ export default function AdminCauses() {
             <p className="text-sm text-muted-foreground">Review submissions, approve campaigns, trigger escrow release</p>
           </div>
         </div>
+
+        <Card className="p-5 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+            <div>
+              <h2 className="text-lg font-semibold">Add Cause</h2>
+              <p className="text-sm text-muted-foreground">
+                Create a new campaign directly in the Causes system and choose whether it starts as a draft or goes live.
+              </p>
+            </div>
+            <Badge variant="secondary" className="w-fit">
+              Admin insert enabled
+            </Badge>
+          </div>
+
+          <form onSubmit={handleCreateCampaign} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="cause-title">Title</Label>
+                <Input
+                  id="cause-title"
+                  value={createForm.title}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Justice for the Northside 7"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-wallet">Recipient XRPL Wallet</Label>
+                <Input
+                  id="cause-wallet"
+                  className="font-mono"
+                  value={createForm.recipient_wallet_address}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, recipient_wallet_address: e.target.value }))}
+                  placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-release">Release Date</Label>
+                <Input
+                  id="cause-release"
+                  type="datetime-local"
+                  value={createForm.release_date}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, release_date: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-goal">Goal Amount (XRP)</Label>
+                <Input
+                  id="cause-goal"
+                  type="number"
+                  min="0"
+                  step="0.000001"
+                  value={createForm.goal_amount}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, goal_amount: e.target.value }))}
+                  placeholder="50000"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-network">Network</Label>
+                <select
+                  id="cause-network"
+                  value={createForm.network}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, network: e.target.value as CampaignNetwork }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="testnet">Testnet</option>
+                  <option value="mainnet">Mainnet</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-status">Initial Status</Label>
+                <select
+                  id="cause-status"
+                  value={createForm.status}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, status: e.target.value as CampaignStatus }))}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="under_review">Under Review</option>
+                  <option value="approved">Approved</option>
+                  <option value="active">Active</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-image">Image URL</Label>
+                <Input
+                  id="cause-image"
+                  type="url"
+                  value={createForm.image_url}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, image_url: e.target.value }))}
+                  placeholder="https://example.com/image.jpg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cause-video">Video URL</Label>
+                <Input
+                  id="cause-video"
+                  type="url"
+                  value={createForm.video_url}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, video_url: e.target.value }))}
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="cause-description">Description</Label>
+                <Textarea
+                  id="cause-description"
+                  rows={5}
+                  value={createForm.description}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe the cause, who it helps, and why it matters."
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="cause-notes">Submission Notes</Label>
+                <Textarea
+                  id="cause-notes"
+                  rows={3}
+                  value={createForm.submission_notes}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, submission_notes: e.target.value }))}
+                  placeholder="Optional notes for the review team or public record."
+                />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="cause-admin-notes">Admin Notes</Label>
+                <Textarea
+                  id="cause-admin-notes"
+                  rows={3}
+                  value={createForm.admin_notes}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, admin_notes: e.target.value }))}
+                  placeholder="Internal notes not shown publicly."
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+              <p className="text-xs text-muted-foreground">
+                Active campaigns appear on the public Causes page. Under review campaigns stay in admin until approved.
+              </p>
+              <Button type="submit" disabled={creating}>
+                {creating ? 'Creating...' : 'Create Cause'}
+              </Button>
+            </div>
+          </form>
+        </Card>
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 border-b border-border">
