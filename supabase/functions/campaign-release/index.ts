@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
       .from('campaigns')
       .select('id, title, status, release_date, recipient_wallet_address')
       .eq('id', campaign_id)
-      .maybeSingle() as any
+      .maybeSingle()
 
     if (!campaign) {
       return new Response(JSON.stringify({ error: 'Campaign not found' }), {
