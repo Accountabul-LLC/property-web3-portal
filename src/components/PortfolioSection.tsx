@@ -9,6 +9,7 @@ import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
+import { humanizeTx } from '@/lib/txLabels';
 import ReceiveModal from '@/components/ReceiveModal';
 import SendModal from '@/components/SendModal';
 import NetworkToggle from '@/components/NetworkToggle';
@@ -1015,11 +1016,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                         <ArrowUpRight className="w-4 h-4 text-destructive" />
                       );
 
-                      const txLabel = tx.is_swap
-                        ? 'Swap'
-                        : tx.type === 'OfferCreate'
-                        ? 'DEX Order'
-                        : tx.type;
+                      const txLabel = humanizeTx({
+                        type: tx.type,
+                        direction: tx.direction,
+                        is_swap: tx.is_swap,
+                      });
 
                       // Show swap details
                       let amountLine = '';
@@ -1063,7 +1064,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium group-hover:text-secondary transition-colors">{txLabel}</p>
+                              <p className="text-sm font-medium group-hover:text-secondary transition-colors" title={tx.type}>{txLabel}</p>
                               <Badge
                                 variant={tx.result === 'tesSUCCESS' ? 'default' : 'destructive'}
                                 className="text-[10px] px-1.5 py-0"
