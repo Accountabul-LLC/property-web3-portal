@@ -119,27 +119,8 @@ export default function CauseDetail() {
           {/* Left: main content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Hero image */}
-            <div className="relative rounded-xl overflow-hidden bg-gradient-to-br from-primary/20 via-purple-500/10 to-pink-500/10 h-64 sm:h-80">
-              {campaign.image_url ? (
-                <img
-                  src={campaign.image_url}
-                  alt={campaign.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Heart className="w-24 h-24 text-primary/20" />
-                </div>
-              )}
-              {campaign.status === 'completed' && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <div className="text-center text-white">
-                    <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-400" />
-                    <p className="font-bold text-xl">Fully Funded</p>
-                  </div>
-                </div>
-              )}
-            </div>
+            <CauseHero campaign={campaign} />
+
 
             {/* Title + badges */}
             <div>
