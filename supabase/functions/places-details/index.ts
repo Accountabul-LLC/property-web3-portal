@@ -37,6 +37,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const authErr = await requireAuth(req, corsHeaders);
+  if (authErr) return authErr;
+
+
   const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
   if (!apiKey) {
     return new Response(JSON.stringify({ error: "GOOGLE_MAPS_API_KEY not configured" }), {
