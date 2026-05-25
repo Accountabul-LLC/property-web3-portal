@@ -202,8 +202,57 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               )}
             </div>
 
+            {/* Wallet picker */}
+            {activeWallet && (
+              <div className="space-y-2">
+                <Label>Donate from</Label>
+                {wallets.length > 1 ? (
+                  <Select value={activeWallet.address} onValueChange={(v) => setActiveWallet(v)}>
+                    <SelectTrigger className="h-auto py-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets.map((w) => (
+                        <SelectItem key={w.address} value={w.address}>
+                          <div className="flex items-center gap-2">
+                            <WalletIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-medium">{w.label}</span>
+                            <span className="text-xs text-muted-foreground">{shortAddr(w.address)}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                    <WalletIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{activeWallet.label}</span>
+                    <span className="text-xs text-muted-foreground">{shortAddr(activeWallet.address)}</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {balanceLoading ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading balance…</>
+                  ) : (
+                    <>Available: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</>
+                  )}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ({asset})</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="amount">Amount ({asset})</Label>
+                {asset === 'XRP' && balanceReady && maxDonatable > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(maxDonatable))}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Max
+                  </button>
+                )}
+              </div>
               <Input
                 id="amount"
                 type="number"
@@ -213,7 +262,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
+              {insufficientFunds ? (
+                <p className="text-xs text-destructive">
+                  Not enough XRP. Available to donate: {maxDonatable} XRP (≈1 XRP reserved on-ledger).
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
+              )}
             </div>
 
             <div className="space-y-2">
