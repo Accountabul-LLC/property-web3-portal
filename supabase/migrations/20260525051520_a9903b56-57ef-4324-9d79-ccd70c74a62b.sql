@@ -1,0 +1,1 @@
+ALTER TABLE public.campaign_donations ADD COLUMN IF NOT EXISTS donor_display_name text;
