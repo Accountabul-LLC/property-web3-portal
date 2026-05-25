@@ -280,13 +280,11 @@ export default function CauseDetail() {
                 <div className="flex justify-between items-baseline mb-3 gap-4">
                   <div className="flex flex-col min-w-0">
                     <span className="text-3xl font-bold text-foreground tracking-tight truncate">
-                      {raisedUsd !== null
-                        ? formatUsd(raisedUsd)
-                        : `${campaign.total_raised.toLocaleString()} ${campaign.currency}`}
+                      {campaign.total_raised.toLocaleString()} {campaign.currency}
                     </span>
-                    {isXrp && (
+                    {raisedUsd !== null && (
                       <span className="text-xs font-semibold text-primary uppercase tracking-wider mt-0.5">
-                        {campaign.total_raised.toLocaleString()} XRP raised
+                        {formatUsd(raisedUsd)} in escrow
                       </span>
                     )}
                   </div>
@@ -294,9 +292,7 @@ export default function CauseDetail() {
                     <div className="text-right shrink-0">
                       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Goal</span>
                       <div className="text-lg font-semibold text-foreground">
-                        {goalUsd !== null
-                          ? formatUsd(goalUsd)
-                          : `${campaign.goal_amount.toLocaleString()} ${campaign.currency}`}
+                        {campaign.goal_amount.toLocaleString()} {campaign.currency}
                       </div>
                     </div>
                   )}
@@ -314,19 +310,14 @@ export default function CauseDetail() {
                       <span className="text-sm font-semibold text-foreground">{pct}% raised</span>
                       {campaign.goal_amount && (
                         <span className="text-sm text-muted-foreground">
-                          {(() => {
-                            const remaining = Math.max(0, campaign.goal_amount - campaign.total_raised)
-                            const remainingUsd = isXrp && xrpPrice ? remaining * xrpPrice : null
-                            return remainingUsd !== null
-                              ? `${formatUsd(remainingUsd)} to go`
-                              : `${remaining.toLocaleString()} ${campaign.currency} to go`
-                          })()}
+                          {Math.max(0, campaign.goal_amount - campaign.total_raised).toLocaleString()} {campaign.currency} to go
                         </span>
                       )}
                     </div>
                   </>
                 )}
               </div>
+
 
 
               <div className="grid grid-cols-2 gap-4 text-center">
