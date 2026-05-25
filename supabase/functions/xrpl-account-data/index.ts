@@ -181,6 +181,14 @@ function parseMPTIssuances(objects: any[]) {
         attributes = Array.isArray(metadata.attributes) ? metadata.attributes : null;
       }
 
+      // Extract estimated asset value in USD if present (XLS-89 ai.value_usd or ai.val)
+      let value_usd: number | null = null;
+      if (metadata.ai && typeof metadata.ai === 'object') {
+        const raw = (metadata.ai as any).value_usd ?? (metadata.ai as any).val;
+        const n = raw != null ? Number(raw) : NaN;
+        if (Number.isFinite(n) && n > 0) value_usd = n;
+      }
+
       return {
         mpt_issuance_id: obj.MPTokenIssuanceID || obj.mpt_issuance_id || null,
         issuer: obj.Issuer || obj.Account || null,
@@ -203,6 +211,7 @@ function parseMPTIssuances(objects: any[]) {
         asset_subclass,
         issuer_name,
         uris,
+        value_usd,
       };
     });
 }
