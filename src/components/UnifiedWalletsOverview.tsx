@@ -135,7 +135,7 @@ export default function UnifiedWalletsOverview() {
           {totals.totalUsd > 0 ? (
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="text-3xl font-bold">
-                ${totals.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                ${totals.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </span>
               <span className="text-sm text-muted-foreground">
                 · {totals.totalXrp.toLocaleString(undefined, { maximumFractionDigits: 2 })} XRP
@@ -193,7 +193,7 @@ export default function UnifiedWalletsOverview() {
                   <>
                     {s.hasUsd && (
                       <p className="text-sm font-semibold">
-                        ${s.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                        ${s.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     )}
                     <p className={`text-[11px] ${s.hasUsd ? 'text-muted-foreground' : 'text-sm font-semibold text-foreground'}`}>
