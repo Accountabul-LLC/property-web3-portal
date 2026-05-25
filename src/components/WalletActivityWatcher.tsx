@@ -29,19 +29,87 @@ interface ParsedTx {
   result?: string | null;
 }
 
+type DonationMap = Map<string, {
+  role: 'donor' | 'recipient';
+  stage: 'escrow_create' | 'escrow_finish';
+  amount: number;
+  currency: string;
+  campaign_title: string | null;
+  counterparty: string | null;
+}>;
+
+async function fetchDonationLookup(address: string): Promise<DonationMap> {
+  const map: DonationMap = new Map();
+  try {
+    const [donorRes, recipRes] = await Promise.all([
+      supabase
+        .from('campaign_donations')
+        .select('amount, currency, escrow_tx_hash, escrow_finish_tx_hash, donor_wallet_address, campaigns:campaign_id(title, recipient_wallet_address)')
+        .eq('donor_wallet_address', address),
+      supabase
+        .from('campaign_donations')
+        .select('amount, currency, escrow_tx_hash, escrow_finish_tx_hash, donor_wallet_address, campaigns:campaign_id!inner(title, recipient_wallet_address)')
+        .in('escrow_status', ['escrowed', 'released'])
+        .eq('campaigns.recipient_wallet_address', address),
+    ]);
+    const rows = [
+      ...((donorRes.data || []) as any[]).map((r) => ({ r, role: 'donor' as const })),
+      ...((recipRes.data || []) as any[]).map((r) => ({ r, role: 'recipient' as const })),
+    ];
+    for (const { r, role } of rows) {
+      const campaign = r.campaigns || {};
+      const base = {
+        role,
+        amount: Number(r.amount ?? 0),
+        currency: r.currency ?? 'XRP',
+        campaign_title: campaign.title ?? null,
+        counterparty: role === 'donor' ? campaign.recipient_wallet_address ?? null : r.donor_wallet_address ?? null,
+      };
+      if (r.escrow_tx_hash) map.set(r.escrow_tx_hash, { ...base, stage: 'escrow_create' });
+      if (r.escrow_finish_tx_hash) map.set(r.escrow_finish_tx_hash, { ...base, stage: 'escrow_finish' });
+    }
+  } catch { /* non-blocking */ }
+  return map;
+}
+
+function donationNotification(
+  hash: string,
+  d: { role: 'donor' | 'recipient'; stage: 'escrow_create' | 'escrow_finish'; amount: number; currency: string; campaign_title: string | null; counterparty: string | null },
+  address: string,
+  network: Network,
+) {
+  const amt = `${fmt(d.amount)} ${d.currency}`;
+  const campaign = d.campaign_title ? ` to "${d.campaign_title}"` : '';
+  const fromCampaign = d.campaign_title ? ` for "${d.campaign_title}"` : '';
+  const base = { network, wallet_address: address, tx_hash: hash };
+  if (d.role === 'donor' && d.stage === 'escrow_create') {
+    return { ...base, kind: 'donation_sent' as const, title: `You donated ${amt}${campaign}`, body: `Funds locked in escrow until release date.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
+  }
+  if (d.role === 'donor' && d.stage === 'escrow_finish') {
+    return { ...base, kind: 'donation_delivered' as const, title: `Your donation was delivered`, body: `${amt}${fromCampaign} was released to the recipient.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
+  }
+  if (d.role === 'recipient' && d.stage === 'escrow_create') {
+    return { ...base, kind: 'donation_pledged' as const, title: `Donation pledged: ${amt}`, body: `Someone pledged ${amt}${fromCampaign}. Funds will release on the scheduled date.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
+  }
+  return { ...base, kind: 'donation_received' as const, title: `Funds donated to you: ${amt}`, body: `Released${fromCampaign} from ${short(d.counterparty)}.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
+}
+
 async function backfill(address: string, network: Network) {
   try {
-    const { data, error } = await supabase.functions.invoke('xrpl-account-data', {
-      body: { wallet_address: address, network },
-    });
+    const [{ data, error }, donations] = await Promise.all([
+      supabase.functions.invoke('xrpl-account-data', { body: { wallet_address: address, network } }),
+      fetchDonationLookup(address),
+    ]);
     if (error || !data?.transactions) return;
     const existing = new Set(listNotifications(address, network).map(n => n.tx_hash));
     const txs: ParsedTx[] = data.transactions;
-    // Reverse so we insert oldest-first, leaving most recent at top.
     for (const t of [...txs].reverse()) {
       if (!t.hash || existing.has(t.hash)) continue;
       if (t.result && t.result !== 'tesSUCCESS') continue;
-      const note = parsedToNotification(t, address, network);
+      const donation = donations.get(t.hash);
+      const note = donation
+        ? donationNotification(t.hash, donation, address, network)
+        : parsedToNotification(t, address, network);
       if (!note) continue;
       addNotification({ ...note, backfilled: true, created_at: t.date || undefined });
     }
