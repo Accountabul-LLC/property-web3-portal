@@ -59,7 +59,7 @@ export default function AdminCauses() {
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('campaigns')
         .select('*')
         .order('created_at', { ascending: false }) as any
@@ -85,7 +85,7 @@ export default function AdminCauses() {
   async function handleApprove(id: string) {
     setProcessing(id)
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('campaigns')
         .update({
           status: 'active',
@@ -111,7 +111,7 @@ export default function AdminCauses() {
     }
     setProcessing(id)
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('campaigns')
         .update({
           status: 'rejected',

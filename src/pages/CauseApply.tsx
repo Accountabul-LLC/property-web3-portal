@@ -67,7 +67,7 @@ export default function CauseApply() {
     try {
       const slug = slugify(values.title) + '-' + Date.now().toString(36)
 
-      const { error } = await supabase.from('campaigns').insert({
+      const { error } = await (supabase as any).from('campaigns').insert({
         title: values.title,
         slug,
         description: values.description,

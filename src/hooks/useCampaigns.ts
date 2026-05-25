@@ -26,7 +26,7 @@ export function useCampaigns() {
   return useQuery({
     queryKey: ['campaigns'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('campaigns')
         .select('*')
         .in('status', ['active', 'completed'])
@@ -42,7 +42,7 @@ export function useCampaign(slug: string) {
   return useQuery({
     queryKey: ['campaign', slug],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('campaigns')
         .select('*')
         .eq('slug', slug)
@@ -59,7 +59,7 @@ export function useCampaignDonations(campaignId: string) {
   return useQuery({
     queryKey: ['campaign-donations', campaignId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('campaign_donations')
         .select('id, donor_wallet_address, amount, currency, donor_message, is_anonymous, escrow_status, created_at')
         .eq('campaign_id', campaignId)
@@ -79,7 +79,7 @@ export function useMyDonations() {
   return useQuery({
     queryKey: ['my-donations'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('campaign_donations')
         .select(`
           id, amount, currency, escrow_status, donor_message, created_at,
