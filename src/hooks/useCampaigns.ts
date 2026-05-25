@@ -72,7 +72,7 @@ export function useCampaignDonations(campaignId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaign_donations')
-        .select('id, donor_wallet_address, amount, currency, donor_message, is_anonymous, escrow_status, created_at')
+        .select('id, donor_wallet_address, donor_display_name, amount, currency, donor_message, is_anonymous, escrow_status, created_at')
         .eq('campaign_id', campaignId)
         .in('escrow_status', ['escrowed', 'released'])
         .eq('is_anonymous', false)
