@@ -168,10 +168,23 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
       }
     }
 
+    // MPT issuer-held value (unsold supply * implied price per token)
+    let mptSubtotal = 0;
+    for (const mpt of xrplData.mpt_issuances || []) {
+      const v = valueMptIssuance(mpt);
+      if (v.issuerHeldUsd && v.issuerHeldUsd > 0) {
+        mptSubtotal += v.issuerHeldUsd;
+        pricedCount++;
+      } else if ((mpt.max_amount && Number(mpt.max_amount) > 0)) {
+        unpricedCount++;
+      }
+    }
+
     return {
-      totalUsd: xrpSubtotal + tokenSubtotal,
+      totalUsd: xrpSubtotal + tokenSubtotal + mptSubtotal,
       xrpSubtotal,
       tokenSubtotal,
+      mptSubtotal,
       pricedCount,
       unpricedCount,
       assetValues,
