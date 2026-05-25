@@ -75,6 +75,7 @@ export default function AdminCauses() {
   const [rejectionReason, setRejectionReason] = useState('')
   const [processing, setProcessing] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('under_review')
+  const [addOpen, setAddOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [createForm, setCreateForm] = useState({
     title: '',
