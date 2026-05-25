@@ -1,14 +1,21 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Lock, ExternalLink, Loader2, CheckCircle2, Heart } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Lock, ExternalLink, Loader2, CheckCircle2, Heart, Wallet as WalletIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import type { Campaign } from '@/hooks/useCampaigns'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio'
+
+function shortAddr(a: string) {
+  return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : ''
+}
 
 type Step = 'form' | 'qr' | 'confirming' | 'done'
 
@@ -19,6 +26,16 @@ type Props = {
 }
 
 export default function DonateModal({ campaign, open, onClose }: Props) {
+  const { wallets, activeWallet, setActiveWallet } = useActiveWallet()
+  const campaignNetwork = (campaign.network === 'testnet' ? 'testnet' : 'mainnet') as 'mainnet' | 'testnet'
+  const { data: portfolio, isLoading: balanceLoading } = useXRPLPortfolio(
+    activeWallet?.address ?? null,
+    campaignNetwork
+  )
+  const spendableXrp = portfolio?.spendable_xrp ?? 0
+  // Reserve ~1 XRP headroom for the new escrow object reserve + fee
+  const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - 1) * 1_000_000) / 1_000_000), [spendableXrp])
+
   const [step, setStep] = useState<Step>('form')
   const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
   const [amount, setAmount] = useState('')
@@ -29,6 +46,10 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   const [deepLink, setDeepLink] = useState('')
   const [payloadUuid, setPayloadUuid] = useState('')
   const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null)
+
+  const amt = parseFloat(amount)
+  const insufficientFunds = asset === 'XRP' && !!amount && !Number.isNaN(amt) && amt > maxDonatable
+  const balanceReady = !balanceLoading && !!activeWallet
 
   const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
@@ -52,9 +73,16 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
       toast.info('RLUSD donations coming soon — switch to XRP to donate now.')
       return
     }
-    const amt = parseFloat(amount)
+    if (!activeWallet) {
+      toast.error('Connect a wallet to donate')
+      return
+    }
     if (!amt || amt < 1) {
       toast.error(`Minimum donation is 1 ${asset}`)
+      return
+    }
+    if (asset === 'XRP' && amt > maxDonatable) {
+      toast.error(`Not enough XRP in ${activeWallet.label}. Available to donate: ${maxDonatable} XRP.`)
       return
     }
     setLoading(true)
@@ -174,8 +202,57 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               )}
             </div>
 
+            {/* Wallet picker */}
+            {activeWallet && (
+              <div className="space-y-2">
+                <Label>Donate from</Label>
+                {wallets.length > 1 ? (
+                  <Select value={activeWallet.address} onValueChange={(v) => setActiveWallet(v)}>
+                    <SelectTrigger className="h-auto py-2">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {wallets.map((w) => (
+                        <SelectItem key={w.address} value={w.address}>
+                          <div className="flex items-center gap-2">
+                            <WalletIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                            <span className="font-medium">{w.label}</span>
+                            <span className="text-xs text-muted-foreground">{shortAddr(w.address)}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-3 py-2 text-sm">
+                    <WalletIcon className="w-4 h-4 text-muted-foreground" />
+                    <span className="font-medium">{activeWallet.label}</span>
+                    <span className="text-xs text-muted-foreground">{shortAddr(activeWallet.address)}</span>
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                  {balanceLoading ? (
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading balance…</>
+                  ) : (
+                    <>Available: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</>
+                  )}
+                </p>
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount ({asset})</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="amount">Amount ({asset})</Label>
+                {asset === 'XRP' && balanceReady && maxDonatable > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setAmount(String(maxDonatable))}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Max
+                  </button>
+                )}
+              </div>
               <Input
                 id="amount"
                 type="number"
@@ -185,7 +262,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
+              {insufficientFunds ? (
+                <p className="text-xs text-destructive">
+                  Not enough XRP. Available to donate: {maxDonatable} XRP (≈1 XRP reserved on-ledger).
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -206,7 +289,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             </div>
 
             <div className="pt-2 space-y-2">
-              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD'} className="w-full">
+              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD' || !activeWallet || (asset === 'XRP' && (!balanceReady || insufficientFunds))} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Heart className="w-4 h-4 mr-2" />}
                 {loading ? 'Preparing...' : 'Donate'}
               </Button>
