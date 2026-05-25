@@ -1846,53 +1846,6 @@ export type Database = {
       }
     }
     Views: {
-      campaign_donations_public: {
-        Row: {
-          amount: number | null
-          campaign_id: string | null
-          created_at: string | null
-          currency: string | null
-          donor_display_name: string | null
-          donor_message: string | null
-          donor_wallet_address: string | null
-          escrow_status: string | null
-          id: string | null
-          is_anonymous: boolean | null
-        }
-        Insert: {
-          amount?: number | null
-          campaign_id?: string | null
-          created_at?: string | null
-          currency?: string | null
-          donor_display_name?: never
-          donor_message?: string | null
-          donor_wallet_address?: never
-          escrow_status?: string | null
-          id?: string | null
-          is_anonymous?: boolean | null
-        }
-        Update: {
-          amount?: number | null
-          campaign_id?: string | null
-          created_at?: string | null
-          currency?: string | null
-          donor_display_name?: never
-          donor_message?: string | null
-          donor_wallet_address?: never
-          escrow_status?: string | null
-          id?: string | null
-          is_anonymous?: boolean | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "campaign_donations_campaign_id_fkey"
-            columns: ["campaign_id"]
-            isOneToOne: false
-            referencedRelation: "campaigns"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_wallets_safe: {
         Row: {
           avatar_url: string | null
@@ -1941,6 +1894,21 @@ export type Database = {
     }
     Functions: {
       get_kyc_status: { Args: { p_user_id: string }; Returns: string }
+      get_public_campaign_donations: {
+        Args: { p_campaign_id: string }
+        Returns: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          currency: string
+          donor_display_name: string
+          donor_message: string
+          donor_wallet_address: string
+          escrow_status: string
+          id: string
+          is_anonymous: boolean
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
