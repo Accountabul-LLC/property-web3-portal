@@ -44,6 +44,14 @@ const XRPL_NODES: Record<'mainnet' | 'testnet' | 'devnet', string[]> = {
   devnet: ['https://s.devnet.rippletest.net:51234'],
 }
 
+// RLUSD = "RLUSD" padded to 40-hex characters per XRPL IOU currency code spec.
+const RLUSD_CURRENCY_HEX = '524C555344000000000000000000000000000000'
+const RLUSD_ISSUER: Record<'mainnet' | 'testnet' | 'devnet', string | null> = {
+  mainnet: 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De',
+  testnet: 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV',
+  devnet: null,
+}
+
 function toDrops(xrp: number): string {
   return String(Math.round(xrp * 1_000_000))
 }
