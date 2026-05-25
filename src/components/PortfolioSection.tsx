@@ -92,6 +92,19 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false }: PortfolioSect
   const [expandedToken, setExpandedToken] = useState<string | null>(null);
   const [mptSortMode, setMptSortMode] = useState<'newest' | 'alpha' | 'supply'>('newest');
   const [mptSearchQuery, setMptSearchQuery] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = async () => {
+    if (!displayAddress) return;
+    try {
+      await navigator.clipboard.writeText(displayAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast.success('Address copied to clipboard');
+    } catch {
+      toast.error('Failed to copy address');
+    }
+  };
 
   // Fetch enriched metadata for all token holdings
   const { data: tokenMetaData } = useTokenMeta(
