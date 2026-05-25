@@ -62,7 +62,7 @@
     {
       "id": "prod_audit_002",
       "name": "CauseApply Auth Gate",
-      "status": "approved",
+      "status": "shipped",
       "priority": "medium",
       "description": "Unauthenticated users can fill the entire cause application form, only failing on submit due to RLS.",
       "source_workstream": "ws_fix_002",
@@ -93,7 +93,7 @@
     {
       "id": "prod_audit_003",
       "name": "GitHub Agent File Path Whitelist",
-      "status": "approved",
+      "status": "shipped",
       "priority": "medium",
       "description": "github-agent allows arbitrary file reads from the repo. AI Panel admins could request .env files or secret-adjacent paths.",
       "source_workstream": "ws_sec_001",
