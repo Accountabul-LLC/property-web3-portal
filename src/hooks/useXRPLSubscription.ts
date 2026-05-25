@@ -6,14 +6,26 @@ const TESTNET_WS = ['wss://s.altnet.rippletest.net:51233'];
 const RECONNECT_BASE_MS = 1000;
 const RECONNECT_MAX_MS = 30000;
 
-export function useXRPLSubscription(walletAddress: string | null, network: 'mainnet' | 'testnet' = 'mainnet') {
+export interface XRPLTransactionEvent {
+  tx: any;
+  meta: any;
+  validated: boolean;
+}
+
+export function useXRPLSubscription(
+  walletAddress: string | null,
+  network: 'mainnet' | 'testnet' = 'mainnet',
+  onTransaction?: (evt: XRPLTransactionEvent) => void,
+) {
   const queryClient = useQueryClient();
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
   const addressRef = useRef(walletAddress);
   const endpointIndex = useRef(0);
+  const onTxRef = useRef(onTransaction);
   addressRef.current = walletAddress;
+  onTxRef.current = onTransaction;
 
   useEffect(() => {
     if (!walletAddress) return;
@@ -43,6 +55,12 @@ export function useXRPLSubscription(walletAddress: string | null, network: 'main
             queryClient.invalidateQueries({
               queryKey: ['xrpl_portfolio', addressRef.current],
             });
+            if (onTxRef.current) {
+              const tx = msg.transaction || msg.tx_json || msg.tx;
+              // Ensure hash is present on tx object for downstream use
+              if (tx && !tx.hash && msg.hash) tx.hash = msg.hash;
+              onTxRef.current({ tx, meta: msg.meta, validated: true });
+            }
           }
         } catch {
           // ignore parse errors
@@ -52,7 +70,6 @@ export function useXRPLSubscription(walletAddress: string | null, network: 'main
       ws.onclose = () => {
         wsRef.current = null;
         if (disposed) return;
-        // Cycle to next endpoint on failure
         endpointIndex.current++;
         const delay = Math.min(
           RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt.current),
