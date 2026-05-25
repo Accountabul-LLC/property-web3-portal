@@ -100,6 +100,10 @@ const AI_KEY_LABELS: Record<string, string> = {
   adr: 'Address', ct: 'City', st: 'State', zip: 'ZIP', cc: 'Country',
   pt: 'Type', b: 'Beds', ba: 'Baths', sf: 'SqFt', yb: 'Built',
   val: 'Value', cur: 'Currency', asof: 'As Of', em: 'Contact',
+  // Long-form keys (legacy/uncompressed builder output)
+  address: 'Address', city: 'City', state: 'State', country: 'Country',
+  property_type: 'Type', bedrooms: 'Beds', bathrooms: 'Baths', sqft: 'SqFt', year_built: 'Built',
+  value_usd: 'Asset Value (USD)', contact: 'Contact',
 };
 
 function parseMPTIssuances(objects: any[]) {
