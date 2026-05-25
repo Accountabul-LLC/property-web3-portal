@@ -138,6 +138,7 @@ serve(async (req) => {
     const existingInvoicePayload = safeObject(invoice.provider_payload);
 
     if (provider === "stripe") {
+      const publishableKey = Deno.env.get("STRIPE_PUBLISHABLE_KEY") ?? null;
       if ((existingPaymentPayload.client_secret || existingInvoicePayload.client_secret) && payment.id) {
         return json({
           payment,
@@ -147,6 +148,7 @@ serve(async (req) => {
             payment_intent_id: payment.provider_reference ?? existingPaymentPayload.payment_intent_id ?? null,
             client_secret: existingInvoicePayload.client_secret ?? existingPaymentPayload.client_secret ?? null,
             status: existingPaymentPayload.stripe_status ?? "requires_payment_method",
+            publishable_key: publishableKey,
           },
         });
       }
@@ -162,9 +164,11 @@ serve(async (req) => {
             payment_intent_id: payment.provider_reference ?? null,
             status: "unconfigured",
             configuration_missing: true,
+            publishable_key: publishableKey,
           },
         });
       }
+
 
       const amountMinor = toStripeMinorUnits(amount, currency);
       const metadataForStripe = {
