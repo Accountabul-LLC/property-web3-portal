@@ -15,8 +15,8 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
 import { callAdminEdgeFunction } from '@/lib/adminEdge'
+import { callEdgeFunction } from '@/lib/edgeFunction'
 import { toast } from 'sonner'
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -47,22 +47,6 @@ interface IssuerStatus {
   }
 }
 
-async function callEdgeFn(fn: string, body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(body),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || res.statusText)
-  return json
-}
-
 export function IssuerWalletPanel() {
   const qc = useQueryClient()
   const [showRegister, setShowRegister] = useState(false)
@@ -73,7 +57,7 @@ export function IssuerWalletPanel() {
 
   const { data, isLoading, refetch } = useQuery<IssuerStatus>({
     queryKey: ['admin-issuer-status'],
-    queryFn: () => callEdgeFn('get-issuer-status', { network: 'testnet' }),
+    queryFn: () => callEdgeFunction('get-issuer-status', { network: 'testnet' }),
     refetchInterval: 60_000,
   })
 

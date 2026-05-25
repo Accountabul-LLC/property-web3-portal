@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { callEdgeFunction } from '@/lib/edgeFunction'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -31,22 +32,6 @@ interface EvidenceRequirement {
   documents: EvidenceDocument[]
 }
 
-async function callEdgeFn(fnName: string, body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(body),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || res.statusText)
-  return json
-}
-
 function docStatusVariant(status: string): 'default' | 'secondary' | 'destructive' | 'outline' {
   if (status === 'accepted') return 'default'
   if (status === 'rejected') return 'destructive'
@@ -59,7 +44,7 @@ export function CredentialEvidencePanel({ applicationId, credentialKey, userId }
   const { data, isLoading, error } = useQuery<{ evidence: EvidenceRequirement[]; kyc_case_id: string | null }>({
     queryKey: ['credential-evidence', applicationId],
     queryFn: () =>
-      callEdgeFn('review-credential-application', {
+      callEdgeFunction('review-credential-application', {
         application_id: applicationId,
         action: 'get_evidence',
       }),

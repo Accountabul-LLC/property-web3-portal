@@ -310,6 +310,7 @@ export function useMyData() {
 - Moved privileged admin reads for GitHub integrations, credential applications, wallet registrations, and the credential ledger behind Supabase edge functions.
 - Updated the admin dashboards to fetch those datasets via `admin-integrations`, `admin-credential-applications`, `admin-wallet-registrations`, and `admin-credential-ledger` instead of querying sensitive tables directly from the browser.
 - Residual note: the user-scoped `useCredentialApplications` hook still reads only the signed-in user’s own records client-side; that is lower risk and can be moved later if we want a fully server-mediated pattern.
+- Consolidated the repeated authenticated edge-function fetch boilerplate into a shared `src/lib/edgeFunction.ts` helper and had admin components reuse it instead of local copies.
 
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`

@@ -34,7 +34,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { supabase } from '@/integrations/supabase/client'
+import { callEdgeFunction } from '@/lib/edgeFunction'
 import { callAdminEdgeFunction } from '@/lib/adminEdge'
 import { toast } from 'sonner'
 
@@ -63,19 +63,6 @@ interface AdminApplication {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-async function callEdgeFn(fn: string, body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-    body: JSON.stringify(body),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || res.statusText)
-  return json
-}
 
 function userName(app: AdminApplication): string {
   if (app._profile_name) return app._profile_name
@@ -194,7 +181,7 @@ const AdminCredentials = () => {
   async function runAction(appId: string, action: string, extra?: Record<string, unknown>) {
     setActionLoading(appId + action)
     try {
-      await callEdgeFn('review-credential-application', { application_id: appId, action, ...extra })
+      await callEdgeFunction('review-credential-application', { application_id: appId, action, ...extra })
       toast.success(`Action '${action}' completed`)
       qc.invalidateQueries({ queryKey: ['admin-credential-applications'] })
     } catch (err) {
@@ -207,7 +194,7 @@ const AdminCredentials = () => {
   async function runIssueCredential(appId: string) {
     setActionLoading(appId + 'issue_cred')
     try {
-      const result = await callEdgeFn('issue-credential', { application_id: appId })
+      const result = await callEdgeFunction('issue-credential', { application_id: appId })
       toast.success(result.message ?? 'Credential issued')
       qc.invalidateQueries({ queryKey: ['admin-credential-applications'] })
     } catch (err) {
@@ -220,7 +207,7 @@ const AdminCredentials = () => {
   async function runRevoke(appId: string, reason: string) {
     setActionLoading(appId + 'revoke')
     try {
-      await callEdgeFn('revoke-credential', { application_id: appId, reason })
+      await callEdgeFunction('revoke-credential', { application_id: appId, reason })
       toast.success('Credential revoked')
       qc.invalidateQueries({ queryKey: ['admin-credential-applications'] })
     } catch (err) {
