@@ -38,6 +38,11 @@ function buildCors(req: Request): Record<string, string> {
 
 // XRPL epoch starts Jan 1, 2000 — Unix epoch offset in seconds
 const RIPPLE_EPOCH_OFFSET = 946684800
+const XRPL_NODES: Record<'mainnet' | 'testnet' | 'devnet', string[]> = {
+  mainnet: ['https://xrplcluster.com', 'https://s1.ripple.com:51234', 'https://s2.ripple.com:51234'],
+  testnet: ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'],
+  devnet: ['https://s.devnet.rippletest.net:51234'],
+}
 
 function toDrops(xrp: number): string {
   return String(Math.round(xrp * 1_000_000))
@@ -46,6 +51,70 @@ function toDrops(xrp: number): string {
 function toXrplTime(isoDate: string): number {
   const unixSeconds = Math.floor(new Date(isoDate).getTime() / 1000)
   return unixSeconds - RIPPLE_EPOCH_OFFSET
+}
+
+async function xrplRpc(network: 'mainnet' | 'testnet' | 'devnet', method: string, params: Record<string, unknown>[]) {
+  const nodes = XRPL_NODES[network] ?? XRPL_NODES.mainnet
+  let lastError: Error | null = null
+  for (const node of nodes) {
+    try {
+      const res = await fetch(node, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ method, params }),
+        signal: AbortSignal.timeout(7000),
+      })
+      if (!res.ok) {
+        lastError = new Error(`${node} returned ${res.status}`)
+        continue
+      }
+      return await res.json()
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err))
+    }
+  }
+  throw lastError ?? new Error(`Unable to query XRPL ${method}`)
+}
+
+function isDepositAuthEnabled(accountData: Record<string, unknown> | null | undefined): boolean {
+  const flags = Number(accountData?.Flags ?? 0)
+  return (flags & 0x01000000) !== 0
+}
+
+async function preflightRecipient(
+  recipientAddress: string,
+  donorAddress: string,
+  network: 'mainnet' | 'testnet' | 'devnet',
+  requireDepositAuthCheck: boolean,
+) {
+  const accountInfo = await xrplRpc(network, 'account_info', [{ account: recipientAddress, ledger_index: 'validated' }])
+  const accountData = accountInfo?.result?.account_data
+  if (!accountData) {
+    return { ok: false as const, error: 'This campaign recipient wallet is not activated on the XRP Ledger yet.' }
+  }
+
+  if (!requireDepositAuthCheck) {
+    return { ok: true as const, accountData }
+  }
+
+  const depositAuth = accountInfo?.result?.account_flags?.depositAuth ?? isDepositAuthEnabled(accountData)
+  if (depositAuth) {
+    const authRes = await xrplRpc(network, 'deposit_authorized', [{
+      source_account: donorAddress,
+      destination_account: recipientAddress,
+      ledger_index: 'validated',
+    }])
+
+    const authorized = authRes?.result?.authorized === true
+    if (!authorized) {
+      return {
+        ok: false as const,
+        error: 'This recipient requires deposit authorization. Please contact the campaign owner to preauthorize your wallet.',
+      }
+    }
+  }
+
+  return { ok: true as const, accountData }
 }
 
 Deno.serve(async (req) => {
@@ -149,6 +218,36 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({
         error: `Connected wallet network (${wallet.network ?? 'unknown'}) must match the campaign network (${campaign.network}).`,
       }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
+    const recipientNetwork = (campaign.network === 'testnet' || campaign.network === 'devnet' || campaign.network === 'mainnet')
+      ? campaign.network
+      : 'mainnet'
+    const recipientPreflight = await preflightRecipient(
+      campaign.recipient_wallet_address,
+      wallet.wallet_address,
+      recipientNetwork,
+      campaign.campaign_type === 'direct',
+    )
+
+    if (!recipientPreflight.ok) {
+      await logAppAudit(svc, {
+        area: 'causes',
+        action: 'donation_preflight_blocked',
+        entityType: 'campaign',
+        entityId: campaign.id,
+        actorId: user.id,
+        metadata: {
+          origin: 'campaign-donate',
+          campaign_type: campaign.campaign_type ?? 'escrow',
+          recipient_wallet_address: campaign.recipient_wallet_address,
+          reason: recipientPreflight.error,
+        },
+      })
+
+      return new Response(JSON.stringify({ error: recipientPreflight.error }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }

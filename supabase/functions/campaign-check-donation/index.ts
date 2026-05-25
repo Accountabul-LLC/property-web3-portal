@@ -61,6 +61,35 @@ async function fetchXrplTx(txHash: string, network: string): Promise<any> {
   }
 }
 
+function mapEngineResultMessage(engineResult: string, isDirectDonation: boolean): string {
+  if (!isDirectDonation) {
+    if (engineResult === 'tecNO_PERMISSION') {
+      return 'The XRP Ledger rejected this transaction: the escrow release time has not been reached yet, or the cancel window has already passed. No funds were moved.'
+    }
+
+    return `The XRP Ledger rejected this transaction (${engineResult}). No funds were moved.`
+  }
+
+  switch (engineResult) {
+    case 'tecNO_TARGET':
+      return 'The recipient wallet is not activated on the XRP Ledger yet. No funds were moved.'
+    case 'tecDST_TAG_NEEDED':
+      return 'The recipient wallet requires a destination tag. Please contact the campaign owner.'
+    case 'tecINSUFFICIENT_RESERVE':
+      return 'The XRP Ledger rejected this payment because there is not enough reserve available for the destination account.'
+    case 'tecUNFUNDED':
+      return 'Not enough XRP was available at signing time. No funds were moved.'
+    case 'tefPAST_SEQ':
+    case 'terPRE_SEQ':
+      return 'A sequence race occurred while submitting this payment. Please try again.'
+    case 'temBAD_AMOUNT':
+    case 'temBAD_EXPIRATION':
+      return 'Something went wrong building this transaction. Admins have been notified.'
+    default:
+      return `The XRP Ledger rejected this payment (${engineResult}). No funds were moved.`
+  }
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req)
 
@@ -285,10 +314,7 @@ Deno.serve(async (req) => {
     // Detect on-ledger failure (tec*, tef*, ter*, tem*, tel*) — signed in Xaman but rejected by the XRP Ledger
     const engineResult: string = txData?.meta?.TransactionResult ?? 'unknown'
     if (engineResult !== 'tesSUCCESS') {
-      const friendly =
-        engineResult === 'tecNO_PERMISSION'
-          ? 'The XRP Ledger rejected this transaction: the escrow release time has not been reached yet, or the cancel window has already passed. No funds were moved.'
-          : `The XRP Ledger rejected this transaction (${engineResult}). No funds were moved.`
+      const friendly = mapEngineResultMessage(engineResult, isDirectDonation)
 
       await Promise.all([
         svc.from('xaman_payloads').update({ status: 'failed' }).eq('uuid', xaman_uuid),
@@ -365,7 +391,11 @@ Deno.serve(async (req) => {
       },
     })
 
-    console.log(`Donation escrowed: campaign=${meta.campaign_id} amount=${meta.amount_xrp} XRP tx=${txHash} seq=${escrowSequence}`)
+    console.log(
+      campaign.campaign_type === 'direct'
+        ? `Direct donation validated: campaign=${meta.campaign_id} amount=${meta.amount_xrp} XRP tx=${txHash}`
+        : `Donation escrowed: campaign=${meta.campaign_id} amount=${meta.amount_xrp} XRP tx=${txHash} seq=${escrowSequence}`,
+    )
 
     return new Response(JSON.stringify({
       status: newDonationStatus,

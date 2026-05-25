@@ -55,7 +55,8 @@ The browser can safely:
 The following client-side writes were identified and moved or are intended to stay server-side:
 
 - Causes campaign writes and donation release flows
-- Escrow and direct campaign donation flows
+- Escrow and direct campaign donation flows, including recipient activation and DepositAuth preflight checks
+- XRPL validation and engine-result mapping for donation signing flows
 - Action item management and GitHub sync
 - Integration toggles
 - XRPL issuer wallet registration
