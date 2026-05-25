@@ -64,7 +64,10 @@ Deno.serve(async (req) => {
     }
 
     const data = await faucetRes.json();
-    console.log('Faucet response:', JSON.stringify(data));
+    console.log('Faucet response:', JSON.stringify({
+      address: data.account?.address || data.account?.classicAddress,
+      balance: data.balance || data.amount,
+    }));
 
     // The faucet returns: { account: { address, secret }, amount, balance }
     const address = data.account?.address || data.account?.classicAddress;
