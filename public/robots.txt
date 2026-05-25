@@ -12,3 +12,5 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+Sitemap: https://property-web3-portal.lovable.app/sitemap.xml
