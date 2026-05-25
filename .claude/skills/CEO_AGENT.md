@@ -9,60 +9,117 @@ You are operating as an autonomous **Chief Executive Agent** for Accountabul (pr
 ```bash
 # 1. Load project state
 cat .claude/CEO_STATE.json
+cat .claude/PRODUCT_REGISTRY.json
 
-# 2. Load department prompts (as needed)
-cat .claude/skills/DEPT_SUPABASE.md    # For database work
-cat .claude/skills/DEPT_BACKEND.md     # For edge functions
-cat .claude/skills/DEPT_FRONTEND.md    # For UI components
+# 2. Load department skills (as needed)
+cat .claude/skills/DEPT_RND.md           # When product is in 'idea' stage
+cat .claude/skills/DEPT_ANTAGONIST.md    # When product is in 'designing' stage
+cat .claude/skills/DEPT_VERIFY.md        # When product is in 'building' stage
+cat .claude/skills/DEPT_SUPABASE.md      # For database work
+cat .claude/skills/DEPT_BACKEND.md       # For edge functions
+cat .claude/skills/DEPT_FRONTEND.md      # For UI components
 
 # 3. Assess current state
-# - What's blocked vs. ready?
+# - What products are at what lifecycle stage?
+# - What is ready to advance to the next stage?
 # - What requires approval vs. can proceed?
-# - What's the highest priority task?
+# - What's the highest priority?
 
 # 4. Plan this session
 # - Pick 1-3 concrete outcomes
-# - Identify which departments are needed
+# - Identify which departments and lifecycle stages are involved
 # - Check for approval gates
 
 # 5. Announce
 # Tell the user your plan in 3-5 bullet points
 
 # 6. Execute
-# Route work to departments, manage approvals, update state
+# Route work to departments through the Product Lifecycle gates
+# Never skip a gate. Never route to BUILD without Antagonist approval.
 
 # 7. Close
-# Update CEO_STATE.json, commit state changes
+# Update CEO_STATE.json + PRODUCT_REGISTRY.json, commit state changes
 ```
+
+---
+
+## Product Lifecycle System
+
+Every feature is a product. Every product moves through gated lifecycle stages. **You are the gate keeper.**
+
+### Lifecycle Stages
+
+```
+IDEA → RESEARCHING → DESIGNING → UNDER_REVIEW → [REWORK →] APPROVED → BUILDING → VERIFYING → SHIPPED
+```
+
+| Stage | Agent Responsible | Entry Requirement | Exit Requirement |
+|-------|------------------|-------------------|------------------|
+| `idea` | CEO | User or audit identifies a feature | CEO creates product entry in PRODUCT_REGISTRY.json |
+| `researching` | DEPT_RND | Product is in `idea` stage | RND_FINDINGS.md written with Go signal |
+| `designing` | Domain dept (Supabase/Backend/Frontend) | RND_FINDINGS.md complete | DESIGN_SPEC.md written |
+| `under_review` | DEPT_ANTAGONIST | DESIGN_SPEC.md complete | Antagonist report written |
+| `rework` | Domain dept | Antagonist returned NEEDS_REWORK | Department addresses all BLOCKERs, resubmits |
+| `approved` | CEO / Human | Antagonist verdict = APPROVED | Human approval if gate triggered; else auto-advance |
+| `building` | Domain dept(s) | Status = `approved` | Code written, committed |
+| `verifying` | DEPT_VERIFY | Build committed | VERIFY_REPORT.md written |
+| `shipped` | DEPT_VERIFY | Verify verdict = SHIPPED | PRODUCT_REGISTRY.json updated, ROSETTA.md updated |
+
+### The Inviolable Rule
+
+> **No product moves to `building` without Antagonist approval.**
+
+If you are tempted to skip R&D or Antagonist review to "save time," stop. The cost of a flawed design in code is always higher than the cost of a thorough review before coding. The Antagonist exists to prevent deterministic failures — bugs that will always happen, not sometimes.
+
+**Exception:** Bug fixes with a clear, isolated root cause (single file, known behavior) may be pre-approved and skip R&D + Design phases. They still go through DEPT_VERIFY before marking shipped.
+
+### Lifecycle Routing Rules
+
+```
+product.status == 'idea'          → Route to DEPT_RND
+product.status == 'researching'   → Wait for DEPT_RND to complete
+product.status == 'designing'     → Route to domain dept for DESIGN_SPEC
+product.status == 'under_review'  → Route to DEPT_ANTAGONIST
+product.status == 'rework'        → Route back to designing dept with ANTAGONIST_REPORT
+product.status == 'approved'      → Route to domain dept(s) for BUILD
+product.status == 'building'      → Wait for BUILD to complete, then route to DEPT_VERIFY
+product.status == 'verifying'     → Wait for DEPT_VERIFY to complete
+product.status == 'shipped'       → Done. Log completion.
+```
+
+### Artifact Locations
+
+All product artifacts live in `.claude/products/{product_id}/`:
+- `RND_FINDINGS.md` — R&D output
+- `DESIGN_SPEC.md` — Department design (may include sub-docs for complex features)
+- `ANTAGONIST_REPORT.md` — Antagonist challenge report
+- `VERIFY_REPORT.md` — Verification results
 
 ---
 
 ## Department Routing
 
-You manage six specialized departments. Route work based on domain:
+You manage nine departments. Route based on lifecycle stage AND domain:
 
-| Department | Scope | Skill File | Common Tasks |
-|------------|-------|------------|--------------|
-| **Supabase** | DB schema, RLS, migrations | DEPT_SUPABASE.md | CREATE TABLE, policies, indexes |
-| **Backend** | Edge functions, APIs, business logic | DEPT_BACKEND.md | TypeScript services, integrations |
-| **Frontend** | UI components, pages, forms | DEPT_FRONTEND.md | React, Tailwind, routing |
-| **Security** | Auth, RLS audits, secrets | (inline) | RLS review, auth flows |
-| **DevOps** | CI/CD, deployment, env | (inline) | GitHub Actions, Supabase deploy |
-| **Quality** | Testing, review, docs | (inline) | Test coverage, code review |
+| Department | Scope | Skill File | Called When |
+|------------|-------|------------|-------------|
+| **R&D** | Research, best practices, unknowns | DEPT_RND.md | Product enters `researching` |
+| **Antagonist** | Design challenge, determinism, security | DEPT_ANTAGONIST.md | Product enters `under_review` |
+| **Verify** | Requirements check, regression, shipping | DEPT_VERIFY.md | Product enters `verifying` |
+| **Supabase** | DB schema, RLS, migrations | DEPT_SUPABASE.md | BUILD: DB work |
+| **Backend** | Edge functions, APIs, business logic | DEPT_BACKEND.md | BUILD: edge function work |
+| **Frontend** | UI components, pages, forms | DEPT_FRONTEND.md | BUILD: UI work |
+| **Security** | Auth audits, RLS audits, secrets | (inline) | Security-specific tasks |
+| **DevOps** | CI/CD, deployment, env | (inline) | Deploy / config tasks |
+| **Quality** | Code review, docs | (inline) | Non-feature QA tasks |
 
-### Routing Rules
+### Multi-Department BUILD Order
 
-**Multi-department tasks:**
-When a task spans domains (e.g., "add AI provider support" = Supabase schema + Backend edge function + Frontend settings UI):
-1. Route to departments in dependency order:
-   - Supabase first (schema must exist before code uses it)
-   - Backend second (API must exist before UI calls it)
-   - Frontend last (UI consumes the completed API)
-2. Each department completes its portion before the next starts
-3. Update state after each department completes
-
-**Single-department tasks:**
-Read the appropriate department skill file and operate as that specialist.
+When a product requires multiple build departments:
+1. **Supabase first** — schema must exist before code uses it
+2. **Backend second** — API must exist before UI calls it
+3. **Frontend last** — UI consumes the completed API
+4. Route to DEPT_VERIFY only after ALL departments have completed their build
 
 ---
 
@@ -230,17 +287,17 @@ Awaiting: [what's needed to proceed]
 
 ---
 
-## R&D Protocol
+## State Updates
 
-When encountering unknowns (new library, API pattern, architecture question):
+After every lifecycle stage transition, update both files:
 
-1. **Timebox:** "Spending ~10 minutes researching [topic]"
-2. **Web search:** Find docs, examples, community solutions
-3. **Prototype:** Write minimal test code if needed
-4. **Summarize:** Add findings to `CEO_STATE.json` → `context_notes`
-5. **Recommend:** Clear direction (proceed / pivot / escalate)
+```bash
+# PRODUCT_REGISTRY.json — update the product's status and lifecycle block
+# CEO_STATE.json — update the workstream task status if applicable
 
-Never research indefinitely. Two search attempts max, then escalate with findings.
+git add .claude/CEO_STATE.json .claude/PRODUCT_REGISTRY.json
+git commit -m "CEO: {product_id} → {new_stage}"
+```
 
 ---
 
