@@ -1,91 +1,32 @@
-# Accepted-assets whitelist for campaigns
+## Goal
 
-Restrict which assets the platform's donate flow will accept per campaign. Defaults stay safe; donors can never push an unapproved asset through our flow. On-chain hardening of recipient wallets is explicitly out of scope.
+Replace the "Also accept RLUSD donations" checkbox on `/causes/apply` with a dynamic asset picker driven by the submitter's connected wallet holdings. Auto-switch the campaign to direct (evergreen) mode when a non-XRP asset is selected, since XRPL native escrow is XRP-only.
 
-## Scope
+## UX flow
 
-- Asset whitelist limited to `XRP` and `RLUSD` (platform-supported set).
-- We will eventually set this up to where we have issuing wallets and all of the tokens that we launch from that issuing wallet is going to be on this hard coded list as well we can set that up too so if you see our two wallets we've already connected to the test net and launched multiple different tokens that represent 100% ownership rights of a property So that's specifically what we are looking to make sure that we can escrow because some people may have real estate or something that they want to donate you can donate fractional shares of real estate also if that's not the case if a user has only real estate to donate and they want to sell the real estate for fiat or for you know a stable coin we need to be able to facilitate that payment or that transaction So they sell the real estate on our platform we need to get a small fee from that and then we also need to cash them out Then after they get cashed out that cash needs to go into the donation pot because that was their intention in the first place was to swap out the asset for Fiat and then automatically donate whatever they were swapping what amount they were swapping into that donation pool
-- Submitter picks accepted assets on the public submit form; admin can override in the edit drawer; donate modal only shows allowed options.
-- Wire RLUSD as a real IOU payment path in `campaign-donate` (trustline-gated; bounces with a clear message if the donor has no RLUSD trustline / balance).
+1. **No wallet connected** → show inline notice: "Connect your Xaman wallet to choose accepted assets" with a Connect button. Recipient address field stays free-input; campaign defaults to XRP-only scheduled.
+2. **Wallet connected** → fetch holdings via existing `useXRPLPortfolio(activeWallet, activeNetwork)`. Render an asset checklist:
+  - **XRP** — always shown, default checked, can't be unchecked.
+  - **RLUSD** — shown only if the wallet has an RLUSD trustline (detected by currency hex `524C555344...` against the network's official issuer). Tooltip if missing: "No RLUSD trustline detected on this wallet."
+  - Other tokens/MPTs in the wallet are listed but disabled with a "Not supported by donation flow yet" hint, so the user sees them but can't pick them.
+3. **Recipient address field** auto-fills with the connected wallet address (editable). If user edits it to a different address, show a small warning: "Accepted assets are based on your connected wallet's trustlines, not the recipient's. Make sure the recipient also has the required trustlines."
+4. **Mode auto-switch**: if RLUSD is checked, the form silently sets `campaign_mode = 'direct'` and hides/clears the release date field (replaced with note: "Direct mode — donations forward immediately. Required because non-XRP assets can't be escrowed on XRPL."). If user unchecks RLUSD, mode reverts to `scheduled` and release date re-appears.
+  &nbsp;
+
+## Form & submission changes
+
+- Remove `accept_rlusd` boolean from zod schema; add `accepted_assets: z.array(z.enum(['XRP','RLUSD'])).min(1).default(['XRP'])` and `campaign_mode: z.enum(['scheduled','direct']).default('scheduled')`.
+- `release_date` becomes conditional: required when `campaign_mode === 'scheduled'`, optional/null when `'direct'`.
+- Pass `accepted_assets` and `campaign_mode` to `campaign-submit` edge function. (`campaign-submit` already accepts `accepted_assets`; needs a small addition for `campaign_mode` — verify and extend if not present.)
+
+## Files to touch
+
+- `src/pages/CauseApply.tsx` — schema, form fields, asset picker component, mode auto-switch logic, recipient default + warning.
+- New: `src/components/causes/AcceptedAssetsPicker.tsx` — encapsulates the wallet-holdings-driven checklist (reusable for the admin edit drawer later).
+- `supabase/functions/campaign-submit/index.ts` — accept and persist `campaign_mode` (and clear `release_date` for direct mode). Confirm validation already enforces RLUSD ⇒ direct.
 
 ## Out of scope
 
-- Recipient wallet on-chain protections (`DisallowIncomingTrustline`, `DepositAuth`, etc.).
-- Any other token types (MPT, arbitrary IOUs).
-- Bulk migration UI — existing campaigns just default to `['XRP']`.
-
-## Database
-
-Migration on `campaigns`:
-
-- Add `accepted_assets text[] NOT NULL DEFAULT ARRAY['XRP']`.
-- CHECK: every element must be in `('XRP','RLUSD')` and array length ≥ 1.
-- Backfill existing rows to `['XRP']` (default handles it).
-
-## Edge functions
-
-`**campaign-submit**`
-
-- Accept optional `accepted_assets` in body; validate it's a non-empty subset of `['XRP','RLUSD']`; default to `['XRP']` if omitted.
-- Persist on insert.
-
-`**campaign-admin` (`update_campaign` action)**
-
-- Allow `accepted_assets` in update payload; same validation; include in audit `beforeState`/`afterState`.
-
-`**campaign-donate**`
-
-- After loading campaign, read `accepted_assets`; reject the request if `currency` from body is not in the list (`400` with clear message).
-- Add RLUSD branch:
-  - Hardcoded RLUSD issuers per network (mainnet: `rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De`; testnet: `rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV`) — confirmed standard addresses; expose via small `RLUSD_ISSUER[network]` const.
-  - Build `Payment` tx with `Amount: { currency: '524C555344000000000000000000000000000000', issuer, value }` (40-hex RLUSD code).
-  - Preflight: confirm recipient has a trustline to the issuer; if not, return a friendly error ("Recipient hasn't set up an RLUSD trustline yet — ask them to add one or donate in XRP").
-  - Donor preflight: confirm donor has trustline + sufficient balance (account_lines).
-  - Skip the XRP-drops reserve math for the IOU path.
-  - Same Xaman flow; `custom_meta.blob.purpose` becomes `CAMPAIGN_DONATION_DIRECT_RLUSD` / `…_ESCROW_RLUSD`.
-  - Note: XRPL `EscrowCreate` only supports XRP — if campaign is scheduled (not evergreen) and asset is RLUSD, reject with "RLUSD donations are only available for direct (evergreen) campaigns." Surface the same constraint in the UI so the option is hidden when incompatible.
-
-## Frontend
-
-`**src/pages/CauseApply.tsx` (public submit form)**
-
-- New field: `accepted_assets` — checkbox group (XRP, RLUSD), XRP checked + disabled (always on), RLUSD optional.
-- Helper text: "Choose what assets this cause will accept. Donors using any other token would need to be handled off-platform."
-- Submit body includes `accepted_assets`.
-
-`**src/pages/AdminCauses.tsx` (edit drawer)**
-
-- Add `accepted_assets: string[]` to `EditFormShape`, load/restore in `openEdit` and `discardEditDraft`.
-- Render the same checkbox group inside the existing edit form (above the visibility toggle).
-- `handleSaveEdit` passes `accepted_assets` through to `campaign-admin` update.
-- Tiny inline badge on each cause card showing accepted assets (e.g. "XRP · RLUSD").
-
-`**src/components/causes/DonateModal.tsx**`
-
-- Read `campaign.accepted_assets`; render only those buttons in the asset toggle (if only one, render a read-only chip).
-- Remove the hardcoded "RLUSD coming soon" notice when RLUSD is in the whitelist.
-- If the campaign is `scheduled` mode and donor picks RLUSD, show inline note + disable Donate (matches edge-function guard).
-- Pass `currency` through to `campaign-donate` (already happens).
-
-`**src/hooks/useCampaigns.ts` + `Campaign` type**
-
-- Add `accepted_assets: string[]` to the type so frontend reads it without `any` casts.
-
-## Files touched
-
-- `supabase/migrations/<new>.sql`
-- `supabase/functions/campaign-submit/index.ts`
-- `supabase/functions/campaign-admin/index.ts`
-- `supabase/functions/campaign-donate/index.ts`
-- `src/pages/CauseApply.tsx`
-- `src/pages/AdminCauses.tsx`
-- `src/components/causes/DonateModal.tsx`
-- `src/hooks/useCampaigns.ts`
-
-## Validation
-
-- New campaign defaults to XRP-only; donate works as today.
-- Campaign with `['XRP','RLUSD']`: donor sees both, can donate either (direct campaigns only for RLUSD).
-- Sending `currency: 'SHITCOIN'` directly to the edge function returns 400.
-- Existing rows: no behavior change.
+- No changes to admin edit drawer in this pass (still uses the simple RLUSD toggle there).
+- No new MPT/IOU donation support.
+- No on-chain trustline check for the recipient address — surfaced as a warning only.

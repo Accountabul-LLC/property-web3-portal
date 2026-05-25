@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { ArrowLeft, Send, CheckCircle2, Lock, Info } from 'lucide-react'
+import { ArrowLeft, Send, CheckCircle2, Lock, Info, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -15,6 +15,8 @@ import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { AcceptedAssetsPicker, type SupportedAsset } from '@/components/causes/AcceptedAssetsPicker'
 import { toast } from 'sonner'
 
 const schema = z.object({
@@ -24,18 +26,27 @@ const schema = z.object({
     .string()
     .regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Must be a valid XRPL r-address (starts with r)'),
   goal_amount: z.string().optional(),
-  accept_rlusd: z.boolean().default(false),
-  release_date: z.string().min(1, 'Please select a release date'),
+  accepted_assets: z.array(z.enum(['XRP', 'RLUSD'])).min(1).default(['XRP']),
+  release_date: z.string().optional(),
   image_url: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   contact_email: z.string().email('Must be a valid email'),
   submission_notes: z.string().min(20, 'Please tell us more about this cause (min 20 chars)').max(2000),
-})
+}).refine(
+  (data) => {
+    // Release date required only in scheduled (XRP-only) mode
+    const isDirect = data.accepted_assets.some((a) => a !== 'XRP')
+    if (isDirect) return true
+    return !!data.release_date
+  },
+  { message: 'Please select a release date', path: ['release_date'] },
+)
 
 type FormValues = z.infer<typeof schema>
 
 export default function CauseApply() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
+  const { activeAddress } = useActiveWallet()
   const [submitted, setSubmitted] = useState(false)
 
   const minDate = new Date()
@@ -48,7 +59,7 @@ export default function CauseApply() {
       description: '',
       recipient_wallet_address: '',
       goal_amount: '',
-      accept_rlusd: false,
+      accepted_assets: ['XRP'],
       release_date: '',
       image_url: '',
       contact_email: user?.email ?? '',
@@ -56,16 +67,38 @@ export default function CauseApply() {
     },
   })
 
+  const acceptedAssets = form.watch('accepted_assets')
+  const recipientAddress = form.watch('recipient_wallet_address')
+  const isDirectMode = acceptedAssets.some((a) => a !== 'XRP')
+  const recipientDiffersFromConnected =
+    !!activeAddress && !!recipientAddress && recipientAddress !== activeAddress
+
+  // Default recipient to connected wallet once known (if user hasn't typed yet)
+  useEffect(() => {
+    if (activeAddress && !form.getValues('recipient_wallet_address')) {
+      form.setValue('recipient_wallet_address', activeAddress, { shouldValidate: false })
+    }
+  }, [activeAddress, form])
+
+  // Clear release_date when switching to direct mode
+  useEffect(() => {
+    if (isDirectMode && form.getValues('release_date')) {
+      form.setValue('release_date', '', { shouldValidate: false })
+    }
+  }, [isDirectMode, form])
+
   async function onSubmit(values: FormValues) {
     try {
+      const isDirect = values.accepted_assets.some((a) => a !== 'XRP')
       const { data, error } = await supabase.functions.invoke('campaign-submit', {
         body: {
           title: values.title,
           description: values.description,
           recipient_wallet_address: values.recipient_wallet_address,
           goal_amount: values.goal_amount ? parseFloat(values.goal_amount) : null,
-          accepted_assets: values.accept_rlusd ? ['XRP', 'RLUSD'] : ['XRP'],
-          release_date: new Date(values.release_date).toISOString(),
+          accepted_assets: values.accepted_assets,
+          campaign_mode: isDirect ? 'evergreen' : 'scheduled',
+          release_date: isDirect ? null : new Date(values.release_date!).toISOString(),
           image_url: values.image_url || null,
           contact_email: values.contact_email,
           submission_notes: values.submission_notes,
@@ -218,8 +251,29 @@ export default function CauseApply() {
                   />
                 </FormControl>
                 <p className="text-xs text-muted-foreground">
-                  Must be a valid XRPL r-address. This is where funds will be sent when the escrow releases.
+                  {activeAddress
+                    ? 'Defaults to your connected wallet. Edit if funds should go elsewhere.'
+                    : 'Must be a valid XRPL r-address. This is where funds will be sent.'}
                 </p>
+                {recipientDiffersFromConnected && (
+                  <div className="flex items-start gap-2 rounded-md bg-amber-500/10 border border-amber-500/30 p-2.5 text-xs text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    <p>
+                      Accepted assets are based on <strong>your</strong> connected wallet's trustlines, not the recipient's. Make sure the recipient also has the required trustlines before going live.
+                    </p>
+                  </div>
+                )}
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* Accepted assets picker */}
+            <FormField control={form.control} name="accepted_assets" render={({ field }) => (
+              <FormItem>
+                <AcceptedAssetsPicker
+                  value={field.value as SupportedAsset[]}
+                  onChange={field.onChange}
+                />
                 <FormMessage />
               </FormItem>
             )} />
@@ -236,40 +290,31 @@ export default function CauseApply() {
                 </FormItem>
               )} />
 
-              <FormField control={form.control} name="release_date" render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Escrow Release Date *</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="date"
-                      min={minDate.toISOString().split('T')[0]}
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">Minimum 30 days from today.</p>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
-
-            <FormField control={form.control} name="accept_rlusd" render={({ field }) => (
-              <FormItem className="flex flex-row items-start gap-3 rounded-lg border border-border bg-muted/30 p-4">
-                <FormControl>
-                  <input
-                    type="checkbox"
-                    checked={field.value}
-                    onChange={(e) => field.onChange(e.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-border"
-                  />
-                </FormControl>
-                <div className="space-y-1">
-                  <FormLabel className="cursor-pointer">Also accept RLUSD donations</FormLabel>
-                  <p className="text-xs text-muted-foreground">
-                    XRP is always accepted. Enable this to also accept RLUSD (Ripple's USD stablecoin) — the recipient wallet must have an RLUSD trustline before donations can settle. Other tokens are never accepted through the platform donation flow.
+              {isDirectMode ? (
+                <div className="flex flex-col justify-center rounded-md border border-dashed border-border bg-muted/20 p-3">
+                  <p className="text-sm font-medium text-foreground">Direct mode</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Donations forward to the recipient immediately. No release date — required because non-XRP assets can't be escrowed on XRPL.
                   </p>
                 </div>
-              </FormItem>
-            )} />
+              ) : (
+                <FormField control={form.control} name="release_date" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Escrow Release Date *</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="date"
+                        min={minDate.toISOString().split('T')[0]}
+                        {...field}
+                      />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">Minimum 30 days from today.</p>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              )}
+            </div>
+
 
             <FormField control={form.control} name="image_url" render={({ field }) => (
               <FormItem>
