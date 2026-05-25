@@ -41,8 +41,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   // Escrow campaigns need extra reserve for the escrow object; direct payments do not.
   const maxDonatable = useMemo(() => Math.max(0, Math.floor((spendableXrp - reserveXrp) * 1_000_000) / 1_000_000), [spendableXrp, reserveXrp])
 
+  const allowedAssets = (Array.isArray(campaign.accepted_assets) && campaign.accepted_assets.length > 0
+    ? campaign.accepted_assets
+    : ['XRP']) as Array<'XRP' | 'RLUSD'>
+  const rlusdAllowedForCampaign = allowedAssets.includes('RLUSD') && isDirectCampaign
+
   const [step, setStep] = useState<Step>('form')
-  const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
+  const [asset, setAsset] = useState<'XRP' | 'RLUSD'>(allowedAssets[0] ?? 'XRP')
   const [amount, setAmount] = useState('')
   const [message, setMessage] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
@@ -78,8 +83,10 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   }
 
   async function handleSubmit() {
-    if (asset === 'RLUSD') {
-      toast.info('RLUSD donations coming soon — switch to XRP to donate now.')
+    if (asset === 'RLUSD' && !rlusdAllowedForCampaign) {
+      toast.info(allowedAssets.includes('RLUSD')
+        ? 'RLUSD is only supported on direct (evergreen) causes. This cause uses time-locked escrow — switch to XRP.'
+        : 'This cause does not accept RLUSD. Switch to XRP to donate now.')
       return
     }
     if (!activeWallet) {
@@ -211,11 +218,11 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               </p>
             </div>
 
-            {/* Asset toggle */}
+            {/* Asset toggle — only assets whitelisted by the cause */}
             <div className="space-y-2">
               <Label>Asset</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['XRP', 'RLUSD'] as const).map((a) => (
+              <div className={`grid gap-2 ${allowedAssets.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {allowedAssets.map((a) => (
                   <button
                     key={a}
                     type="button"
@@ -230,11 +237,14 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                   </button>
                 ))}
               </div>
-              {asset === 'RLUSD' && (
+              {asset === 'RLUSD' && !rlusdAllowedForCampaign && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  RLUSD donations coming soon — switch to XRP to donate now.
+                  RLUSD is only available on direct (evergreen) causes — this one uses time-locked escrow. Switch to XRP.
                 </p>
               )}
+              <p className="text-xs text-muted-foreground">
+                This cause only accepts {allowedAssets.join(' or ')} through the platform.
+              </p>
             </div>
 
             {/* Wallet picker */}
@@ -337,7 +347,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             </div>
 
             <div className="pt-2 space-y-2">
-              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD' || !activeWallet || (asset === 'XRP' && (!balanceReady || insufficientFunds))} className="w-full">
+              <Button onClick={handleSubmit} disabled={loading || (asset === 'RLUSD' && !rlusdAllowedForCampaign) || !activeWallet || (asset === 'XRP' && (!balanceReady || insufficientFunds))} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Heart className="w-4 h-4 mr-2" />}
                 {loading ? 'Preparing...' : 'Donate'}
               </Button>
