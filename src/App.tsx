@@ -45,6 +45,7 @@ const App = () => (
       <ActiveWalletProvider>
         <TooltipProvider>
           <Sonner />
+          <WalletActivityWatcher />
           <BrowserRouter>
             <RouteSeo />
             <Routes>
