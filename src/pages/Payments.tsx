@@ -85,6 +85,19 @@ export default function Payments() {
       setStatus("ready");
       setIdempotencyKey(crypto.randomUUID());
       toast.success("Payment request prepared.");
+      if (
+        nextRail === "card" &&
+        backendResponse.provider?.provider === "stripe" &&
+        backendResponse.provider?.client_secret &&
+        backendResponse.provider?.publishable_key
+      ) {
+        setStripeModalOpen(true);
+      } else if (
+        nextRail === "card" &&
+        backendResponse.provider?.configuration_missing
+      ) {
+        toast.error("Stripe is not configured. Add STRIPE_PUBLISHABLE_KEY and STRIPE_SECRET_KEY.");
+      }
     } catch (error) {
       setResponse(null);
       setStatus("error");
