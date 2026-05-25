@@ -228,3 +228,122 @@ export async function releaseCampaignEscrows(opts: {
     results,
   }
 }
+
+async function dispatchReleaseNotifications(opts: {
+  svc: any
+  campaign: CampaignReleaseCampaign
+  donation: CampaignReleaseDonation
+  txHash: string
+  network: string
+}) {
+  const { svc, campaign, donation, txHash, network } = opts
+
+  // Look up donor amount/currency
+  const { data: donationRow } = await svc
+    .from('campaign_donations')
+    .select('amount, currency, donor_user_id')
+    .eq('id', donation.id)
+    .maybeSingle()
+
+  const amount = Number(donationRow?.amount ?? 0)
+  const currency = donationRow?.currency ?? 'XRP'
+  const donorUserId: string | null = donationRow?.donor_user_id ?? null
+
+  // Resolve recipient user_id via active user_wallets
+  const { data: recipientWallet } = await svc
+    .from('user_wallets')
+    .select('user_id')
+    .eq('wallet_address', campaign.recipient_wallet_address)
+    .eq('status', 'active')
+    .order('last_seen_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const recipientUserId: string | null = recipientWallet?.user_id ?? null
+
+  const inserts: Array<Record<string, unknown>> = []
+  if (recipientUserId) {
+    inserts.push({
+      user_id: recipientUserId,
+      kind: 'escrow_released_recipient',
+      title: `You received ${amount} ${currency}`,
+      body: `Funds from "${campaign.title}" were released to your wallet.`,
+      campaign_id: campaign.id,
+      donation_id: donation.id,
+      tx_hash: txHash,
+      amount,
+      currency,
+      network,
+    })
+  }
+  if (donorUserId) {
+    inserts.push({
+      user_id: donorUserId,
+      kind: 'donation_delivered_donor',
+      title: `Thank you — your donation was delivered`,
+      body: `Your ${amount} ${currency} donation to "${campaign.title}" has been released.`,
+      campaign_id: campaign.id,
+      donation_id: donation.id,
+      tx_hash: txHash,
+      amount,
+      currency,
+      network,
+    })
+  }
+
+  if (inserts.length > 0) {
+    await svc.from('user_notifications').insert(inserts)
+  }
+
+  // Best-effort email dispatch
+  const emailTargets: Array<{ userId: string; templateName: string; templateData: Record<string, unknown> }> = []
+  if (recipientUserId) {
+    emailTargets.push({
+      userId: recipientUserId,
+      templateName: 'escrow-released-recipient',
+      templateData: {
+        campaignTitle: campaign.title,
+        amount,
+        currency,
+        txHash,
+        network,
+      },
+    })
+  }
+  if (donorUserId) {
+    emailTargets.push({
+      userId: donorUserId,
+      templateName: 'donation-delivered-donor',
+      templateData: {
+        campaignTitle: campaign.title,
+        amount,
+        currency,
+        txHash,
+        network,
+      },
+    })
+  }
+
+  for (const target of emailTargets) {
+    try {
+      const { data: profile } = await svc
+        .from('profiles')
+        .select('email, first_name, full_name')
+        .eq('id', target.userId)
+        .maybeSingle()
+      const email = profile?.email
+      if (!email) continue
+      const name = profile?.first_name || profile?.full_name || null
+      await svc.functions.invoke('send-transactional-email', {
+        body: {
+          templateName: target.templateName,
+          recipientEmail: email,
+          idempotencyKey: `${target.templateName}-${donation.id}`,
+          templateData: { ...target.templateData, name },
+        },
+      })
+    } catch (emailErr) {
+      console.error('email send failed:', emailErr)
+    }
+  }
+}
