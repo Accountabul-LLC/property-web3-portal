@@ -207,15 +207,16 @@ Deno.serve(async (req) => {
     console.log('Xaman donation payload created:', xamanData.uuid)
 
     // ── Store xaman_payloads (bound to user, SEC-004) ─────────
-    await svc.from('xaman_payloads').insert({
+    const { error: payloadInsertErr } = await svc.from('xaman_payloads').insert({
       uuid: xamanData.uuid,
       status: 'pending',
-      intended_user_id: user.id,
+      wallet_address: wallet.wallet_address,
       network: campaign.network,
       metadata: {
         purpose: 'CAMPAIGN_DONATION',
         campaign_id,
         campaign_network: campaign.network,
+        intended_user_id: user.id,
         donor_user_id: user.id,
         donor_wallet_address: wallet.wallet_address,
         amount_xrp: xrpAmount,
@@ -225,6 +226,10 @@ Deno.serve(async (req) => {
         is_anonymous: is_anonymous ?? false,
       },
     })
+    if (payloadInsertErr) {
+      console.error('Failed to insert xaman_payloads row:', payloadInsertErr)
+      throw payloadInsertErr
+    }
 
     // ── Create pending donation row ───────────────────────────
     const { data: donationRow, error: donErr } = await svc
