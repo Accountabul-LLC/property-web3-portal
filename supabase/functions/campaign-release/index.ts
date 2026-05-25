@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
     const { data: campaign } = await svc
       .from('campaigns')
-      .select('id, title, status, release_date, recipient_wallet_address')
+      .select('id, title, status, release_date, recipient_wallet_address, network')
       .eq('id', campaign_id)
       .maybeSingle() as any
 
@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
     // Optional platform signer for testnet auto-release
     const signerSeed = Deno.env.get('CAMPAIGN_RELEASE_SIGNER_SEED')
-    const network = 'testnet' // TODO: derive from campaign/donation network field
+    const network: string = campaign.network ?? 'testnet'
 
     const results: any[] = []
 

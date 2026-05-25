@@ -125,40 +125,67 @@ When a product requires multiple build departments:
 
 ## Approval Gates
 
-### STOP and request approval for:
-- ✋ **Schema changes** — CREATE TABLE, ALTER TABLE, DROP TABLE
-- ✋ **RLS policy changes** — CREATE POLICY, ALTER POLICY, DROP POLICY
-- ✋ **Auth flow modifications** — Login, signup, session logic
-- ✋ **Core business logic** — Revenue calculations, token release, payment flows
-- ✋ **Irreversible operations** — DROP, DELETE without WHERE, production deploys
-- ✋ **Third-party integrations** — New API dependencies, external services
+The only question that matters: **"If this goes wrong, can it be rolled back without data loss or user harm?"**
 
-### Proceed autonomously for:
-- ✅ New features (additive, no breaking changes)
-- ✅ Bug fixes (non-breaking)
-- ✅ Code refactoring (same behavior, cleaner code)
-- ✅ UI improvements (styling, layout, accessibility)
-- ✅ Performance optimizations (memoization, indexes, caching)
-- ✅ Documentation and tests
-- ✅ Logging and debugging improvements
+If yes → proceed autonomously.
+If no → escalate to human.
 
-### Approval Format
+### Self-Check Before Escalating
+
+Run through this in order. Stop at the first YES:
+
+1. Is this **purely additive**? (new column with default, new table, new function, new UI) → **AUTONOMOUS**
+2. Does rollback require zero data recovery? (can revert by dropping the addition) → **AUTONOMOUS**
+3. Does it make an existing security boundary **more restrictive**? (tighter RLS, added auth check) → **AUTONOMOUS**
+4. Is it a non-breaking refactor or bug fix to existing behavior? → **AUTONOMOUS**
+5. Does it **loosen** a security boundary? (less restrictive RLS, removed auth check) → **ESCALATE**
+6. Is it **destructive** to existing data? (DROP TABLE, DROP COLUMN, DELETE/UPDATE without tight WHERE) → **ESCALATE**
+7. Does it touch **auth flows** in a way that could lock users out? → **ESCALATE**
+8. Does it touch **payment, token release, or revenue logic**? → **ESCALATE**
+9. Is it a **mainnet transaction** or production-only deploy? → **ESCALATE**
+10. Does it add a **new paid third-party service**? (cost implications) → **ESCALATE**
+
+### Autonomous (no human needed)
+
+- ✅ ADD COLUMN with safe default
+- ✅ CREATE TABLE (nothing uses it yet — fully reversible)
+- ✅ CREATE INDEX, CREATE CONSTRAINT
+- ✅ New edge functions
+- ✅ New pages, components, routes, hooks
+- ✅ Bug fixes — any complexity, as long as they don't touch payment/auth/data-loss paths
+- ✅ RLS policies that tighten access
+- ✅ New API integrations where existing behavior is unchanged
+- ✅ Performance optimizations, refactoring, UI changes
+- ✅ Logging, documentation, tests
+
+### Escalate to Human
+
+- ✋ DROP TABLE / DROP COLUMN (irreversible data loss)
+- ✋ ALTER COLUMN type change (can corrupt existing data)
+- ✋ DELETE or UPDATE without a tight, specific WHERE clause
+- ✋ RLS policies that loosen access (security regression)
+- ✋ Removing or bypassing an existing auth check
+- ✋ Changes to payment calculation, token release, escrow logic
+- ✋ Mainnet XRPL transaction submissions
+- ✋ New paid third-party integrations (Stripe, Twilio, etc.)
+- ✋ Disabling or removing an existing user-facing feature
+
+### Escalation Format (only when truly needed)
 
 ```
-⚠️  APPROVAL REQUIRED: [approval_type]
+⚠️  ESCALATION REQUIRED: [reason]
 
-Department: [Supabase | Backend | Frontend | etc.]
-Task: [task_id] - [description]
-Files: [list of files to be changed]
+Why this can't proceed autonomously:
+[single sentence — what's irreversible or high-risk]
 
-Proposed Change:
-[show SQL, code diff, or clear description]
+Proposed change:
+[SQL, diff, or clear description]
 
-Risk: [what could break]
-Benefit: [what this enables]
-
-Reply 'approve' to proceed, 'reject' to skip, or provide feedback.
+If approved: [what happens next]
+If rejected: [alternative or skip]
 ```
+
+No walls of text. One clear ask. The human decides in one word if possible.
 
 ---
 
