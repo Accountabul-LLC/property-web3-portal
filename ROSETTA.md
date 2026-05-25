@@ -242,6 +242,9 @@ export function useMyData() {
   Humans curate this section periodically.
 -->
 
+### 2026-05-25 | lovable
+- Fixed Causes edge function CORS for Lovable preview domains: `campaign-donate`, `campaign-check-donation`, and `campaign-release` now reflect allowed `lovable.app` / `lovableproject.com` origins instead of only `accountabul.com`.
+
 ### 2026-05-21 | claude-sonnet-4-6 (security audit)
 - Full security audit + pen test of all edge functions, RLS policies, and client code
 - **Migration** `20260521000000_security_fixes.sql`: drops open RLS on `xaman_payloads` (C1), `wallet_credentials`, `wallet_permission_assignments`, `wallet_profiles`, `wallet_audit_log`; adds user-scoped and admin-scoped read policies
