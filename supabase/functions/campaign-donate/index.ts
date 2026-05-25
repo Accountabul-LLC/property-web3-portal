@@ -494,7 +494,8 @@ Deno.serve(async (req) => {
       afterState: {
         campaign_id,
         donor_wallet_address: wallet.wallet_address,
-        amount_xrp: xrpAmount,
+        amount: donationAmount,
+        currency: requestedCurrency,
         status: 'pending',
       },
       metadata: {
