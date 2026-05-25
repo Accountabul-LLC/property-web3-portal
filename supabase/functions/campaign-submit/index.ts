@@ -42,11 +42,13 @@ Deno.serve(async (req) => {
     const title = String(body?.title ?? '').trim()
     const description = String(body?.description ?? '').trim()
     const recipientWalletAddress = String(body?.recipient_wallet_address ?? '').trim()
-    const releaseDate = String(body?.release_date ?? '').trim()
+    const releaseDateRaw = body?.release_date == null ? '' : String(body.release_date).trim()
     const goalAmountRaw = body?.goal_amount
     const imageUrl = String(body?.image_url ?? '').trim()
     const submissionNotes = String(body?.submission_notes ?? '').trim()
     const contactEmail = String(body?.contact_email ?? user.email ?? '').trim()
+    const campaignModeRaw = String(body?.campaign_mode ?? 'scheduled').toLowerCase()
+    const campaignMode = campaignModeRaw === 'evergreen' || campaignModeRaw === 'direct' ? 'evergreen' : 'scheduled'
 
     // Accepted assets whitelist — donors using our flow can only send these.
     // Default to XRP-only when omitted. XRP is always required.
@@ -61,6 +63,10 @@ Deno.serve(async (req) => {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
+
+    // Non-XRP assets force direct (evergreen) mode because XRPL escrow is XRP-only.
+    const hasNonXrp = acceptedAssets.some((a) => a !== 'XRP')
+    const finalMode = hasNonXrp ? 'evergreen' : campaignMode
 
     if (title.length < 10 || title.length > 100) {
       return new Response(JSON.stringify({ error: 'Title must be between 10 and 100 characters' }), {
@@ -78,17 +84,21 @@ Deno.serve(async (req) => {
       })
     }
 
-    const parsedReleaseDate = new Date(releaseDate)
-    if (Number.isNaN(parsedReleaseDate.getTime())) {
-      return new Response(JSON.stringify({ error: 'Release date is invalid' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-    const minReleaseAt = Date.now() + (30 * 24 * 60 * 60 * 1000)
-    if (parsedReleaseDate.getTime() < minReleaseAt) {
-      return new Response(JSON.stringify({ error: 'Release date must be at least 30 days in the future' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
+    let releaseDateIso: string | null = null
+    if (finalMode === 'scheduled') {
+      const parsedReleaseDate = new Date(releaseDateRaw)
+      if (!releaseDateRaw || Number.isNaN(parsedReleaseDate.getTime())) {
+        return new Response(JSON.stringify({ error: 'Release date is required for scheduled campaigns' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      const minReleaseAt = Date.now() + (30 * 24 * 60 * 60 * 1000)
+      if (parsedReleaseDate.getTime() < minReleaseAt) {
+        return new Response(JSON.stringify({ error: 'Release date must be at least 30 days in the future' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+      releaseDateIso = parsedReleaseDate.toISOString()
     }
     if (submissionNotes.length < 20 || submissionNotes.length > 2000) {
       return new Response(JSON.stringify({ error: 'Submission notes must be between 20 and 2000 characters' }), {
@@ -117,8 +127,9 @@ Deno.serve(async (req) => {
         description,
         recipient_wallet_address: recipientWalletAddress,
         goal_amount: goalAmount,
-        campaign_type: 'escrow',
-        release_date: parsedReleaseDate.toISOString(),
+        campaign_type: finalMode === 'evergreen' ? 'direct' : 'escrow',
+        campaign_mode: finalMode,
+        release_date: releaseDateIso,
         image_url: imageUrl || null,
         submitted_by_user_id: user.id,
         submitted_by_email: contactEmail || null,
