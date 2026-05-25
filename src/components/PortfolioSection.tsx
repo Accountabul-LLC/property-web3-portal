@@ -94,6 +94,16 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
   const [mptSortMode, setMptSortMode] = useState<'newest' | 'alpha' | 'supply'>('newest');
   const [mptSearchQuery, setMptSearchQuery] = useState('');
   const [copied, setCopied] = useState(false);
+  const focusedTxRef = useRef<HTMLAnchorElement | null>(null);
+
+  // Scroll to and briefly highlight a transaction when opened via notification
+  useEffect(() => {
+    if (!focusTxHash || !xrplData) return;
+    const t = setTimeout(() => {
+      focusedTxRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+    return () => clearTimeout(t);
+  }, [focusTxHash, xrplData]);
 
   const handleCopyAddress = async () => {
     if (!displayAddress) return;
