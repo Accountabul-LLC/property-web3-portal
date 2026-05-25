@@ -1064,7 +1064,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <p className="text-sm font-medium group-hover:text-secondary transition-colors">{txLabel}</p>
+                              <p className="text-sm font-medium group-hover:text-secondary transition-colors" title={tx.type}>{txLabel}</p>
                               <Badge
                                 variant={tx.result === 'tesSUCCESS' ? 'default' : 'destructive'}
                                 className="text-[10px] px-1.5 py-0"
