@@ -341,7 +341,7 @@ Deno.serve(async (req) => {
           Account: wallet_address,
           Destination: destination,
           Amount: {
-            currency: currency_code.toUpperCase(),
+            currency: normalizedCurrency,
             issuer: wallet_address,
             value: String(amount),
           },
