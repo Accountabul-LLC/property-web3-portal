@@ -350,6 +350,8 @@ export default function AdminCauses() {
       goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
       image_url: c.image_url ?? '',
       gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+      visibility: c.visibility ?? 'public',
+      hidden_reason: c.hidden_reason ?? '',
     }
     const draft = loadDraft<EditFormShape>(editDraftKey(c.id))
     setEditForm(draft ?? dbValues)
@@ -369,6 +371,8 @@ export default function AdminCauses() {
         goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
         image_url: c.image_url ?? '',
         gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+        visibility: c.visibility ?? 'public',
+        hidden_reason: c.hidden_reason ?? '',
       })
     }
     toast.success('Draft discarded')
