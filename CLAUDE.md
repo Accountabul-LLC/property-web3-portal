@@ -17,6 +17,24 @@ If the task touches XRPL, minting, or payments: also read `.rosetta/modules/xrpl
 - Always pull from GitHub before pushing (Lovable auto-commits)
 - Supabase project: `bmxcjxtjujhwreduwtvz` (Aiagentboard)
 
+## CEO Agent (Autonomous Orchestrator)
+
+To run autonomous multi-department development:
+
+```
+CEO Agent: Continue Phase 1 provider foundation. Read .claude/CEO_STATE.json for full context.
+```
+
+Skills are in `.claude/skills/`:
+- `CEO_AGENT.md` — main orchestrator (load first for CEO-mode sessions)
+- `DEPT_SUPABASE.md` — database/migrations specialist
+- `DEPT_BACKEND.md` — edge function specialist
+- `DEPT_FRONTEND.md` — UI component specialist
+
+State is in `.claude/CEO_STATE.json`. Update it after every session and commit.
+
+See `.claude/BOOTSTRAP.md` for first-run setup and usage examples.
+
 ## After Making Changes
 
 Append a note to `ROSETTA.md` under `## Agent Notes` with the date, what was built, and any new patterns or gotchas discovered.

@@ -1,0 +1,191 @@
+{
+  "schema_version": "1.0",
+  "project_name": "Accountabul",
+  "repo_name": "property-web3-portal",
+  "last_updated": "2026-05-24T00:00:00Z",
+  
+  "current_phase": {
+    "name": "Phase 1 - Provider Foundation",
+    "status": "in_progress",
+    "priority": "high",
+    "description": "Build AI provider abstraction layer for multi-provider support (OpenAI, Anthropic, Google, local models)"
+  },
+
+  "active_workstreams": [
+    {
+      "id": "ws_001",
+      "name": "Supabase Provider Schema",
+      "department": "Supabase",
+      "status": "pending",
+      "priority": "critical",
+      "tasks": [
+        {
+          "id": "t_001",
+          "description": "Create ai_providers table migration",
+          "status": "not_started",
+          "files": ["supabase/migrations/20260524_ai_providers.sql"],
+          "approval_required": true,
+          "approval_type": "schema_change"
+        },
+        {
+          "id": "t_002",
+          "description": "Create provider_connections table migration",
+          "status": "not_started",
+          "files": ["supabase/migrations/20260524_provider_connections.sql"],
+          "approval_required": true,
+          "approval_type": "schema_change"
+        },
+        {
+          "id": "t_003",
+          "description": "Create ai_task_defaults table migration",
+          "status": "not_started",
+          "files": ["supabase/migrations/20260524_ai_task_defaults.sql"],
+          "approval_required": true,
+          "approval_type": "schema_change"
+        },
+        {
+          "id": "t_004",
+          "description": "Seed ai_providers with OpenAI, Anthropic, Google, Ollama",
+          "status": "blocked",
+          "blocked_by": ["t_001"],
+          "approval_required": false
+        }
+      ]
+    },
+    {
+      "id": "ws_002",
+      "name": "Edge Functions - Provider Integration",
+      "department": "Backend",
+      "status": "pending",
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "t_005",
+          "description": "Create test-ai-provider edge function",
+          "status": "not_started",
+          "files": ["supabase/functions/test-ai-provider/index.ts"],
+          "approval_required": false
+        },
+        {
+          "id": "t_006",
+          "description": "Refactor generate-post to use provider resolution",
+          "status": "not_started",
+          "files": ["supabase/functions/generate-post/index.ts"],
+          "approval_required": true,
+          "approval_type": "core_business_logic"
+        }
+      ]
+    },
+    {
+      "id": "ws_003",
+      "name": "Settings UI - Provider Management",
+      "department": "Frontend",
+      "status": "pending",
+      "priority": "high",
+      "tasks": [
+        {
+          "id": "t_007",
+          "description": "Add Providers section to SettingsPage",
+          "status": "not_started",
+          "files": ["src/pages/SettingsPage.tsx"],
+          "approval_required": false
+        },
+        {
+          "id": "t_008",
+          "description": "Build provider connection form components",
+          "status": "not_started",
+          "files": ["src/components/settings/ProviderConnectionForm.tsx"],
+          "approval_required": false
+        },
+        {
+          "id": "t_009",
+          "description": "Build task defaults editor component",
+          "status": "not_started",
+          "files": ["src/components/settings/TaskDefaultsEditor.tsx"],
+          "approval_required": false
+        }
+      ]
+    }
+  ],
+
+  "bug_backlog": {
+    "source": "blast_radius_scan",
+    "scan_date": "2026-05-24",
+    "critical": [
+      {
+        "id": "bug_001",
+        "severity": "high",
+        "title": "Release flow not reliable end-to-end",
+        "description": "campaign-release hardcodes testnet, does not persist network on donation row, swaps signing account to platform wallet in auto-sign branch, falls back to pending_manual when no signer seed configured. Admin UI shows success toast even when nothing released.",
+        "department": "Backend",
+        "secondary_dept": "Supabase",
+        "files": [
+          "supabase/functions/campaign-release/index.ts:137",
+          "supabase/functions/campaign-release/index.ts:151",
+          "supabase/functions/campaign-release/index.ts:175",
+          "supabase/functions/campaign-release/index.ts:208",
+          "src/pages/AdminCauses.tsx:133",
+          "src/pages/AdminCauses.tsx:153"
+        ],
+        "status": "pending_triage",
+        "approval_gates": ["edge_function_logic", "database_schema"]
+      }
+    ],
+    "medium": [
+      {
+        "id": "bug_002",
+        "severity": "medium",
+        "title": "Public cause submission dead-end for logged-out users",
+        "description": "Causes page sends everyone to /causes/apply, but CauseApply has no auth gate and submits submitted_by_user_id: user?.id ?? null. Migration only allows authenticated inserts with submitted_by_user_id = auth.uid(). Guest can fill whole form and only discover failure after submit.",
+        "department": "Frontend",
+        "secondary_dept": "Supabase",
+        "files": [
+          "src/pages/Causes.tsx:35",
+          "src/pages/CauseApply.tsx:46",
+          "src/pages/CauseApply.tsx:66",
+          "src/pages/CauseApply.tsx:78",
+          "src/pages/CauseApply.tsx:155",
+          "supabase/migrations/20260522000000_causes_product.sql:176"
+        ],
+        "status": "pending_triage",
+        "approval_gates": ["auth_flow_change"]
+      }
+    ],
+    "low": []
+  },
+
+  "blocked_items": [
+    {
+      "id": "block_001",
+      "task": "Seed ai_providers table",
+      "blocker": "ai_providers table migration must be applied first",
+      "blocked_by": ["t_001"],
+      "department": "Supabase"
+    }
+  ],
+
+  "completed_work": [],
+
+  "pending_approvals": [],
+
+  "department_assignments": {
+    "Supabase": ["ws_001"],
+    "Backend": ["ws_002", "bug_001"],
+    "Frontend": ["ws_003", "bug_002"],
+    "Security": [],
+    "DevOps": [],
+    "Quality": []
+  },
+
+  "next_session_prompt": "Continue Phase 1 provider foundation work. Start with Supabase migrations (ws_001), then Backend edge functions (ws_002), then Frontend settings UI (ws_003). Process bug backlog after Phase 1 tasks are complete. Request approval for all schema changes and auth flow modifications.",
+
+  "context_notes": [
+    "This is a real-world asset (RWA) tokenization platform with social hub features",
+    "Currently running on Supabase with edge functions",
+    "Frontend is React + TypeScript",
+    "User (Jibreel) runs Center Connect LLC, PNC Business Checking is primary account",
+    "User prefers autonomous development with approval gates only for irreversible actions",
+    "User has CEO Agent skill in /mnt/skills/user/ceo-agent/SKILL.md",
+    "User has Blast Radius skill in /mnt/skills/user/blast-radius/SKILL.md"
+  ]
+}
