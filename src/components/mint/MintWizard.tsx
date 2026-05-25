@@ -177,7 +177,7 @@ const MintWizard: React.FC = () => {
           status: 'validated',
           tx_hash: submitData.tx_hash,
           property_id: linkedPropertyId,
-        });
+        } as never);
 
               // Activate linked property (if it was pre-existing and approved)
               if (selectedPropertyId) {
