@@ -19,6 +19,32 @@ function shortAddress(addr: string) {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`
 }
 
+function explorerBase(network?: string | null) {
+  return network === 'testnet'
+    ? 'https://testnet.xrpl.org'
+    : 'https://livenet.xrpl.org'
+}
+
+function videoSrc(url: string) {
+  try {
+    const parsed = new URL(url)
+    if (parsed.hostname.includes('youtube.com')) {
+      const v = parsed.searchParams.get('v')
+      if (v) return `https://www.youtube.com/embed/${v}`
+    }
+    if (parsed.hostname === 'youtu.be') {
+      return `https://www.youtube.com/embed/${parsed.pathname.replace('/', '')}`
+    }
+  } catch {
+    return url
+  }
+  return url
+}
+
+function isVideoFile(url: string) {
+  return /\.(mp4|webm|ogg)(\?.*)?$/i.test(url)
+}
+
 export default function CauseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
@@ -58,6 +84,7 @@ export default function CauseDetail() {
   const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
     year: 'numeric', month: 'long', day: 'numeric',
   })
+  const explorerUrl = `${explorerBase(campaign.network)}/accounts/${campaign.recipient_wallet_address}`
   const pct = campaign.goal_amount
     ? Math.min(100, Math.round((campaign.total_raised / campaign.goal_amount) * 100))
     : null
@@ -124,14 +151,14 @@ export default function CauseDetail() {
             {/* Recipient wallet */}
             <div className="bg-muted/50 rounded-lg p-4">
               <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-2">
-                Recipient Wallet (verified on XRPL)
+                Recipient Wallet (verified on {campaign.network === 'testnet' ? 'Testnet' : 'Mainnet'})
               </p>
               <div className="flex items-center gap-2">
                 <code className="text-sm font-mono text-foreground break-all">
                   {campaign.recipient_wallet_address}
                 </code>
                 <a
-                  href={`https://testnet.xrpl.org/accounts/${campaign.recipient_wallet_address}`}
+                  href={explorerUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:opacity-70 transition-opacity flex-shrink-0"
@@ -154,6 +181,32 @@ export default function CauseDetail() {
                 <li>No human can touch the funds between those two events</li>
               </ol>
             </div>
+
+            {campaign.video_url && (
+              <div className="bg-card border border-border rounded-xl overflow-hidden">
+                <div className="p-4 border-b border-border">
+                  <p className="font-semibold text-foreground">Campaign Video</p>
+                  <p className="text-xs text-muted-foreground mt-1">Optional campaign media provided by the applicant.</p>
+                </div>
+                <div className="aspect-video bg-black">
+                  {isVideoFile(campaign.video_url) ? (
+                    <video
+                      className="w-full h-full object-cover"
+                      controls
+                      src={campaign.video_url}
+                    />
+                  ) : (
+                    <iframe
+                      src={videoSrc(campaign.video_url)}
+                      title={`${campaign.title} video`}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Donation feed */}
             {donations && donations.length > 0 && (

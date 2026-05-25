@@ -285,6 +285,12 @@ export function useMyData() {
 - Gated `CauseApply` so signed-out users see a sign-in prompt instead of a form that would fail RLS.
 - Updated `campaign-release` and the admin release toast to distinguish released, manual-signing, and error outcomes.
 
+### 2026-05-24 | codex
+- Added a network-aware `network` field to Causes campaigns and a migration to backfill and constrain it.
+- Built the `My Donations` page and wired `/causes/my-donations` into the app so signed-in users can review their donations.
+- Added search and status filtering on the Causes listing page.
+- Rendered campaign video URLs on the detail page and switched explorer links to use the campaign network instead of hardcoded testnet.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements

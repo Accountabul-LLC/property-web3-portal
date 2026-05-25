@@ -25,6 +25,7 @@ interface Campaign {
   slug: string
   description: string
   image_url: string | null
+  network: 'mainnet' | 'testnet'
   goal_amount: number | null
   currency: string
   recipient_wallet_address: string
@@ -43,6 +44,12 @@ const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }>
   active:       { label: 'Active',       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
   completed:    { label: 'Completed',    className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
   rejected:     { label: 'Rejected',     className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+}
+
+function explorerBase(network?: string | null) {
+  return network === 'testnet'
+    ? 'https://testnet.xrpl.org'
+    : 'https://livenet.xrpl.org'
 }
 
 export default function AdminCauses() {
@@ -334,7 +341,7 @@ export default function AdminCauses() {
                         <div className="flex items-center gap-2">
                           <code className="text-xs font-mono break-all">{campaign.recipient_wallet_address}</code>
                           <a
-                            href={`https://testnet.xrpl.org/accounts/${campaign.recipient_wallet_address}`}
+                            href={`${explorerBase(campaign.network)}/accounts/${campaign.recipient_wallet_address}`}
                             target="_blank" rel="noopener noreferrer"
                             className="text-primary hover:opacity-70 flex-shrink-0"
                           >
