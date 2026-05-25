@@ -66,6 +66,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
   const network: 'mainnet' | 'testnet' = resolvedNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const isTestnet = network === 'testnet';
   const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
+  const { data: donationLookup } = useDonationLookup(displayAddress);
   const [isFunding, setIsFunding] = useState(false);
 
   const explorerBase = network === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
