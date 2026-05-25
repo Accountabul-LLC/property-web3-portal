@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { callAdminEdgeFunction } from '@/lib/adminEdge';
 import { useAuth } from '@/hooks/useAuth';
 import { useAIAgents, type AIAgent } from '@/hooks/useAIAgents';
@@ -34,31 +34,31 @@ interface AuditEntry {
 export default function IntegrationsDashboard() {
   const { user } = useAuth();
   const { data: agents, isLoading: agentsLoading } = useAIAgents();
-  const [integrations, setIntegrations] = useState<AgentIntegration[]>([]);
-  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
-  const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState<string | null>(null);
-  const [githubConnected, setGithubConnected] = useState(true);
   const [togglingGlobal, setTogglingGlobal] = useState(false);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    const [intRes, auditRes] = await Promise.all([
-      supabase.from('agent_integrations' as any).select('*'),
-      supabase.from('integration_audit_log' as any).select('*').order('created_at', { ascending: false }).limit(50),
-    ]);
-    const ints = (intRes.data || []) as unknown as AgentIntegration[];
-    setIntegrations(ints);
-    setAuditLog((auditRes.data || []) as unknown as AuditEntry[]);
+  const { data: dashboardData, isLoading, refetch } = useQuery<{
+    integrations: AgentIntegration[];
+    audit_log: AuditEntry[];
+    github_connected: boolean;
+  }>({
+    queryKey: ['admin-integrations-dashboard'],
+    queryFn: async () => {
+      const data = await callAdminEdgeFunction('admin-integrations', { action: 'list', integration_type: 'github' });
+      return data as {
+        integrations: AgentIntegration[];
+        audit_log: AuditEntry[];
+        github_connected: boolean;
+      };
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
 
-    // Derive global connection state: connected if any integration exists
-    // We store this in a special "global" integration record with agent_id = '00000000-0000-0000-0000-000000000000'
-    const globalRecord = ints.find(i => i.agent_id === '00000000-0000-0000-0000-000000000000' && i.integration_type === 'github');
-    setGithubConnected(globalRecord ? globalRecord.enabled : true); // default to connected if no record
-    setLoading(false);
-  }, []);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
+  const integrations = dashboardData?.integrations ?? [];
+  const auditLog = dashboardData?.audit_log ?? [];
+  const githubConnected = dashboardData?.github_connected ?? true;
 
   const handleToggle = useCallback(async (agent: AIAgent, currentEnabled: boolean) => {
     if (!user) return;
@@ -74,13 +74,13 @@ export default function IntegrationsDashboard() {
       });
 
       toast.success(`GitHub ${newEnabled ? 'enabled' : 'disabled'} for ${agent.name}`);
-      await fetchData();
+      await refetch();
     } catch (e: any) {
       toast.error(e.message || 'Failed to update');
     } finally {
       setToggling(null);
     }
-  }, [user, fetchData]);
+  }, [user, refetch]);
 
   const handleGlobalToggle = useCallback(async () => {
     if (!user) return;
@@ -95,13 +95,13 @@ export default function IntegrationsDashboard() {
       });
 
       toast.success(`GitHub integration ${newConnected ? 'connected' : 'disconnected'}`);
-      await fetchData();
+      await refetch();
     } catch (e: any) {
       toast.error(e.message || 'Failed to update');
     } finally {
       setTogglingGlobal(false);
     }
-  }, [user, githubConnected, fetchData]);
+  }, [user, githubConnected, refetch]);
 
   const getIntegration = (agentId: string) =>
     integrations.find((i) => i.agent_id === agentId && i.integration_type === 'github');
@@ -111,7 +111,7 @@ export default function IntegrationsDashboard() {
     return agents?.find((a) => a.id === id)?.name || id.slice(0, 8);
   };
 
-  if (loading || agentsLoading) {
+  if (isLoading || agentsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <Loader2 className="w-6 h-6 animate-spin text-primary" />

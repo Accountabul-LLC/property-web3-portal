@@ -15,6 +15,15 @@ verify_jwt = false
 [functions.admin-integrations]
 verify_jwt = false
 
+[functions.admin-credential-applications]
+verify_jwt = false
+
+[functions.admin-wallet-registrations]
+verify_jwt = false
+
+[functions.admin-credential-ledger]
+verify_jwt = false
+
 [functions.issuer-wallet-register]
 verify_jwt = false
 

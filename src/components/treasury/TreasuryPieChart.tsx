@@ -26,8 +26,12 @@ const fmtUsdFull = (n: number) =>
   `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export const TreasuryPieChart = ({ wallets, selectedAddress, onSelect }: Props) => {
-  const total = wallets.reduce((s, w) => s + w.mockUsd, 0);
-  const chartData = wallets.map((w, i) => ({
+  const activeWallets = wallets.filter(
+    (w): w is TreasuryWalletConfig & { address: string } => !w.isPlaceholder && !!w.address
+  );
+
+  const total = activeWallets.reduce((s, w) => s + w.mockUsd, 0);
+  const chartData = activeWallets.map((w, i) => ({
     name: w.label,
     address: w.address,
     value: w.mockUsd,

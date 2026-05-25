@@ -2,7 +2,7 @@
   "schema_version": "1.1",
   "project_name": "Accountabul",
   "repo_name": "property-web3-portal",
-  "last_updated": "2026-05-25T00:00:00Z",
+  "last_updated": "2026-05-25T08:48:18.7823386-05:00",
   "audit_date": "2026-05-25",
   "overall_completeness": "~75% production-ready",
 
@@ -135,14 +135,22 @@
       "id": "ws_fix_003",
       "name": "Treasury — Remove Demo Wallet Address",
       "department": "Frontend",
-      "status": "ready",
+      "status": "complete",
       "priority": "medium",
       "description": "src/config/treasuryWallets.ts contains 'rABULTokenTreasuryWa11etDemoXXXXXX' — a fake address. Either replace with real wallet addresses or gate the page behind admin and add a setup notice.",
       "tasks": [
         {
           "id": "t_fix_003a",
           "description": "Replace demo wallet addresses with real treasury wallet addresses, or replace with an empty-state UI instructing admin to configure them",
-          "status": "not_started",
+          "status": "complete",
+          "completed_at": "2026-05-25T13:08:49Z",
+          "files_changed": [
+            "src/config/treasuryWallets.ts",
+            "src/pages/Treasury.tsx",
+            "src/components/treasury/TreasuryPieChart.tsx",
+            "src/components/treasury/TreasuryWalletCard.tsx",
+            "src/hooks/useWalletValuation.ts"
+          ],
           "files": ["src/config/treasuryWallets.ts", "src/pages/Treasury.tsx"],
           "approval_required": false
         }
@@ -222,7 +230,7 @@
         "title": "Treasury has demo/invalid wallet addresses",
         "file": "src/config/treasuryWallets.ts:11",
         "workstream": "ws_fix_003",
-        "status": "tracked"
+        "status": "fixed"
       },
       {
         "id": "bug_004",
@@ -264,7 +272,7 @@
       "title": "Demo wallet address in public treasury config",
       "severity": "medium",
       "file": "src/config/treasuryWallets.ts:11",
-      "status": "tracked_in_ws_fix_003"
+      "status": "fixed"
     },
     {
       "id": "sec_002",
@@ -314,5 +322,5 @@
     "AI Panel uses ai-debate edge function — streams NDJSON, requires OPENAI_API_KEY and ANTHROPIC_API_KEY secrets"
   ],
 
-  "next_session_prompt": "Phase 2 audit complete. Priority order: (1) ws_fix_001 — fix campaign-release testnet hardcoding, (2) ws_fix_002 — add CauseApply auth gate, (3) ws_sec_001 — add file path whitelist to github-agent, (4) ws_fix_003 — resolve treasury demo wallets, (5) ws_new_001 — begin Pools feature design. Start with ws_fix_001 as it's a data-loss risk on mainnet."
+  "next_session_prompt": "Phase 2 audit complete. Priority order: (1) ws_fix_001 — fix campaign-release testnet hardcoding, (2) ws_fix_002 — add CauseApply auth gate, (3) ws_sec_001 — add file path whitelist to github-agent, (4) ws_new_001 — begin Pools feature design. Start with ws_fix_001 as it's a data-loss risk on mainnet."
 }

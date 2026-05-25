@@ -62,7 +62,7 @@ const ago = (iso: string | null) => {
 };
 
 export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig }) => {
-  const { address, label, network, description, isPlaceholder } = wallet;
+  const { address, label, network, description, isPlaceholder, setupNote } = wallet;
 
   if (isPlaceholder) {
     return (
@@ -76,9 +76,10 @@ export const TreasuryWalletCard = ({ wallet }: { wallet: TreasuryWalletConfig })
               <AlertTriangle className="w-3 h-3" /> Setup Required
             </Badge>
             <p className="text-sm text-muted-foreground">
-              This wallet address has not been configured. Update{' '}
+              {setupNote || 'This wallet has not been configured yet.'}{' '}
+              Update{' '}
               <code className="text-xs bg-muted px-1 py-0.5 rounded">src/config/treasuryWallets.ts</code>{' '}
-              with the real XRPL r-address for this wallet.
+              with the real XRPL r-address for this wallet before showing live holdings.
             </p>
           </div>
         </div>

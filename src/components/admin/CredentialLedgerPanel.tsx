@@ -9,7 +9,7 @@
 
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+import { callAdminEdgeFunction } from '@/lib/adminEdge'
 import { toast } from 'sonner'
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -45,22 +45,6 @@ const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | '
   deleted: 'destructive',
 }
 
-async function callEdgeFn(fn: string, body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(body),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || res.statusText)
-  return json
-}
-
 export function CredentialLedgerPanel() {
   const qc = useQueryClient()
   const [actioning, setActioning] = useState<string | null>(null)
@@ -68,16 +52,8 @@ export function CredentialLedgerPanel() {
   const { data: credentials = [], isLoading, refetch } = useQuery<CredentialRow[]>({
     queryKey: ['admin-credential-ledger'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from('wallet_credentials')
-        .select(`
-          id, ledger_status, credential_type, issuer_address,
-          tx_hash, issued_at, accepted_at, created_at, revoked_at,
-          user_wallets ( wallet_address, user_id, network, label )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(100)
-      if (error) throw error
-      return data ?? []
+      const data = await callAdminEdgeFunction('admin-credential-ledger', { action: 'list' })
+      return (data.credentials ?? []) as CredentialRow[]
     },
   })
 
@@ -93,7 +69,7 @@ export function CredentialLedgerPanel() {
   async function handleIssue(cred: CredentialRow) {
     setActioning(cred.id)
     try {
-      await callEdgeFn('issue-testnet-credential', { credential_id: cred.id })
+      await callAdminEdgeFunction('issue-testnet-credential', { credential_id: cred.id })
       toast.success('Credential issued on XRPL. User can now accept it.')
       qc.invalidateQueries({ queryKey: ['admin-credential-ledger'] })
       qc.invalidateQueries({ queryKey: ['admin-issuer-status'] })
@@ -108,7 +84,7 @@ export function CredentialLedgerPanel() {
     if (!confirm(`Revoke credential for ${cred.user_wallets?.wallet_address}? This will remove their trading access.`)) return
     setActioning(cred.id)
     try {
-      await callEdgeFn('revoke-credential', { credential_id: cred.id, reason: 'Admin revocation' })
+      await callAdminEdgeFunction('revoke-credential', { credential_id: cred.id, reason: 'Admin revocation' })
       toast.success('Credential revoked on XRPL.')
       qc.invalidateQueries({ queryKey: ['admin-credential-ledger'] })
       qc.invalidateQueries({ queryKey: ['admin-wallet-registrations'] })

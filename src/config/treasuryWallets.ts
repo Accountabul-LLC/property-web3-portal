@@ -10,7 +10,7 @@ export interface MockTokenHolding {
 }
 
 export interface TreasuryWalletConfig {
-  address: string;
+  address?: string;
   label: string;
   network: 'mainnet' | 'testnet';
   purpose: string;
@@ -18,6 +18,7 @@ export interface TreasuryWalletConfig {
   mockUsd: number;
   mockTokens?: MockTokenHolding[];
   isPlaceholder?: boolean;
+  setupNote?: string;
 }
 
 // Demo price for the Accountabul (ABUL) governance token
@@ -33,7 +34,6 @@ const abul = (amount: number): MockTokenHolding => ({
 
 export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
   {
-    address: 'rABULTokenTreasuryWa11etDemoXXXXXX',
     label: 'ABUL Token Wallet',
     network: 'testnet',
     purpose: 'Accountabul Token Reserve',
@@ -42,6 +42,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     mockUsd: 6_982_317.04,
     mockTokens: [abul(14_756_173.92)],
     isPlaceholder: true,
+    setupNote: 'Configure the real XRPL r-address for the ABUL reserve before enabling live treasury reporting.',
   },
   {
     address: 'rPZdYatVHP4YegTp3qQzkdojCAihb8DmAx',

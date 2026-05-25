@@ -12,7 +12,7 @@ export interface WalletValuation {
 }
 
 export function useWalletValuation(wallet: TreasuryWalletConfig): WalletValuation {
-  const { data, isLoading, error } = useXRPLPortfolio(wallet.address, wallet.network);
+  const { data, isLoading, error } = useXRPLPortfolio(wallet.address ?? null, wallet.network);
   const { data: tokenMetaData } = useTokenMeta(
     data?.token_holdings.map((t) => ({ currency: t.currency, issuer: t.issuer }))
   );

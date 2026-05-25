@@ -48,6 +48,31 @@ Deno.serve(async (req) => {
     const agentId = String(body?.agent_id ?? '').trim()
     const integrationType = String(body?.integration_type ?? 'github').trim()
 
+    if (action === 'list') {
+      const [integrationsRes, auditRes] = await Promise.all([
+        svc.from('agent_integrations').select('*'),
+        svc.from('integration_audit_log').select('*').order('created_at', { ascending: false }).limit(50),
+      ])
+
+      if (integrationsRes.error) throw integrationsRes.error
+      if (auditRes.error) throw auditRes.error
+
+      const integrations = integrationsRes.data ?? []
+      const auditLog = auditRes.data ?? []
+      const globalRecord = integrations.find(
+        (row: any) => row.agent_id === '00000000-0000-0000-0000-000000000000' && row.integration_type === 'github'
+      )
+
+      return new Response(JSON.stringify({
+        success: true,
+        integrations,
+        audit_log: auditLog,
+        github_connected: globalRecord ? !!globalRecord.enabled : true,
+      }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
+
     if (!action) {
       return new Response(JSON.stringify({ error: 'action is required' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },

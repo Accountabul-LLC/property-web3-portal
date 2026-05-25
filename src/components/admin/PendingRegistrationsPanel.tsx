@@ -8,7 +8,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/integrations/supabase/client'
+import { callAdminEdgeFunction } from '@/lib/adminEdge'
 import { toast } from 'sonner'
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
@@ -37,22 +37,6 @@ interface WalletReg {
   } | null
 }
 
-async function callEdgeFn(fn: string, body: Record<string, unknown>) {
-  const { data: { session } } = await supabase.auth.getSession()
-  if (!session) throw new Error('Not authenticated')
-  const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fn}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify(body),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || res.statusText)
-  return json
-}
-
 const STATUS_VARIANT: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   pending: 'default',
   under_review: 'secondary',
@@ -78,16 +62,8 @@ export function PendingRegistrationsPanel() {
   const { data: registrations = [], isLoading, refetch } = useQuery<WalletReg[]>({
     queryKey: ['admin-wallet-registrations'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from('wallet_registrations')
-        .select(`
-          id, registration_status, created_at, notes, user_id,
-          user_wallets ( id, wallet_address, network, label ),
-          kyc_cases ( status )
-        `)
-        .in('registration_status', ['pending', 'under_review'])
-        .order('created_at', { ascending: true })
-      if (error) throw error
-      return data ?? []
+      const data = await callAdminEdgeFunction('admin-wallet-registrations', { action: 'list' })
+      return (data.registrations ?? []) as WalletReg[]
     },
   })
 
@@ -101,7 +77,7 @@ export function PendingRegistrationsPanel() {
   async function handleApprove(reg: WalletReg) {
     setActioning(reg.id)
     try {
-      const result = await callEdgeFn('wallet-approve', { registration_id: reg.id })
+      const result = await callAdminEdgeFunction('wallet-approve', { registration_id: reg.id })
 
       if (result.xaman_uuid && result.qr_code) {
         // Open signing modal
@@ -128,7 +104,7 @@ export function PendingRegistrationsPanel() {
 
     pollRef.current = setInterval(async () => {
       try {
-        const result = await callEdgeFn('check-credential-payload', { uuid, registration_id: registrationId })
+        const result = await callAdminEdgeFunction('check-credential-payload', { uuid, registration_id: registrationId })
 
         if (result.signed) {
           stopPolling()

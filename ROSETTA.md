@@ -301,6 +301,16 @@ export function useMyData() {
 - Hardened Causes donations so the donor wallet network must match the campaign network before a payload is created.
 - Updated donation polling to wait for a validated XRPL EscrowCreate that matches the expected recipient and amount before marking a donation as escrowed.
 
+### 2026-05-25 | codex
+- Removed the fake treasury wallet address from `src/config/treasuryWallets.ts` and made placeholder treasury entries render as setup notices instead of live accounts.
+- Filtered placeholder treasury entries out of the `/treasury` pie chart and default selection so the page no longer advertises a broken explorer link.
+- Small gotcha: `TreasuryWalletConfig.address` is now optional, so treasury consumers should guard for placeholder entries before calling XRPL hooks or building explorer URLs.
+
+### 2026-05-25 | codex
+- Moved privileged admin reads for GitHub integrations, credential applications, wallet registrations, and the credential ledger behind Supabase edge functions.
+- Updated the admin dashboards to fetch those datasets via `admin-integrations`, `admin-credential-applications`, `admin-wallet-registrations`, and `admin-credential-ledger` instead of querying sensitive tables directly from the browser.
+- Residual note: the user-scoped `useCredentialApplications` hook still reads only the signed-in user’s own records client-side; that is lower risk and can be moved later if we want a fully server-mediated pattern.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
@@ -310,4 +320,4 @@ export function useMyData() {
 ---
 
 <!-- rosetta:version:1.0 -->
-<!-- rosetta:last-updated:2026-03-06 -->
+<!-- rosetta:last-updated:2026-05-25 -->
