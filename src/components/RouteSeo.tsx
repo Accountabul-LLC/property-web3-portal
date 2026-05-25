@@ -51,6 +51,8 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/swap': { title: `Swap | ${SITE_NAME}`, description: 'Swap tokens on the XRP Ledger.', noindex: true },
   '/pools': { title: `Pools | ${SITE_NAME}`, description: 'Liquidity pools.', noindex: true },
   '/mint': { title: `Mint Sandbox | ${SITE_NAME}`, description: 'XRPL mint sandbox.', noindex: true },
+  '/smart-escrow': { title: `Smart Escrow | ${SITE_NAME}`, description: 'XRPL escrow hub for campaign donations and escrow-capable tokens.' },
+  '/escrow': { title: `Smart Escrow | ${SITE_NAME}`, description: 'XRPL escrow hub for campaign donations and escrow-capable tokens.' },
   '/action-items': { title: `Action Items | ${SITE_NAME}`, description: 'Pending action items.', noindex: true },
   '/admin': { title: `Admin | ${SITE_NAME}`, description: 'Admin console.', noindex: true },
   '/admin/kyc': { title: `Admin KYC | ${SITE_NAME}`, description: 'Admin KYC review.', noindex: true },

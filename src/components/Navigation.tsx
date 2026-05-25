@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets, Heart, ReceiptText, Tag } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets, Heart, ReceiptText, Tag, Lock } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 import { WalletConnectModal } from '@/components/WalletConnectModal';
@@ -34,7 +34,7 @@ const Navigation = () => {
       if (!user) return false;
       const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
       if (isAdmin) return true;
-      const { data: isCompliance } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' as any });
+      const { data: isCompliance } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' });
       return !!isCompliance;
     },
     enabled: !!user,
@@ -54,6 +54,7 @@ const Navigation = () => {
   const navItems = [
     { path: '/causes',       label: 'Causes',       shortLabel: 'Causes',  icon: Heart },
     ...(user ? [{ path: '/causes/my-donations', label: 'My Donations', shortLabel: 'Donations', icon: Coins }] : []),
+    { path: '/smart-escrow', label: 'Escrow', shortLabel: 'Escrow', icon: Lock },
     { path: '/payments', label: 'Payments', shortLabel: 'Pay', icon: ReceiptText },
     { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },

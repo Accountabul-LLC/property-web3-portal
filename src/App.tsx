@@ -1,7 +1,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import Index from "./pages/Index";
@@ -39,6 +39,7 @@ import Payments from "./pages/Payments";
 import PaymentsHistory from "./pages/PaymentsHistory";
 import PaymentDetail from "./pages/PaymentDetail";
 import Pricing from "./pages/Pricing";
+import SmartEscrow from "./pages/SmartEscrow";
 import DeedProtection from "./pages/DeedProtection";
 import KycGate from "./components/KycGate";
 import { RouteGuard } from "./components/RouteGuard";
@@ -73,6 +74,8 @@ const App = () => (
               <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
               <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
               <Route path="/treasury" element={<Treasury />} />
+              <Route path="/smart-escrow" element={<SmartEscrow />} />
+              <Route path="/escrow" element={<Navigate to="/smart-escrow" replace />} />
               <Route path="/property/:id" element={<PropertyDetail />} />
               <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 

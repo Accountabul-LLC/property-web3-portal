@@ -64,6 +64,9 @@ export default function Causes() {
                   <Plus className="w-4 h-4 mr-2" />
                   Submit a Cause
                 </Button>
+                <Button size="lg" variant="outline" onClick={() => navigate('/smart-escrow')}>
+                  Smart Escrow Hub
+                </Button>
                 <Button size="lg" variant="outline" onClick={() => navigate('/causes/my-donations')}>
                   My Donations
                 </Button>
