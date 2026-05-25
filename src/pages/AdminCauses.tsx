@@ -217,16 +217,15 @@ export default function AdminCauses() {
     }
   }
 
-  async function handleImageUpload(file: File) {
+  async function uploadCauseImage(file: File): Promise<string | null> {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file')
-      return
+      return null
     }
     if (file.size > 5 * 1024 * 1024) {
       toast.error('Image must be under 5MB')
-      return
+      return null
     }
-    setUploadingImage(true)
     try {
       const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
       const path = `causes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
@@ -235,15 +234,87 @@ export default function AdminCauses() {
         .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type })
       if (upErr) throw upErr
       const { data } = supabase.storage.from('campaign-images').getPublicUrl(path)
-      setCreateForm((prev) => ({ ...prev, image_url: data.publicUrl }))
-      toast.success('Image uploaded')
+      return data.publicUrl
     } catch (err: any) {
       console.error('Image upload failed:', err)
       toast.error(err.message || 'Failed to upload image')
-    } finally {
-      setUploadingImage(false)
+      return null
     }
   }
+
+  async function handleImageUpload(file: File) {
+    setUploadingImage(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setCreateForm((prev) => ({ ...prev, image_url: url }))
+      toast.success('Image uploaded')
+    }
+    setUploadingImage(false)
+  }
+
+  function openEdit(c: Campaign) {
+    setEditId(c.id)
+    setEditForm({
+      title: c.title,
+      description: c.description,
+      goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
+      image_url: c.image_url ?? '',
+      gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+    })
+    setEditOpen(true)
+  }
+
+  async function handleEditCoverUpload(file: File) {
+    setUploadingEditCover(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setEditForm((prev) => ({ ...prev, image_url: url }))
+      toast.success('Cover image uploaded')
+    }
+    setUploadingEditCover(false)
+  }
+
+  async function handleEditGalleryUpload(file: File) {
+    setUploadingEditGallery(true)
+    const url = await uploadCauseImage(file)
+    if (url) {
+      setEditForm((prev) => ({ ...prev, gallery_urls: [...prev.gallery_urls, url] }))
+      toast.success('Gallery image added')
+    }
+    setUploadingEditGallery(false)
+  }
+
+  async function handleSaveEdit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!editId) return
+    setEditing(true)
+    try {
+      if (!editForm.title.trim()) throw new Error('Title is required')
+      if (!editForm.description.trim()) throw new Error('Description is required')
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          title: editForm.title.trim(),
+          description: editForm.description.trim(),
+          goal_amount: editForm.goal_amount ? Number(editForm.goal_amount) : null,
+          image_url: editForm.image_url.trim() || null,
+          gallery_urls: editForm.gallery_urls,
+        } as any)
+        .eq('id', editId) as any
+      if (error) throw error
+      toast.success('Campaign updated')
+      setEditOpen(false)
+      setEditId(null)
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaign'] })
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update campaign')
+    } finally {
+      setEditing(false)
+    }
+  }
+
 
   async function handleCreateCampaign(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
