@@ -217,17 +217,22 @@ export default function CauseDetail() {
               <div>
                 <h3 className="font-semibold text-foreground mb-4">Recent Supporters</h3>
                 <div className="space-y-3">
-                  {donations.map((d: any) => (
+                  {donations.map((d: any) => {
+                    const displayName = d.donor_display_name?.trim() || shortAddress(d.donor_wallet_address)
+                    const initials = d.donor_display_name?.trim()
+                      ? d.donor_display_name.trim().split(/\s+/).map((p: string) => p[0]).join('').slice(0, 2).toUpperCase()
+                      : d.donor_wallet_address.slice(1, 3).toUpperCase()
+                    return (
                     <div key={d.id} className="flex items-start gap-3">
                       <Avatar className="w-8 h-8 flex-shrink-0">
                         <AvatarFallback className="text-xs bg-primary/10 text-primary">
-                          {d.donor_wallet_address.slice(1, 3).toUpperCase()}
+                          {initials}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-medium text-foreground">
-                            {shortAddress(d.donor_wallet_address)}
+                            {displayName}
                           </span>
                           <span className="text-sm font-semibold text-primary">
                             {d.amount} {d.currency}
