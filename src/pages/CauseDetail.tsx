@@ -341,6 +341,15 @@ export default function CauseDetail() {
           onClose={() => setDonateOpen(false)}
         />
       )}
+
+      <WalletConnectModal
+        isOpen={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
+        onWalletConnected={() => {
+          setWalletModalOpen(false)
+          setDonateOpen(true)
+        }}
+      />
     </div>
   )
 }
