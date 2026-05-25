@@ -487,6 +487,7 @@ export default function AdminCauses() {
   const filtered = campaigns?.filter((c) => {
     if (activeTab === 'under_review') return c.status === 'under_review'
     if (activeTab === 'active') return c.status === 'active'
+    if (activeTab === 'hidden') return c.visibility === 'hidden'
     return true
   }) ?? []
 
@@ -494,6 +495,7 @@ export default function AdminCauses() {
     under_review: campaigns?.filter(c => c.status === 'under_review').length ?? 0,
     active:       campaigns?.filter(c => c.status === 'active').length ?? 0,
     completed:    campaigns?.filter(c => c.status === 'completed').length ?? 0,
+    hidden:       campaigns?.filter(c => c.visibility === 'hidden').length ?? 0,
     all:          campaigns?.length ?? 0,
   }
   const totalRaised = campaigns?.reduce((sum, c) => sum + (Number(c.total_raised) || 0), 0) ?? 0
