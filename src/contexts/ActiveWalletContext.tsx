@@ -14,10 +14,23 @@ export interface ConnectedWallet {
   label: string;
   xamanName: string | null;
   provider: string;
+  network: XRPLNetwork;
   connectedAt: string;
   lastUsedAt: string;
   status: string;
 }
+
+type WalletRow = {
+  id: string;
+  wallet_address: string;
+  label: string | null;
+  xaman_account_name: string | null;
+  provider: string | null;
+  network: XRPLNetwork | string | null;
+  created_at: string;
+  last_seen_at: string;
+  status: string;
+};
 
 interface ActiveWalletContextType {
   wallets: ConnectedWallet[];
@@ -28,7 +41,14 @@ interface ActiveWalletContextType {
   setActiveNetwork: (network: XRPLNetwork) => void;
   isConnected: boolean;
   setActiveWallet: (address: string) => void;
-  addWallet: (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => void;
+  addWallet: (
+    address: string,
+    label?: string,
+    xamanName?: string | null,
+    provider?: string,
+    walletSecret?: string | null,
+    walletNetwork?: XRPLNetwork
+  ) => Promise<void>;
   removeWallet: (address: string) => void;
   renameWallet: (address: string, newLabel: string) => void;
   disconnectAll: () => void;
@@ -103,6 +123,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       setWallets([]);
       setActiveAddressState(null);
       saveActiveAddress(null);
+      setActiveNetworkState('mainnet');
+      localStorage.setItem(NETWORK_KEY, 'mainnet');
       return;
     }
 
@@ -120,12 +142,13 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      const mapped: ConnectedWallet[] = (data || []).map((w: any) => ({
-      id: w.id,
+      const mapped: ConnectedWallet[] = ((data || []) as WalletRow[]).map((w) => ({
+        id: w.id,
         address: w.wallet_address,
         label: w.label || w.xaman_account_name || `Wallet`,
         xamanName: w.xaman_account_name,
         provider: w.provider || 'xaman',
+        network: w.network === 'testnet' ? 'testnet' : 'mainnet',
         connectedAt: w.created_at,
         lastUsedAt: w.last_seen_at,
         status: w.status,
@@ -136,13 +159,20 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       // Reconcile active address
       const savedActive = loadActiveAddress();
       if (savedActive && mapped.find(w => w.address === savedActive)) {
+        const matched = mapped.find(w => w.address === savedActive)!;
         setActiveAddressState(savedActive);
+        setActiveNetworkState(matched.network);
+        localStorage.setItem(NETWORK_KEY, matched.network);
       } else if (mapped.length > 0) {
         setActiveAddressState(mapped[0].address);
         saveActiveAddress(mapped[0].address);
+        setActiveNetworkState(mapped[0].network);
+        localStorage.setItem(NETWORK_KEY, mapped[0].network);
       } else {
         setActiveAddressState(null);
         saveActiveAddress(null);
+        setActiveNetworkState('mainnet');
+        localStorage.setItem(NETWORK_KEY, 'mainnet');
       }
 
       setWalletsLoading(false);
@@ -170,8 +200,13 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
   const setActiveWallet = useCallback((address: string) => {
     const prev = prevActiveRef.current;
+    const nextWallet = walletsRef.current.find(w => w.address === address) || null;
     setActiveAddressState(address);
     saveActiveAddress(address);
+    if (nextWallet?.network) {
+      setActiveNetworkState(nextWallet.network);
+      localStorage.setItem(NETWORK_KEY, nextWallet.network);
+    }
 
     // Update last_seen_at in DB
     supabase
@@ -187,7 +222,14 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
   }, [user]);
 
-  const addWallet = useCallback(async (address: string, label?: string, xamanName?: string | null, provider?: string, walletSecret?: string | null) => {
+  const addWallet = useCallback(async (
+    address: string,
+    label?: string,
+    xamanName?: string | null,
+    provider?: string,
+    walletSecret?: string | null,
+    walletNetwork?: XRPLNetwork
+  ) => {
     if (!user) return;
 
     // Upsert into user_wallets
@@ -196,6 +238,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       wallet_address: address,
       label: label || xamanName || `Wallet`,
       xaman_account_name: xamanName || null,
+      network: walletNetwork ?? (provider === 'testnet_faucet' ? 'testnet' : activeNetwork),
       status: 'active',
       last_seen_at: new Date().toISOString(),
       revoked_at: null,
@@ -204,7 +247,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
 
     const { data, error } = await supabase
       .from('user_wallets')
-      .upsert(upsertData as any, { onConflict: 'wallet_address' })
+      .upsert(upsertData as never, { onConflict: 'wallet_address' })
       .select()
       .single();
 
@@ -228,12 +271,13 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       .eq('status', 'active')
       .order('last_seen_at', { ascending: false });
 
-    const mapped: ConnectedWallet[] = (allWallets || []).map((w: any) => ({
+    const mapped: ConnectedWallet[] = ((allWallets || []) as WalletRow[]).map((w) => ({
       id: w.id,
       address: w.wallet_address,
       label: w.label || w.xaman_account_name || `Wallet`,
       xamanName: w.xaman_account_name,
       provider: w.provider || 'xaman',
+      network: w.network === 'testnet' ? 'testnet' : 'mainnet',
       connectedAt: w.created_at,
       lastUsedAt: w.last_seen_at,
       status: w.status,
@@ -245,7 +289,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     prevActiveRef.current = address;
 
     logAuditEvent(address, 'connect', user.id, { label: label || null, xaman_name: xamanName || null, provider: provider || 'xaman' });
-  }, [user]);
+  }, [activeNetwork, user]);
 
   const removeWallet = useCallback(async (address: string) => {
     if (!user) return;
@@ -301,6 +345,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     setWallets([]);
     setActiveAddressState(null);
     saveActiveAddress(null);
+    setActiveNetworkState('mainnet');
+    localStorage.setItem(NETWORK_KEY, 'mainnet');
     prevActiveRef.current = null;
   }, [wallets, user]);
 
@@ -312,11 +358,11 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const onWalletConnected = useCallback((address: string, xamanName?: string | null) => {
-    addWallet(address, undefined, xamanName);
+    addWallet(address, undefined, xamanName, undefined, undefined, activeNetwork);
     setConnectModalOpen(false);
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
     toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);
-  }, [addWallet]);
+  }, [activeNetwork, addWallet]);
 
   // 30-minute inactivity timeout: clears auth session + wallet context
   const handleInactivityTimeout = useCallback(() => {
@@ -324,6 +370,8 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     setWallets([]);
     setActiveAddressState(null);
     saveActiveAddress(null);
+    setActiveNetworkState('mainnet');
+    localStorage.setItem(NETWORK_KEY, 'mainnet');
     prevActiveRef.current = null;
     toast.info('Session expired due to inactivity. Please sign in again.');
   }, []);

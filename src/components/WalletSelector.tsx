@@ -38,12 +38,13 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       const secret = data.secret || null;
 
       // Add it via context; the testnet seed stays in the browser session only
-      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret);
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
 
       toast.success(`🧪 Testnet Wallet Created — Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
       setIsOpen(false);
-    } catch (err: any) {
-      toast.error(`Failed to generate testnet wallet: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to generate testnet wallet: ${message}`);
     } finally {
       setGeneratingTestnet(false);
     }
@@ -51,7 +52,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
 
   const shortenAddress = (addr: string) => `…${addr.slice(-6)}`;
 
-  const getExplorerUrl = (address: string, network: string) => {
+  const getExplorerUrl = (address: string, network: XRPLNetwork) => {
     if (network === 'testnet') return `https://testnet.xrpl.org/accounts/${address}`;
     return `https://xrpscan.com/account/${address}`;
   };
@@ -150,17 +151,17 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                       <div className="flex items-center gap-1.5">
                         <p className="text-xs font-medium truncate">{w.label}</p>
                         <Badge
-                          variant={activeNetwork !== 'mainnet' ? 'secondary' : 'outline'}
-                          className={`text-[9px] px-1 py-0 ${activeNetwork === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}
+                          variant={w.network !== 'mainnet' ? 'secondary' : 'outline'}
+                          className={`text-[9px] px-1 py-0 ${w.network === 'testnet' ? 'bg-amber-500/20 text-amber-500 border-amber-500/30' : ''}`}
                         >
-                          {activeNetwork === 'testnet' ? 'Testnet' : 'Mainnet'}
+                          {w.network === 'testnet' ? 'Testnet' : 'Mainnet'}
                         </Badge>
                       </div>
                       {w.xamanName && w.xamanName !== w.label && (
                         <p className="text-[10px] text-primary/70 truncate">{w.xamanName}</p>
                       )}
                       <a
-                        href={getExplorerUrl(w.address, activeNetwork)}
+                        href={getExplorerUrl(w.address, w.network)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-[10px] font-mono text-muted-foreground hover:text-primary hover:underline inline-flex items-center gap-0.5"
@@ -203,7 +204,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
               <span>Add Wallet</span>
             </button>
 
-            {activeNetwork === 'testnet' && (
+            {activeWallet.network === 'testnet' && (
               <button
                 onClick={handleGenerateTestnet}
                 disabled={generatingTestnet}

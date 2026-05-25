@@ -10,9 +10,10 @@ interface ReceiveModalProps {
   isOpen: boolean;
   onClose: () => void;
   walletAddress: string;
+  network?: 'mainnet' | 'testnet';
 }
 
-const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => {
+const ReceiveModal = ({ isOpen, onClose, walletAddress, network = 'mainnet' }: ReceiveModalProps) => {
   const [copied, setCopied] = useState(false);
   
 
@@ -68,8 +69,8 @@ const ReceiveModal = ({ isOpen, onClose, walletAddress }: ReceiveModalProps) => 
           </div>
 
           {/* Network Badge */}
-          <Badge variant="outline" className="text-xs">
-            XRPL Mainnet
+          <Badge variant={network === 'testnet' ? 'secondary' : 'outline'} className="text-xs">
+            XRPL {network === 'testnet' ? 'Testnet' : 'Mainnet'}
           </Badge>
 
           {/* Warning */}

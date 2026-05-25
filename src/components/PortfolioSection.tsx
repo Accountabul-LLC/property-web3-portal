@@ -56,15 +56,17 @@ interface PortfolioSectionProps {
 
 const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = null }: PortfolioSectionProps) => {
   const queryClient = useQueryClient();
-  const { activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
+  const { wallets, activeAddress, activeWallet, isConnected, activeNetwork } = useActiveWallet();
   const displayAddress = overrideAddress || activeAddress;
   const hasWallet = overrideAddress ? !!overrideAddress : isConnected;
-  const isTestnet = activeNetwork === 'testnet';
-  const network: 'mainnet' | 'testnet' = isTestnet ? 'testnet' : 'mainnet';
+  const overrideWallet = overrideAddress ? wallets.find((wallet) => wallet.address === overrideAddress) ?? null : null;
+  const resolvedNetwork = overrideWallet?.network ?? activeWallet?.network ?? activeNetwork;
+  const network: 'mainnet' | 'testnet' = resolvedNetwork === 'testnet' ? 'testnet' : 'mainnet';
+  const isTestnet = network === 'testnet';
   const { data: xrplData, isLoading, error, dataUpdatedAt, isFetching } = useXRPLPortfolio(displayAddress, network);
   const [isFunding, setIsFunding] = useState(false);
 
-  const explorerBase = activeNetwork === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
+  const explorerBase = network === 'testnet' ? 'https://testnet.xrpl.org' : 'https://livenet.xrpl.org';
 
   const handleFaucetFund = async () => {
     if (!displayAddress) return;
@@ -77,8 +79,9 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
       if (!data?.success) throw new Error(data?.error || 'Faucet failed');
       toast.success(`Funded! Balance: ${data.balance} XRP`);
       queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
-    } catch (err: any) {
-      toast.error(`Faucet error: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Faucet error: ${message}`);
     } finally {
       setIsFunding(false);
     }
@@ -129,7 +132,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
   const portfolioValuation = useMemo(() => {
     if (!xrplData) return null;
 
-    const xrpSubtotal = xrpUsdPrice > 0 ? (xrplData.xrp_balance ?? 0) * xrpUsdPrice : 0;
+    const hasXrpPrice = xrpUsdPrice > 0;
+    const xrpSubtotal = hasXrpPrice ? (xrplData.xrp_balance ?? 0) * xrpUsdPrice : null;
     let tokenSubtotal = 0;
     let pricedCount = 0;
     let unpricedCount = 0;
@@ -139,11 +143,11 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
     // XRP
     assetValues.push({
       key: 'XRP_NATIVE',
-      subtotalUsd: xrpUsdPrice > 0 ? xrpSubtotal : null,
-      priceUsd: xrpUsdPrice > 0 ? xrpUsdPrice : null,
-      priceSource: xrpUsdPrice > 0 ? 'market' : 'unavailable',
+      subtotalUsd: xrpSubtotal,
+      priceUsd: hasXrpPrice ? xrpUsdPrice : null,
+      priceSource: hasXrpPrice ? 'market' : 'unavailable',
     });
-    if (xrpUsdPrice > 0) pricedCount++; else unpricedCount++;
+    if (hasXrpPrice) pricedCount++; else unpricedCount++;
 
     for (const token of xrplData.token_holdings) {
       const meta = tokenMetaMap?.get(`${token.currency}:${token.issuer}`);
@@ -168,6 +172,8 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
       }
     }
 
+    const hasUsdValuation = hasXrpPrice && unpricedCount === 0;
+
     // MPT issuer-held value (unsold supply * implied price per token)
     let mptSubtotal = 0;
     for (const mpt of xrplData.mpt_issuances || []) {
@@ -180,13 +186,16 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
       }
     }
 
+    const totalUsd = hasUsdValuation ? ((xrpSubtotal ?? 0) + tokenSubtotal + mptSubtotal) : null;
+
     return {
-      totalUsd: xrpSubtotal + tokenSubtotal + mptSubtotal,
+      totalUsd,
       xrpSubtotal,
       tokenSubtotal,
       mptSubtotal,
       pricedCount,
       unpricedCount,
+      hasUsdValuation,
       assetValues,
     };
   }, [xrplData, xrpUsdPrice, tokenMetaMap]);
@@ -199,7 +208,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.round(diff / 60)}m ago`;
     return `${Math.round(diff / 3600)}h ago`;
-  }, [dataUpdatedAt, isFetching]); // re-evaluate on refetch
+  }, [dataUpdatedAt]);
 
   const formatXRP = (amount: number | undefined | null) => (amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 });
   const shortenAddress = (addr: string) => addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : '';
@@ -307,14 +316,21 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                     )}
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
-                    ${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {portfolioValuation.totalUsd !== null
+                      ? `$${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : 'USD unavailable'}
                   </p>
                   <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" />
                       Updated {updatedAgo || 'now'}
                     </span>
-                    {portfolioValuation.unpricedCount > 0 && (
+                    {portfolioValuation.totalUsd === null ? (
+                      <span className="flex items-center gap-1">
+                        <Info className="w-3 h-3" />
+                        Live USD pricing unavailable
+                      </span>
+                    ) : portfolioValuation.unpricedCount > 0 && (
                       <span className="flex items-center gap-1">
                         <Info className="w-3 h-3" />
                         {portfolioValuation.unpricedCount} asset{portfolioValuation.unpricedCount > 1 ? 's' : ''} without USD price
@@ -360,9 +376,13 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                 <div>
                   <p className="text-sm text-muted-foreground">Net Worth</p>
                   <p className="text-2xl font-bold">
-                    {portfolioValuation ? `$${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—'}
+                    {portfolioValuation?.totalUsd !== null && portfolioValuation?.totalUsd !== undefined
+                      ? `$${portfolioValuation.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : 'Unavailable'}
                   </p>
-                  <p className="text-xs text-muted-foreground">USD estimated</p>
+                  <p className="text-xs text-muted-foreground">
+                    {portfolioValuation?.hasUsdValuation ? 'USD estimated' : 'Live price unavailable'}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -820,12 +840,12 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                                 <div>
                                   <p className="text-[10px] uppercase text-muted-foreground font-medium mb-2">Verification Links</p>
                                   <div className="flex flex-wrap gap-2">
-                                    {mpt.uris.map((uri: any, uriIdx: number) => {
+                                    {mpt.uris.map((uri, uriIdx: number) => {
                                       // Support both XLS-89 object format {u, c, t} and plain string URIs
-                                      const href = typeof uri === 'string' ? uri : uri?.u || '';
+                                      const href = typeof uri === 'string' ? uri : (uri && typeof uri === 'object' && 'u' in uri ? String(uri.u || '') : '');
                                       const label = typeof uri === 'string'
                                         ? uri.replace(/^https?:\/\//, '').slice(0, 30)
-                                        : (uri?.t || href.replace(/^https?:\/\//, '').slice(0, 30));
+                                        : (uri && typeof uri === 'object' && 't' in uri && uri.t ? String(uri.t) : href.replace(/^https?:\/\//, '').slice(0, 30));
                                       const fullUrl = href.startsWith('http') ? href : `https://${href}`;
                                       if (!href) return null;
                                       return (
@@ -1092,6 +1112,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
             isOpen={isReceiveOpen}
             onClose={() => setIsReceiveOpen(false)}
             walletAddress={displayAddress}
+            network={network}
           />
           <SendModal
             isOpen={isSendOpen}

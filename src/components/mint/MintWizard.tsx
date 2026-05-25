@@ -55,11 +55,11 @@ const MintWizard: React.FC = () => {
   const [pushed, setPushed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [generatingFaucet, setGeneratingFaucet] = useState(false);
-  const getParams = () => {
+  const getParams = useCallback(() => {
     if (tokenType === 'nft') return nftParams;
     if (tokenType === 'mpt') return mptParams;
     return iouParams;
-  };
+  }, [iouParams, mptParams, nftParams, tokenType]);
 
   const canProceedToReview = () => {
     if (tokenType === 'nft') return nftParams.uri.trim().length > 0;
@@ -82,12 +82,14 @@ const MintWizard: React.FC = () => {
         'Testnet Faucet Wallet',
         null,
         'testnet_faucet',
-        data.secret
+        data.secret,
+        'testnet'
       );
 
       toast.success(`✅ Testnet wallet created — Funded with ${data.balance} XRP`);
-    } catch (err: any) {
-      toast.error(`Faucet error: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Faucet error: ${message}`);
     } finally {
       setGeneratingFaucet(false);
     }
@@ -128,7 +130,7 @@ const MintWizard: React.FC = () => {
 
         // Auto-create a property record from MPT metadata if no approved property was linked
         if (!linkedPropertyId && tokenType === 'mpt') {
-          const p = mptParams;
+          const p = getParams() as MPTParams;
           const estVal = p.estimated_value ? Number(String(p.estimated_value).replace(/,/g, '')) : null;
           const totalTk = p.max_amount ? Number(p.max_amount) : null;
           const propRow = {
@@ -153,19 +155,19 @@ const MintWizard: React.FC = () => {
             status: 'active',
           };
           const { data: newProp, error: propErr } = await supabase
-            .from('properties' as any)
-            .insert(propRow as any)
+            .from('properties' as never)
+            .insert(propRow as never)
             .select('id')
             .single();
           if (propErr) {
             console.error('[MintWizard] Failed to create property listing:', propErr);
             toast.error('Token minted but marketplace listing failed. Contact support.');
           }
-          if (newProp) linkedPropertyId = (newProp as any).id;
+          if (newProp && typeof newProp === 'object' && 'id' in newProp) linkedPropertyId = String(newProp.id);
         }
 
         // Save mint record as validated
-        await supabase.from('token_mints' as any).insert({
+        await supabase.from('token_mints' as never).insert({
           user_id: user.id,
           wallet_address: mintAddress,
           token_type: tokenType,
@@ -177,10 +179,10 @@ const MintWizard: React.FC = () => {
           property_id: linkedPropertyId,
         });
 
-        // Activate linked property (if it was pre-existing and approved)
-        if (selectedPropertyId) {
-          await supabase.from('properties' as any)
-            .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+              // Activate linked property (if it was pre-existing and approved)
+              if (selectedPropertyId) {
+          await supabase.from('properties' as never)
+            .update({ status: 'active', updated_at: new Date().toISOString() } as never)
             .eq('id', selectedPropertyId);
         }
 
@@ -204,7 +206,7 @@ const MintWizard: React.FC = () => {
         // Auto-create property for standalone MPT mints (Xaman flow)
         let xamanLinkedPropertyId = selectedPropertyId;
         if (!xamanLinkedPropertyId && tokenType === 'mpt') {
-          const p = mptParams;
+          const p = getParams() as MPTParams;
           const estVal = p.estimated_value ? Number(String(p.estimated_value).replace(/,/g, '')) : null;
           const totalTk = p.max_amount ? Number(p.max_amount) : null;
           const propRow = {
@@ -229,19 +231,19 @@ const MintWizard: React.FC = () => {
             status: 'active',
           };
           const { data: newProp, error: propErr } = await supabase
-            .from('properties' as any)
-            .insert(propRow as any)
+            .from('properties' as never)
+            .insert(propRow as never)
             .select('id')
             .single();
           if (propErr) {
             console.error('[MintWizard] Failed to create property listing:', propErr);
             toast.error('Token minted but marketplace listing failed. Contact support.');
           }
-          if (newProp) xamanLinkedPropertyId = (newProp as any).id;
+          if (newProp && typeof newProp === 'object' && 'id' in newProp) xamanLinkedPropertyId = String(newProp.id);
         }
 
         // Save mint record
-        await supabase.from('token_mints' as any).insert({
+        await supabase.from('token_mints' as never).insert({
           user_id: user.id,
           wallet_address: mintAddress,
           token_type: tokenType,
@@ -266,14 +268,14 @@ const MintWizard: React.FC = () => {
               setMintStatus('validated');
               setTxHash(checkData.tx_hash || null);
 
-              await supabase.from('token_mints' as any)
-                .update({ status: 'validated', tx_hash: checkData.tx_hash })
+              await supabase.from('token_mints' as never)
+                .update({ status: 'validated', tx_hash: checkData.tx_hash } as never)
                 .eq('xaman_payload_uuid', uuid);
 
               // Activate linked property (either pre-existing approved or auto-created)
               if (xamanLinkedPropertyId) {
-                await supabase.from('properties' as any)
-                  .update({ status: 'active', updated_at: new Date().toISOString() } as any)
+                await supabase.from('properties' as never)
+                  .update({ status: 'active', updated_at: new Date().toISOString() } as never)
                   .eq('id', xamanLinkedPropertyId);
               }
 
@@ -283,8 +285,8 @@ const MintWizard: React.FC = () => {
               setMintStatus('failed');
               setMintError(checkData.cancelled ? 'Signing was cancelled.' : 'Signing request expired.');
 
-              await supabase.from('token_mints' as any)
-                .update({ status: 'failed' })
+              await supabase.from('token_mints' as never)
+                .update({ status: 'failed' } as never)
                 .eq('xaman_payload_uuid', uuid);
             }
           } catch {
@@ -302,13 +304,13 @@ const MintWizard: React.FC = () => {
         }, 300_000);
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       setMintStatus('failed');
-      setMintError(err.message);
+      setMintError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setLoading(false);
     }
-  }, [mintAddress, selectedWallet, user, tokenType, network, nftParams, mptParams, iouParams, isTestnetFaucetWallet, selectedPropertyId, getWalletSecret]);
+  }, [getParams, getWalletSecret, isTestnetFaucetWallet, mintAddress, mintStatus, network, selectedPropertyId, tokenType, user]);
 
   const handleReset = () => {
     setStep('type');
