@@ -112,10 +112,13 @@ Deno.serve(async (req) => {
       const goalAmount = goalAmountRaw === '' || goalAmountRaw == null ? null : Number(goalAmountRaw)
       if (goalAmountRaw !== '' && goalAmountRaw != null && (!Number.isFinite(goalAmount) || (goalAmount ?? 0) < 0)) {
         throw new Error('Goal amount is invalid')
+      }
 
       const acceptedAssets = body?.accepted_assets === undefined
         ? ['XRP']
         : normalizeAcceptedAssets(body.accepted_assets)
+
+
 
 
       const { data: campaign, error } = await svc
