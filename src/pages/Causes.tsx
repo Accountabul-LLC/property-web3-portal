@@ -73,6 +73,24 @@ export default function Causes() {
                   </Button>
                 )}
               </div>
+
+              <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto lg:mx-0">
+                {[
+                  { icon: Lock, title: 'Trustless Escrow', desc: 'Funds lock on XRPL the moment you donate.' },
+                  { icon: Shield, title: 'Curated Campaigns', desc: 'Reviewed by the Accountabul civil division.' },
+                  { icon: Zap, title: 'Censorship Resistant', desc: 'No bank or processor can block donations.' },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-card/60 p-3 text-left">
+                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <item.icon className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground">{item.title}</p>
+                      <p className="text-[11px] text-muted-foreground leading-snug mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className="relative">
@@ -108,40 +126,6 @@ export default function Causes() {
         </div>
       </section>
 
-      {/* Why us */}
-      <section className="border-b border-border bg-card/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Lock,
-                title: 'Trustless Escrow',
-                desc: 'Donations lock on the XRP Ledger the moment you send. The Accountabul team never holds or controls your funds.',
-              },
-              {
-                icon: Shield,
-                title: 'Curated Campaigns',
-                desc: 'Every cause is reviewed and approved by the Accountabul civil division - focused on justice and community defense.',
-              },
-              {
-                icon: Zap,
-                title: 'Censorship Resistant',
-                desc: 'No bank, no payment processor, no platform can freeze or block donations. Once in escrow, it will reach its destination.',
-              },
-            ].map((item) => (
-              <div key={item.title} className="flex gap-4">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <item.icon className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-foreground mb-1">{item.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Campaign grid */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
