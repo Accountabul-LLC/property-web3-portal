@@ -204,6 +204,34 @@ export default function AdminCauses() {
     }
   }
 
+  async function handleImageUpload(file: File) {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5MB')
+      return
+    }
+    setUploadingImage(true)
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg'
+      const path = `causes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('campaign-images')
+        .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type })
+      if (upErr) throw upErr
+      const { data } = supabase.storage.from('campaign-images').getPublicUrl(path)
+      setCreateForm((prev) => ({ ...prev, image_url: data.publicUrl }))
+      toast.success('Image uploaded')
+    } catch (err: any) {
+      console.error('Image upload failed:', err)
+      toast.error(err.message || 'Failed to upload image')
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   async function handleCreateCampaign(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setCreating(true)
