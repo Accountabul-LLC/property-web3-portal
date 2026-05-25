@@ -410,10 +410,16 @@ export default function CauseDetail() {
                 </div>
                 <div className="bg-muted/50 rounded-lg p-3">
                   <p className="text-xl font-bold text-foreground" title={isDirectCampaign ? 'Direct donations stay open' : unlockTimestamp}>
-                    {isDirectCampaign ? 'Open' : (releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', ''))}
+                    {isDirectCampaign
+                      ? 'Open'
+                      : campaign.status === 'completed'
+                        ? 'Complete'
+                        : releaseReady ? 'Ready' : unlockCountdown.replace('Unlocks in ', '')}
                   </p>
                   <p className="text-xs text-muted-foreground flex items-center justify-center gap-1 mt-0.5">
-                    <Calendar className="w-3 h-3" /> {isDirectCampaign ? 'open-ended' : 'unlock window'}
+                    <Calendar className="w-3 h-3" /> {isDirectCampaign
+                      ? 'open-ended'
+                      : campaign.status === 'completed' ? 'funding round' : 'unlock window'}
                   </p>
                 </div>
               </div>
@@ -422,12 +428,14 @@ export default function CauseDetail() {
                 <Lock className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                 {isDirectCampaign
                   ? 'Direct donations are sent straight to the recipient after signing.'
-                  : campaign.status === 'completed' || releaseReady
-                    ? 'Ready to release to the recipient.'
-                    : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
+                  : campaign.status === 'completed'
+                    ? 'Initial funding round complete — you can still donate directly to the recipient wallet.'
+                    : releaseReady
+                      ? 'Ready to release to the recipient.'
+                      : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
               </div>
 
-              {campaign.status !== 'completed' && !releaseReady && (
+              {(campaign.status !== 'completed' && !releaseReady) || campaign.status === 'completed' ? (
                 !user ? (
                   <Button className="w-full" size="lg" onClick={() => navigate('/auth')}>
                     Sign In to Donate
@@ -440,12 +448,12 @@ export default function CauseDetail() {
                 ) : (
                   <Button className="w-full" size="lg" onClick={() => setDonateOpen(true)}>
                     <Heart className="w-4 h-4 mr-2" />
-                    Donate
+                    {campaign.status === 'completed' ? 'Donate Directly' : 'Donate'}
                   </Button>
                 )
-              )}
+              ) : null}
 
-              {(campaign.status === 'completed' || releaseReady) && (
+              {campaign.status !== 'completed' && releaseReady && (
                 <Button variant="outline" className="w-full" disabled>
                   <CheckCircle2 className="w-4 h-4 mr-2 text-green-600" />
                   Funds Released
