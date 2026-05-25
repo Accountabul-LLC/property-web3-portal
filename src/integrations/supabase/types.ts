@@ -347,6 +347,7 @@ export type Database = {
           currency: string
           description: string
           donor_count: number
+          gallery_urls: string[]
           goal_amount: number | null
           id: string
           image_url: string | null
@@ -372,6 +373,7 @@ export type Database = {
           currency?: string
           description: string
           donor_count?: number
+          gallery_urls?: string[]
           goal_amount?: number | null
           id?: string
           image_url?: string | null
@@ -397,6 +399,7 @@ export type Database = {
           currency?: string
           description?: string
           donor_count?: number
+          gallery_urls?: string[]
           goal_amount?: number | null
           id?: string
           image_url?: string | null
