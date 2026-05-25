@@ -19,10 +19,22 @@ import {
   formatCauseReleaseUnlockTimestamp,
   isCauseReleaseReady,
 } from '@/lib/causesRelease'
+import { loadDraft, saveDraft, clearDraft } from '@/lib/draftStorage'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
-  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw,
 } from 'lucide-react'
+
+type EditFormShape = {
+  title: string
+  description: string
+  goal_amount: string
+  image_url: string
+  gallery_urls: string[]
+}
+
+const CREATE_DRAFT_KEY = 'admin-causes:create-draft'
+const editDraftKey = (id: string) => `admin-causes:edit-draft:${id}`
 
 type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
 type CampaignNetwork = 'mainnet' | 'testnet'
@@ -80,13 +92,14 @@ export default function AdminCauses() {
   const [editOpen, setEditOpen] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EditFormShape>({
     title: '',
     description: '',
     goal_amount: '',
     image_url: '',
-    gallery_urls: [] as string[],
+    gallery_urls: [],
   })
+  const [editHasDraft, setEditHasDraft] = useState(false)
   const [uploadingEditCover, setUploadingEditCover] = useState(false)
   const [uploadingEditGallery, setUploadingEditGallery] = useState(false)
   const [now, setNow] = useState(() => Date.now())
@@ -105,6 +118,27 @@ export default function AdminCauses() {
     submission_notes: '',
     admin_notes: '',
   })
+
+  // Restore create-form draft once on mount (if any).
+  useEffect(() => {
+    const draft = loadDraft<typeof createForm>(CREATE_DRAFT_KEY)
+    if (draft) {
+      setCreateForm((prev) => ({ ...prev, ...draft }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Persist create draft on every change.
+  useEffect(() => {
+    saveDraft(CREATE_DRAFT_KEY, createForm)
+  }, [createForm])
+
+  // Persist edit draft whenever it changes (only while a campaign is being edited).
+  useEffect(() => {
+    if (!editId) return
+    saveDraft(editDraftKey(editId), editForm)
+  }, [editId, editForm])
+
 
   const { data: campaigns, isLoading } = useQuery({
     queryKey: ['admin-campaigns'],
@@ -262,15 +296,36 @@ export default function AdminCauses() {
 
   function openEdit(c: Campaign) {
     setEditId(c.id)
-    setEditForm({
+    const dbValues: EditFormShape = {
       title: c.title,
       description: c.description,
       goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
       image_url: c.image_url ?? '',
       gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
-    })
+    }
+    const draft = loadDraft<EditFormShape>(editDraftKey(c.id))
+    setEditForm(draft ?? dbValues)
+    setEditHasDraft(!!draft)
     setEditOpen(true)
   }
+
+  function discardEditDraft() {
+    if (!editId) return
+    const c = campaigns?.find((x) => x.id === editId)
+    clearDraft(editDraftKey(editId))
+    setEditHasDraft(false)
+    if (c) {
+      setEditForm({
+        title: c.title,
+        description: c.description,
+        goal_amount: c.goal_amount != null ? String(c.goal_amount) : '',
+        image_url: c.image_url ?? '',
+        gallery_urls: Array.isArray(c.gallery_urls) ? c.gallery_urls : [],
+      })
+    }
+    toast.success('Draft discarded')
+  }
+
 
   async function handleEditCoverUpload(file: File) {
     setUploadingEditCover(true)
@@ -313,6 +368,8 @@ export default function AdminCauses() {
       if (error) throw error
       if (!data?.success) throw new Error(data?.error || 'Failed to update campaign')
       toast.success('Campaign updated')
+      if (editId) clearDraft(editDraftKey(editId))
+      setEditHasDraft(false)
       setEditOpen(false)
       setEditId(null)
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
@@ -372,6 +429,7 @@ export default function AdminCauses() {
         submission_notes: '',
         admin_notes: '',
       })
+      clearDraft(CREATE_DRAFT_KEY)
       setAddOpen(false)
       qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
       qc.invalidateQueries({ queryKey: ['campaigns'] })
@@ -657,14 +715,29 @@ export default function AdminCauses() {
         <Dialog open={editOpen} onOpenChange={(o) => { setEditOpen(o); if (!o) setEditId(null) }}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
+              <DialogTitle className="flex items-center gap-2 flex-wrap">
                 <Pencil className="w-5 h-5 text-primary" />
                 Edit Cause
+                {editHasDraft && (
+                  <Badge variant="secondary" className="ml-1 gap-1">
+                    Unsaved draft
+                    <button
+                      type="button"
+                      onClick={discardEditDraft}
+                      className="ml-1 inline-flex items-center gap-1 text-xs underline hover:no-underline"
+                      title="Discard local draft and reload saved values"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Discard
+                    </button>
+                  </Badge>
+                )}
               </DialogTitle>
               <DialogDescription>
-                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions.
+                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions. Closing this dialog keeps your edits as a local draft — nothing changes until you click <span className="font-medium">Save Changes</span>.
               </DialogDescription>
             </DialogHeader>
+
 
             <form onSubmit={handleSaveEdit} className="space-y-4">
               <div className="space-y-2">
