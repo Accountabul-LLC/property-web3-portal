@@ -252,6 +252,25 @@ export default function CauseApply() {
               )} />
             </div>
 
+            <FormField control={form.control} name="accept_rlusd" render={({ field }) => (
+              <FormItem className="flex flex-row items-start gap-3 rounded-lg border border-border bg-muted/30 p-4">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(e) => field.onChange(e.target.checked)}
+                    className="mt-1 h-4 w-4 rounded border-border"
+                  />
+                </FormControl>
+                <div className="space-y-1">
+                  <FormLabel className="cursor-pointer">Also accept RLUSD donations</FormLabel>
+                  <p className="text-xs text-muted-foreground">
+                    XRP is always accepted. Enable this to also accept RLUSD (Ripple's USD stablecoin) — the recipient wallet must have an RLUSD trustline before donations can settle. Other tokens are never accepted through the platform donation flow.
+                  </p>
+                </div>
+              </FormItem>
+            )} />
+
             <FormField control={form.control} name="image_url" render={({ field }) => (
               <FormItem>
                 <FormLabel>Campaign Image URL (optional)</FormLabel>
