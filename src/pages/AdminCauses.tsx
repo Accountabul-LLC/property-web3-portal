@@ -713,6 +713,15 @@ export default function AdminCauses() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => { e.stopPropagation(); openEdit(campaign) }}
+                      className="h-8 px-3"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span className="ml-1 hidden sm:inline">Edit</span>
+                    </Button>
                     {/* Quick actions */}
                     {campaign.status === 'under_review' && (
                       <>
