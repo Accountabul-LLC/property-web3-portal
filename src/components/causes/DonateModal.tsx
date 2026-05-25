@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client'
 import type { Campaign } from '@/hooks/useCampaigns'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio'
+import NetworkToggle from '@/components/NetworkToggle'
 
 function shortAddr(a: string) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : ''
