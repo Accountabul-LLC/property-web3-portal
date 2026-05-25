@@ -289,7 +289,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             </div>
 
             <div className="pt-2 space-y-2">
-              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD'} className="w-full">
+              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD' || !activeWallet || (asset === 'XRP' && (!balanceReady || insufficientFunds))} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Heart className="w-4 h-4 mr-2" />}
                 {loading ? 'Preparing...' : 'Donate'}
               </Button>
