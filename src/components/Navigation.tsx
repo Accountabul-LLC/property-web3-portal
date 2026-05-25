@@ -63,7 +63,9 @@ const Navigation = () => {
     { path: '/pools',        label: 'Liquidity',     shortLabel: 'Pools',  icon: Droplets },
     { path: '/portfolio',    label: 'Portfolio',     icon: Wallet },
     { path: '/treasury',     label: 'Treasury',      icon: Landmark },
+    { path: '/pricing',      label: 'Pricing',       icon: Tag },
   ];
+
 
   const currentPath = location.pathname;
 
