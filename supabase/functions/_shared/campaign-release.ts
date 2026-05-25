@@ -3,9 +3,9 @@
 import { Client, Wallet } from 'npm:xrpl@3.1.0'
 
 const XRPL_NODES: Record<string, string[]> = {
-  mainnet: ['https://xrplcluster.com', 'https://s1.ripple.com'],
-  testnet: ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'],
-  devnet: ['https://s.devnet.rippletest.net:51234'],
+  mainnet: ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com'],
+  testnet: ['wss://s.altnet.rippletest.net:51233', 'wss://testnet.xrpl-labs.com'],
+  devnet: ['wss://s.devnet.rippletest.net:51233'],
 }
 
 export type CampaignReleaseCampaign = {
