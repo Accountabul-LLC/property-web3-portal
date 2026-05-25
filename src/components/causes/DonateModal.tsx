@@ -38,6 +38,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
     if (pollInterval) clearInterval(pollInterval)
     setStep('form')
     setAmount('')
+    setAsset('XRP')
     setMessage('')
     setIsAnonymous(false)
     setQrUrl('')
