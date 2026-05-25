@@ -1,71 +1,67 @@
-## Goal
+# Plan: Admin-launched campaigns (reverse the flow)
 
-1. Block public access to **Tokenize, AI Agents, Swap, Liquidity Pools** — visitors can still see them in the hamburger menu, but opening them redirects to `/auth` unless logged in.
-2. Confirm the site is safe to publish: every new sign-up (email or Google) creates an independent account — no one can land in your account.
+Today campaigns are user-submitted via `/causes/apply` and then approved in `/admin/causes`. You want the inverse: **only Accountabul admins create campaigns**, and they go live on `/causes` immediately for the public to donate.
 
----
+## Changes
 
-## Part 1 — Lock down the pages
+### 1. Admin: "Launch a Campaign" form
 
-We already have a working `RouteGuard` component (`src/components/RouteGuard.tsx`) that handles auth/wallet/credential gating with a loading spinner and a clean redirect to `/auth`. We'll reuse it instead of writing one-off checks in each page.
+New section at the top of `/admin/causes` with a **+ Launch Campaign** button that opens a full form (modal or inline panel) with:
 
-**Edit `src/App.tsx`** — wrap four routes:
+- Title
+- Description (rich textarea)
+- Campaign image — **file upload** to a new public `campaign-images` storage bucket (we don't have one yet), with live preview. Falls back to a pasted URL.
+- Recipient XRPL wallet address (with r-address validation)
+- Goal amount (XRP, optional)
+- Escrow release date (date picker, must be future)
 
-```tsx
-<Route path="/tokenize" element={
-  <RouteGuard><KycGate><Tokenize /></KycGate></RouteGuard>
-} />
-<Route path="/ai-agents" element={
-  <RouteGuard><AIAgents /></RouteGuard>
-} />
-<Route path="/swap" element={
-  <RouteGuard><Swap /></RouteGuard>
-} />
-<Route path="/pools" element={
-  <RouteGuard><Pools /></RouteGuard>
-} />
-```
+On submit: insert into `campaigns` with `status='active'` directly — no review queue, no email. Campaign appears on `/causes` instantly.
 
-Behavior:
-- Not logged in → redirected to `/auth`.
-- Logged in → page loads normally (KYC gate still applies on `/tokenize` as today).
-- Menu links remain visible to everyone (no nav changes).
+### 2. Storage
 
-Notes:
-- `Mint` is already auth-gated inside the page; we can leave it or also wrap it with `RouteGuard` for consistency (recommend wrapping).
-- The inline `useAuth` redirect inside `Tokenize.tsx` becomes redundant once wrapped — can be removed in a small cleanup.
+Create a public `campaign-images` bucket with admin-only upload policy and public read. Uploaded images get a public URL written to `campaigns.image_url`.
 
----
+### 3. Public-side removals
 
-## Part 2 — Public-launch auth sanity check
+- Delete page `src/pages/CauseApply.tsx`
+- Remove the `/causes/apply` route from `App.tsx`
+- Remove all "Submit a Cause" CTAs from `src/pages/Causes.tsx` (hero button, header button, empty-state button)
+- Reframe the hero copy: "Causes curated by the Accountabul civil division" instead of inviting submissions
 
-Your concern: "if someone signs in through Google, it doesn't sign into my account."
+### 4. Admin page cleanup
 
-Good news — this is already handled correctly:
+Since there's no longer a submission queue:
 
-- **Google sign-in** uses Lovable's managed OAuth (`lovable.auth.signInWithOAuth("google", …)` in `src/pages/Auth.tsx`). Each Google account creates its own `auth.users` row keyed by that Google email. There is no shared session — your account is tied to *your* Google email only.
-- **Email/password sign-up** uses `supabase.auth.signUp`, which also creates a fresh `auth.users` row per email.
-- Sessions are stored per-browser in localStorage via the Supabase client. Another person signing in on their own device gets their own JWT; they cannot reach your data.
-- RLS policies on user-owned tables (`profiles`, `user_wallets`, `kyc_cases`, etc.) already scope rows by `auth.uid()`, so even if someone signed in, they only see their own data.
+- Drop the `under_review` tab; default tab becomes **Active**
+- Keep tabs: Active, Completed, Rejected (rejected = paused/hidden), All
+- Keep the existing release-escrow button on each active card
+- Add **Edit** and **Pause/Unpause** actions per campaign (status toggle between `active` ↔ `rejected`)
 
-**Recommended pre-launch hardening** (small, low-risk):
+### 5. Seed a starter campaign
 
-1. **Email confirmation ON** — verify in Cloud → Users → Auth Settings that "Auto-confirm email" is **disabled** so new users must click the verification link before signing in. (Currently the signup flow already shows "Check your email to verify your account," which implies it's off — we'll just confirm.)
-2. **Leaked-password protection (HIBP)** — enable via `configure_auth` so weak/compromised passwords are rejected at sign-up.
-3. **Run the Supabase linter** once to flag any RLS gaps before publish.
+Insert one live campaign so you can immediately see the flow:
 
-These three are quick toggles, not code changes. I'll run them as part of the implementation pass.
+- **Title:** Donate to Accountabul
+- **Description:** Support platform development and the civil division's work.
+- **Recipient:** `rHsehLToQL7puJCkmk2dne53iXX2K6LffW` (your testnet wallet)
+- **Goal:** 1000 XRP, **Release:** ~30 days out, **Status:** active
 
----
+### 6. Secret (still needed for escrow release)
 
-## Files touched
-
-- `src/App.tsx` — wrap 4 (or 5 incl. Mint) routes with `<RouteGuard>`.
-- `src/pages/Tokenize.tsx` *(optional cleanup)* — remove now-redundant inline auth redirect.
-- No DB migrations, no nav changes, no new components.
+Once any donation comes in, the `**campaign-release**` edge function needs `**CAMPAIGN_RELEASE_SIGNER_SEED**` to broadcast the `EscrowFinish`. We'll prompt for it as part of build. This is independent from the recipient — it only pays the ~12 drop fee.
 
 ## Out of scope
 
-- Changing what's visible in the hamburger menu (you explicitly want it to stay visible).
-- Wallet/KYC/credential gating beyond what each page already enforces.
-- Any change to RLS policies (already correct).
+- Editing donations or refunds
+- Multi-image galleries (single image per campaign for now) - add this 
+- Public submission form (removed; can be reintroduced later behind a separate "Suggest a cause" contact form if you want) - can keep or say coming soon
+
+## Files touched
+
+- `src/pages/AdminCauses.tsx` — new launch form, tab changes, edit/pause actions
+- `src/pages/Causes.tsx` — remove submit CTAs, update copy
+- `src/App.tsx` — drop `/causes/apply` route
+- `src/pages/CauseApply.tsx` — **deleted**
+- New migration: `campaign-images` bucket + RLS
+- One data insert: seed "Donate to Accountabul" campaign
+- Secret prompt: `CAMPAIGN_RELEASE_SIGNER_SEED`

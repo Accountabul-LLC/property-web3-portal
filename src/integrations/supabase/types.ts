@@ -273,6 +273,146 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_donations: {
+        Row: {
+          amount: number
+          campaign_id: string
+          created_at: string
+          currency: string
+          donor_message: string | null
+          donor_user_id: string | null
+          donor_wallet_address: string
+          escrow_finish_tx_hash: string | null
+          escrow_sequence: number | null
+          escrow_status: string
+          escrow_tx_hash: string | null
+          id: string
+          is_anonymous: boolean
+          updated_at: string
+          xaman_payload_uuid: string | null
+        }
+        Insert: {
+          amount: number
+          campaign_id: string
+          created_at?: string
+          currency?: string
+          donor_message?: string | null
+          donor_user_id?: string | null
+          donor_wallet_address: string
+          escrow_finish_tx_hash?: string | null
+          escrow_sequence?: number | null
+          escrow_status?: string
+          escrow_tx_hash?: string | null
+          id?: string
+          is_anonymous?: boolean
+          updated_at?: string
+          xaman_payload_uuid?: string | null
+        }
+        Update: {
+          amount?: number
+          campaign_id?: string
+          created_at?: string
+          currency?: string
+          donor_message?: string | null
+          donor_user_id?: string | null
+          donor_wallet_address?: string
+          escrow_finish_tx_hash?: string | null
+          escrow_sequence?: number | null
+          escrow_status?: string
+          escrow_tx_hash?: string | null
+          id?: string
+          is_anonymous?: boolean
+          updated_at?: string
+          xaman_payload_uuid?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_donations_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          currency: string
+          description: string
+          donor_count: number
+          goal_amount: number | null
+          id: string
+          image_url: string | null
+          network: string
+          recipient_wallet_address: string
+          rejection_reason: string | null
+          release_date: string
+          slug: string
+          status: string
+          submission_notes: string | null
+          submitted_by_email: string | null
+          submitted_by_user_id: string | null
+          title: string
+          total_raised: number
+          updated_at: string
+          video_url: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          currency?: string
+          description: string
+          donor_count?: number
+          goal_amount?: number | null
+          id?: string
+          image_url?: string | null
+          network?: string
+          recipient_wallet_address: string
+          rejection_reason?: string | null
+          release_date: string
+          slug: string
+          status?: string
+          submission_notes?: string | null
+          submitted_by_email?: string | null
+          submitted_by_user_id?: string | null
+          title: string
+          total_raised?: number
+          updated_at?: string
+          video_url?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          currency?: string
+          description?: string
+          donor_count?: number
+          goal_amount?: number | null
+          id?: string
+          image_url?: string | null
+          network?: string
+          recipient_wallet_address?: string
+          rejection_reason?: string | null
+          release_date?: string
+          slug?: string
+          status?: string
+          submission_notes?: string | null
+          submitted_by_email?: string | null
+          submitted_by_user_id?: string | null
+          title?: string
+          total_raised?: number
+          updated_at?: string
+          video_url?: string | null
+        }
+        Relationships: []
+      }
       credential_applications: {
         Row: {
           accepted_at: string | null
