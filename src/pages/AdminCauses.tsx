@@ -259,7 +259,45 @@ export default function AdminCauses() {
       toast.error(err.message)
     } finally {
       setProcessing(null)
+  }
+
+  async function handleSetVisibility(campaign: Campaign, next: 'public' | 'hidden') {
+    if (next === 'hidden') {
+      const reason = window.prompt('Optional reason for hiding this cause (visible to admins only):', '') ?? ''
+      // If user clicks Cancel, prompt returns null → coalesced to '' above, treat as proceed with empty reason.
+      setProcessing(campaign.id)
+      try {
+        const { data, error } = await supabase.functions.invoke('campaign-admin', {
+          body: { action: 'set_visibility', campaign_id: campaign.id, visibility: 'hidden', reason },
+        })
+        if (error) throw error
+        if (!data?.success) throw new Error(data?.error || 'Failed to hide cause')
+        toast.success('Cause hidden from public view')
+        qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+        qc.invalidateQueries({ queryKey: ['campaigns'] })
+      } catch (err: any) {
+        toast.error(err.message)
+      } finally {
+        setProcessing(null)
+      }
+      return
     }
+    setProcessing(campaign.id)
+    try {
+      const { data, error } = await supabase.functions.invoke('campaign-admin', {
+        body: { action: 'set_visibility', campaign_id: campaign.id, visibility: 'public' },
+      })
+      if (error) throw error
+      if (!data?.success) throw new Error(data?.error || 'Failed to show cause')
+      toast.success('Cause is public again')
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
   }
 
   async function uploadCauseImage(file: File): Promise<string | null> {
