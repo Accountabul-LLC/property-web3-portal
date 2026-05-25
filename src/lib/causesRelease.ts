@@ -1,6 +1,6 @@
 export const CAUSES_RELEASE_SAFETY_BUFFER_MS = 10_000
 
-export type CauseCampaignType = 'escrow' | 'direct'
+export type CauseCampaignType = 'escrow' | 'direct' | 'scheduled' | 'evergreen'
 
 export function getCauseReleaseUnlockAt(releaseDate: string | null | undefined): number {
   if (!releaseDate) return Number.POSITIVE_INFINITY
