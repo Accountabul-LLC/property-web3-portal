@@ -16,6 +16,7 @@ import {
 import { PaymentComposer } from "@/components/payments/PaymentComposer";
 import { PaymentRailCards } from "@/components/payments/PaymentRailCards";
 import { PaymentSummary } from "@/components/payments/PaymentSummary";
+import { StripeCheckoutModal } from "@/components/payments/StripeCheckoutModal";
 import type { PaymentCheckoutResponse, PaymentDraft, PaymentRail } from "@/components/payments/paymentTypes";
 
 const DEFAULT_PAYMENT_DRAFT: PaymentDraft = {
