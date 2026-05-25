@@ -158,11 +158,21 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
     <Dialog open={open} onOpenChange={resetAndClose}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Heart className="w-5 h-5 text-primary" />
-            Donate to {campaign.title}
+            <span>Donate to {campaign.title}</span>
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                campaignNetwork === 'mainnet'
+                  ? 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30'
+              }`}
+            >
+              {campaignNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'}
+            </span>
           </DialogTitle>
         </DialogHeader>
+
 
         {step === 'form' && (
           <div className="space-y-4">
@@ -230,13 +240,19 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                     <span className="text-xs text-muted-foreground">{shortAddr(activeWallet.address)}</span>
                   </div>
                 )}
-                <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
                   {balanceLoading ? (
-                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading balance…</>
+                    <><Loader2 className="w-3 h-3 animate-spin" /> Loading {campaignNetwork} balance…</>
                   ) : (
-                    <>Available: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</>
+                    <>
+                      <span className={campaignNetwork === 'mainnet' ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'}>
+                        {campaignNetwork === 'mainnet' ? '● Mainnet' : '● Testnet'}
+                      </span>
+                      balance: <strong className="text-foreground">{spendableXrp.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP</strong> · max donatable {maxDonatable.toLocaleString(undefined, { maximumFractionDigits: 6 })} XRP
+                    </>
                   )}
                 </p>
+
               </div>
             )}
 
