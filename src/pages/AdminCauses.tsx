@@ -952,7 +952,44 @@ export default function AdminCauses() {
                 )}
               </div>
 
+              {/* Visibility toggle — applied on Save Changes */}
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label htmlFor="edit-visibility-toggle" className="flex items-center gap-2 cursor-pointer">
+                      {editForm.visibility === 'hidden'
+                        ? <EyeOff className="w-4 h-4 text-muted-foreground" />
+                        : <Eye className="w-4 h-4 text-muted-foreground" />}
+                      Hide from public
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      When on, this cause is removed from the public-facing site but remains live and visible to admins. Takes effect when you click <span className="font-medium">Save Changes</span>.
+                    </p>
+                  </div>
+                  <Switch
+                    id="edit-visibility-toggle"
+                    checked={editForm.visibility === 'hidden'}
+                    onCheckedChange={(checked) =>
+                      setEditForm((p) => ({ ...p, visibility: checked ? 'hidden' : 'public' }))
+                    }
+                  />
+                </div>
+                {editForm.visibility === 'hidden' && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-hidden-reason" className="text-xs">Reason (optional, admin-only)</Label>
+                    <Textarea
+                      id="edit-hidden-reason"
+                      value={editForm.hidden_reason}
+                      onChange={(e) => setEditForm((p) => ({ ...p, hidden_reason: e.target.value }))}
+                      placeholder="e.g. Pending content review, reported by user, awaiting clarification from organizer…"
+                      rows={2}
+                    />
+                  </div>
+                )}
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
+
                 <Button type="button" variant="ghost" onClick={() => setEditOpen(false)} disabled={editing}>
                   Cancel
                 </Button>
