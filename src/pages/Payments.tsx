@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
+import { LogIn, Lock, ReceiptText, ShieldCheck, WalletCards } from "lucide-react";
 import { toast } from "sonner";
 
 import Navigation from "@/components/Navigation";
@@ -18,6 +18,8 @@ import { PaymentRailCards } from "@/components/payments/PaymentRailCards";
 import { PaymentSummary } from "@/components/payments/PaymentSummary";
 import { StripeCheckoutModal } from "@/components/payments/StripeCheckoutModal";
 import type { PaymentCheckoutResponse, PaymentDraft, PaymentRail } from "@/components/payments/paymentTypes";
+import { useAuth } from "@/hooks/useAuth";
+import { useKycStatus } from "@/hooks/useKycStatus";
 
 const DEFAULT_PAYMENT_DRAFT: PaymentDraft = {
   amount: "250.00",
@@ -33,6 +35,8 @@ const DEFAULT_PAYMENT_DRAFT: PaymentDraft = {
 };
 
 export default function Payments() {
+  const { user, loading: authLoading } = useAuth();
+  const { status: kycStatus, isApproved: kycApproved, isLoading: kycLoading } = useKycStatus();
   const [draft, setDraft] = useState<PaymentDraft>(DEFAULT_PAYMENT_DRAFT);
   const [rail, setRail] = useState<PaymentRail>(() =>
     typeof window !== "undefined" && localStorage.getItem("accountabul_preferred_payment_rail") === "wallet"
@@ -79,6 +83,16 @@ export default function Payments() {
       return;
     }
 
+    if (!user) {
+      toast.error("Sign in first so we can prepare your payment session.");
+      return;
+    }
+
+    if (!kycApproved) {
+      toast.error("Complete KYC before preparing a live payment.");
+      return;
+    }
+
     setBusy(true);
     setRail(nextRail);
     setStatus("preparing");
@@ -117,6 +131,17 @@ export default function Payments() {
   const payment = response?.payment ?? null;
   const invoice = response?.invoice ?? null;
   const provider = response?.provider ?? null;
+  const needsIdentity = !user || !kycApproved;
+  const identityTitle = !user
+    ? "Sign in to continue"
+    : kycApproved
+      ? ""
+      : "Complete KYC to continue";
+  const identityDescription = !user
+    ? "You can view the payment product now, but you need to sign in before creating a live payment session."
+    : kycStatus === "rejected" || kycStatus === "expired"
+      ? "Your verification needs attention before you can create payments."
+      : "Payments are visible, but the live checkout stays locked until KYC is approved.";
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -166,6 +191,36 @@ export default function Payments() {
                 Payment settings
               </Link>
             </div>
+            {authLoading || kycLoading ? (
+              <div className="rounded-2xl border border-border bg-card/80 px-4 py-3 text-sm text-muted-foreground">
+                Checking your access...
+              </div>
+            ) : needsIdentity ? (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/90 px-4 py-4 text-sm text-amber-950 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-100">
+                <div className="flex items-center gap-2 font-medium">
+                  <Lock className="h-4 w-4" />
+                  {identityTitle}
+                </div>
+                <p className="mt-1 text-sm opacity-90">{identityDescription}</p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  {!user ? (
+                    <Link
+                      to="/auth"
+                      className="inline-flex items-center rounded-full bg-amber-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-900 dark:bg-amber-50 dark:text-amber-950 dark:hover:bg-white"
+                    >
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Sign in
+                    </Link>
+                  ) : null}
+                  <Link
+                    to="/kyc"
+                    className="inline-flex items-center rounded-full border border-amber-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900/30"
+                  >
+                    Verify identity
+                  </Link>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <Card className="border-border/70 bg-card/90 shadow-card">

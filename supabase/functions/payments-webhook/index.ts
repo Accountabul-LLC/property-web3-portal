@@ -26,16 +26,25 @@ const safeJson = (raw: string) => {
   }
 };
 
-const resolveGenericPaymentId = (payload: Record<string, any>) => {
+type WebhookPayload = Record<string, unknown>;
+
+const asObject = (value: unknown): WebhookPayload | null =>
+  value && typeof value === "object" && !Array.isArray(value) ? (value as WebhookPayload) : null;
+
+const resolveGenericPaymentId = (payload: WebhookPayload) => {
+  const invoice = asObject(payload.invoice);
+  const data = asObject(payload.data);
+  const dataObject = asObject(data?.object);
+  const dataObjectMetadata = asObject(dataObject?.metadata);
   const candidates = [
     payload.payment_id,
     payload.paymentId,
-    payload.invoice?.payment_id,
-    payload.invoice?.paymentId,
-    payload.data?.payment_id,
-    payload.data?.paymentId,
-    payload.data?.object?.metadata?.payment_id,
-    payload.data?.object?.metadata?.paymentId,
+    invoice?.payment_id,
+    invoice?.paymentId,
+    data?.payment_id,
+    data?.paymentId,
+    dataObjectMetadata?.payment_id,
+    dataObjectMetadata?.paymentId,
   ];
   for (const candidate of candidates) {
     if (isUuidLike(candidate)) return String(candidate);
@@ -43,12 +52,15 @@ const resolveGenericPaymentId = (payload: Record<string, any>) => {
   return null;
 };
 
-const resolveGenericInvoiceId = (payload: Record<string, any>) => {
+const resolveGenericInvoiceId = (payload: WebhookPayload) => {
+  const data = asObject(payload.data);
+  const dataObject = asObject(data?.object);
+  const dataObjectMetadata = asObject(dataObject?.metadata);
   const candidates = [
     payload.invoice_id,
     payload.invoiceId,
-    payload.data?.object?.metadata?.invoice_id,
-    payload.data?.object?.metadata?.invoiceId,
+    dataObjectMetadata?.invoice_id,
+    dataObjectMetadata?.invoiceId,
   ];
   for (const candidate of candidates) {
     if (isUuidLike(candidate)) return String(candidate);
@@ -77,7 +89,7 @@ serve(async (req) => {
       return json({ error: "Invalid JSON body" }, 400, corsHeaders);
     }
 
-    const body = parsed as Record<string, any>;
+    const body = parsed as WebhookPayload;
 
     if (stripeSignature) {
       const stripeSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
@@ -121,6 +133,12 @@ serve(async (req) => {
         payload,
         result: data,
       }, 200, corsHeaders);
+    }
+
+    const webhookSecret = Deno.env.get("PAYMENTS_WEBHOOK_SECRET");
+    const providedSecret = req.headers.get("x-payments-webhook-secret") ?? req.headers.get("X-Payments-Webhook-Secret");
+    if (!webhookSecret || providedSecret !== webhookSecret) {
+      return json({ error: "Unauthorized" }, 401, corsHeaders);
     }
 
     const provider = body.provider === "system"

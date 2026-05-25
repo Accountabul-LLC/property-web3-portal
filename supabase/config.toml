@@ -55,7 +55,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.xaman-send-payment]
-verify_jwt = false
+verify_jwt = true
 
 [functions.xrpl-build-mint]
 verify_jwt = false

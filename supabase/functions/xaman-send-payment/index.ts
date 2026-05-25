@@ -19,10 +19,31 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
     if (!xamanApiKey || !xamanApiSecret) {
       throw new Error('Xaman API credentials not configured');
+    }
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
+    }
+
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    const { data: { user } } = await userClient.auth.getUser();
+    if (!user?.id) {
+      return new Response(JSON.stringify({ success: false, error: 'Authentication required' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      });
     }
 
     const { tx_json } = await req.json();
@@ -38,7 +59,7 @@ Deno.serve(async (req) => {
     let userToken: string | null = null;
     if (senderAddress) {
       const supabase = createClient(
-        Deno.env.get('SUPABASE_URL')!,
+        supabaseUrl,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
       );
       const { data: wallet } = await supabase
@@ -46,8 +67,18 @@ Deno.serve(async (req) => {
         .select('xaman_user_token')
         .eq('wallet_address', senderAddress)
         .eq('status', 'active')
+        .eq('user_id', user.id)
         .maybeSingle();
-      userToken = wallet?.xaman_user_token || null;
+      if (!wallet) {
+        return new Response(JSON.stringify({
+          success: false,
+          error: 'The sender wallet is not linked to your account.',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 403,
+        });
+      }
+      userToken = wallet.xaman_user_token || null;
     }
 
     console.log('User token present:', !!userToken);

@@ -69,7 +69,7 @@ const App = () => (
               <Route path="/professionals" element={<Professionals />} />
               <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
               <Route path="/portfolio" element={<Portfolio />} />
-              <Route path="/payments" element={<RouteGuard><KycGate><Payments /></KycGate></RouteGuard>} />
+              <Route path="/payments" element={<Payments />} />
               <Route path="/payments/history" element={<RouteGuard><KycGate><PaymentsHistory /></KycGate></RouteGuard>} />
               <Route path="/payments/:id" element={<RouteGuard><KycGate><PaymentDetail /></KycGate></RouteGuard>} />
               <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
