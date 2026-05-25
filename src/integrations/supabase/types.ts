@@ -1438,6 +1438,57 @@ export type Database = {
         }
         Relationships: []
       }
+      user_notifications: {
+        Row: {
+          amount: number | null
+          body: string | null
+          campaign_id: string | null
+          created_at: string
+          currency: string | null
+          donation_id: string | null
+          id: string
+          kind: string
+          metadata: Json
+          network: string | null
+          read_at: string | null
+          title: string
+          tx_hash: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          body?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          donation_id?: string | null
+          id?: string
+          kind: string
+          metadata?: Json
+          network?: string | null
+          read_at?: string | null
+          title: string
+          tx_hash?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          body?: string | null
+          campaign_id?: string | null
+          created_at?: string
+          currency?: string | null
+          donation_id?: string | null
+          id?: string
+          kind?: string
+          metadata?: Json
+          network?: string | null
+          read_at?: string | null
+          title?: string
+          tx_hash?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
