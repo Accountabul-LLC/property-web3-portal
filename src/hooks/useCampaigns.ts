@@ -72,13 +72,7 @@ export function useCampaignDonations(campaignId: string) {
     queryKey: ['campaign-donations', campaignId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('campaign_donations')
-        .select('id, donor_wallet_address, donor_display_name, amount, currency, donor_message, is_anonymous, escrow_status, created_at')
-        .eq('campaign_id', campaignId)
-        .in('escrow_status', ['escrowed', 'released'])
-        .eq('is_anonymous', false)
-        .order('created_at', { ascending: false })
-        .limit(50)
+        .rpc('get_public_campaign_donations', { p_campaign_id: campaignId })
       if (error) throw error
       return data
     },
