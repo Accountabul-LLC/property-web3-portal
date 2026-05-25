@@ -324,7 +324,7 @@ Deno.serve(async (req) => {
           TransactionType: 'TrustSet',
           Account: destination,
           LimitAmount: {
-            currency: currency_code.toUpperCase(),
+            currency: normalizedCurrency,
             issuer: wallet_address,
             value: String(amount),
           },
