@@ -709,6 +709,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                       const scale = mpt.asset_scale || 0;
                       const outstanding = mpt.outstanding_amount ? Number(mpt.outstanding_amount) / Math.pow(10, scale) : 0;
                       const maxAmt = mpt.max_amount ? Number(mpt.max_amount) / Math.pow(10, scale) : null;
+                      const valuation = valueMptIssuance(mpt);
 
                       return (
                         <Card
@@ -742,8 +743,22 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                               </div>
                               <div className="flex items-center gap-3">
                                 <div className="text-right">
-                                  <p className="text-lg font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
-                                  <p className="text-xs text-muted-foreground">supply</p>
+                                  {valuation.issuerHeldUsd != null ? (
+                                    <>
+                                      <p className="text-lg font-bold">
+                                        ${valuation.issuerHeldUsd.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                                      </p>
+                                      <p className="text-[10px] text-muted-foreground">
+                                        {valuation.issuerHeldUnits.toLocaleString(undefined, { maximumFractionDigits: scale })} held
+                                        {valuation.pricePerTokenUsd ? ` · $${valuation.pricePerTokenUsd.toLocaleString(undefined, { maximumFractionDigits: 4 })}/tok` : ''}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-lg font-bold">{maxAmt !== null ? maxAmt.toLocaleString() : outstanding.toLocaleString(undefined, { maximumFractionDigits: scale })}</p>
+                                      <p className="text-xs text-muted-foreground">supply</p>
+                                    </>
+                                  )}
                                 </div>
                                 {isExpanded ? (
                                   <ChevronUp className="w-4 h-4 text-muted-foreground" />
