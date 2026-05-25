@@ -1,0 +1,450 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import { useAuth } from '@/hooks/useAuth'
+import { useTeamAccess } from '@/hooks/useTeamAccess'
+import { supabase } from '@/integrations/supabase/client'
+import { toast } from 'sonner'
+import {
+  Loader2, ChevronDown, ChevronUp, Check, X, Heart,
+  ExternalLink, Lock, Users, Calendar, Send, ArrowLeft,
+} from 'lucide-react'
+
+type CampaignStatus = 'under_review' | 'approved' | 'active' | 'completed' | 'rejected'
+
+interface Campaign {
+  id: string
+  title: string
+  slug: string
+  description: string
+  image_url: string | null
+  goal_amount: number | null
+  currency: string
+  recipient_wallet_address: string
+  release_date: string
+  status: CampaignStatus
+  submitted_by_email: string | null
+  submission_notes: string | null
+  total_raised: number
+  donor_count: number
+  created_at: string
+}
+
+const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }> = {
+  under_review: { label: 'Under Review', className: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400' },
+  approved:     { label: 'Approved',     className: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
+  active:       { label: 'Active',       className: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
+  completed:    { label: 'Completed',    className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
+  rejected:     { label: 'Rejected',     className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
+}
+
+export default function AdminCauses() {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+  const { hasAccess, loading: accessLoading } = useTeamAccess()
+  const qc = useQueryClient()
+
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [rejectionReason, setRejectionReason] = useState('')
+  const [processing, setProcessing] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<'under_review' | 'active' | 'all'>('under_review')
+
+  const { data: campaigns, isLoading } = useQuery({
+    queryKey: ['admin-campaigns'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('campaigns')
+        .select('*')
+        .order('created_at', { ascending: false }) as any
+      if (error) throw error
+      return data as Campaign[]
+    },
+    enabled: !!user && hasAccess,
+  })
+
+  if (authLoading || accessLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user || !hasAccess) {
+    navigate('/dashboard')
+    return null
+  }
+
+  async function handleApprove(id: string) {
+    setProcessing(id)
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          status: 'active',
+          approved_by: user!.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', id) as any
+      if (error) throw error
+      toast.success('Campaign approved and now live')
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+      qc.invalidateQueries({ queryKey: ['campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  async function handleReject(id: string) {
+    if (!rejectionReason.trim()) {
+      toast.error('Please enter a rejection reason')
+      return
+    }
+    setProcessing(id)
+    try {
+      const { error } = await supabase
+        .from('campaigns')
+        .update({
+          status: 'rejected',
+          rejection_reason: rejectionReason,
+        })
+        .eq('id', id) as any
+      if (error) throw error
+      toast.success('Campaign rejected')
+      setRejectionReason('')
+      setExpandedId(null)
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  async function handleRelease(campaign: Campaign) {
+    setProcessing(campaign.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Not authenticated')
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/campaign-release`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ campaign_id: campaign.id }),
+        }
+      )
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Release failed')
+      toast.success(`Release initiated — ${json.released_count} escrow(s) finishing`)
+      qc.invalidateQueries({ queryKey: ['admin-campaigns'] })
+    } catch (err: any) {
+      toast.error(err.message)
+    } finally {
+      setProcessing(null)
+    }
+  }
+
+  const filtered = campaigns?.filter((c) => {
+    if (activeTab === 'under_review') return c.status === 'under_review'
+    if (activeTab === 'active') return c.status === 'active'
+    return true
+  }) ?? []
+
+  const counts = {
+    under_review: campaigns?.filter(c => c.status === 'under_review').length ?? 0,
+    active:       campaigns?.filter(c => c.status === 'active').length ?? 0,
+    all:          campaigns?.length ?? 0,
+  }
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      <Navigation />
+
+      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+        <button
+          onClick={() => navigate('/admin')}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Admin Dashboard
+        </button>
+
+        <div className="flex items-center gap-3 mb-8">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Heart className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Causes Management</h1>
+            <p className="text-sm text-muted-foreground">Review submissions, approve campaigns, trigger escrow release</p>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6 border-b border-border">
+          {([['under_review', 'Under Review'], ['active', 'Active'], ['all', 'All']] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+                activeTab === key
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {label}
+              {counts[key] > 0 && (
+                <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-xs ${
+                  activeTab === key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {counts[key]}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {isLoading && (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+
+        {!isLoading && filtered.length === 0 && (
+          <div className="text-center py-16 text-muted-foreground">
+            <Heart className="w-10 h-10 mx-auto mb-3 opacity-20" />
+            <p>No campaigns in this category</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {filtered.map((campaign) => {
+            const isExpanded = expandedId === campaign.id
+            const badge = STATUS_BADGE[campaign.status]
+            const releaseDate = new Date(campaign.release_date).toLocaleDateString('en-US', {
+              year: 'numeric', month: 'short', day: 'numeric',
+            })
+            const isPastRelease = new Date(campaign.release_date) < new Date()
+            const isProcessing = processing === campaign.id
+
+            return (
+              <Card key={campaign.id} className="overflow-hidden">
+                {/* Header row */}
+                <div
+                  className="p-5 flex items-start gap-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => setExpandedId(isExpanded ? null : campaign.id)}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Submitted {new Date(campaign.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <h3 className="font-semibold text-foreground">{campaign.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{campaign.description}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3.5 h-3.5" />
+                        {campaign.donor_count} donors · {campaign.total_raised} {campaign.currency} raised
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5" />
+                        Releases {releaseDate}
+                        {isPastRelease && <span className="text-amber-600 ml-1">(past due)</span>}
+                      </span>
+                      {campaign.submitted_by_email && (
+                        <span>From: {campaign.submitted_by_email}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {/* Quick actions */}
+                    {campaign.status === 'under_review' && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); handleApprove(campaign.id) }}
+                          disabled={!!isProcessing}
+                          className="h-8 px-3"
+                        >
+                          {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                          <span className="ml-1 hidden sm:inline">Approve</span>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={(e) => { e.stopPropagation(); setExpandedId(campaign.id) }}
+                          disabled={!!isProcessing}
+                          className="h-8 px-3"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          <span className="ml-1 hidden sm:inline">Reject</span>
+                        </Button>
+                      </>
+                    )}
+                    {campaign.status === 'active' && isPastRelease && campaign.donor_count > 0 && (
+                      <Button
+                        size="sm"
+                        onClick={(e) => { e.stopPropagation(); handleRelease(campaign) }}
+                        disabled={!!isProcessing}
+                        className="h-8 px-3 bg-green-600 hover:bg-green-700 text-white"
+                      >
+                        {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        <span className="ml-1 hidden sm:inline">Release Funds</span>
+                      </Button>
+                    )}
+                    {isExpanded
+                      ? <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                      : <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    }
+                  </div>
+                </div>
+
+                {/* Expanded detail */}
+                {isExpanded && (
+                  <div className="border-t border-border px-5 py-4 space-y-4 bg-muted/20">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Recipient Wallet</p>
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono break-all">{campaign.recipient_wallet_address}</code>
+                          <a
+                            href={`https://testnet.xrpl.org/accounts/${campaign.recipient_wallet_address}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-primary hover:opacity-70 flex-shrink-0"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Goal</p>
+                        <p>{campaign.goal_amount ? `${campaign.goal_amount.toLocaleString()} ${campaign.currency}` : 'No goal set'}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Full Description</p>
+                      <p className="text-sm text-foreground whitespace-pre-line leading-relaxed">{campaign.description}</p>
+                    </div>
+
+                    {campaign.submission_notes && (
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Message from Applicant</p>
+                        <p className="text-sm text-foreground whitespace-pre-line bg-card border border-border rounded-lg p-3">
+                          {campaign.submission_notes}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Rejection form */}
+                    {campaign.status === 'under_review' && (
+                      <div className="border-t border-border pt-4 space-y-3">
+                        <Label className="text-sm font-medium">Rejection Reason</Label>
+                        <Textarea
+                          placeholder="Required when rejecting — this will be on record."
+                          value={rejectionReason}
+                          onChange={(e) => setRejectionReason(e.target.value)}
+                          rows={2}
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleApprove(campaign.id)}
+                            disabled={!!processing}
+                            className="flex-1"
+                          >
+                            {processing === campaign.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                              : <Check className="w-3.5 h-3.5 mr-1.5" />
+                            }
+                            Approve Campaign
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleReject(campaign.id)}
+                            disabled={!!processing || !rejectionReason.trim()}
+                            className="flex-1"
+                          >
+                            {processing === campaign.id
+                              ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                              : <X className="w-3.5 h-3.5 mr-1.5" />
+                            }
+                            Reject
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Release section */}
+                    {campaign.status === 'active' && (
+                      <div className="border-t border-border pt-4">
+                        <div className="flex items-start gap-3 bg-card border border-border rounded-lg p-3">
+                          <Lock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">Escrow Release</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {isPastRelease
+                                ? `Release date passed. ${campaign.donor_count} escrow(s) ready to release to recipient.`
+                                : `Escrow releases on ${releaseDate}. Button appears when release date arrives.`
+                              }
+                            </p>
+                            {isPastRelease && campaign.donor_count > 0 && (
+                              <Button
+                                size="sm"
+                                className="mt-3 bg-green-600 hover:bg-green-700 text-white"
+                                onClick={() => handleRelease(campaign)}
+                                disabled={!!processing}
+                              >
+                                {processing === campaign.id
+                                  ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                                  : <Send className="w-3.5 h-3.5 mr-1.5" />
+                                }
+                                Release {campaign.donor_count} Escrow(s) → Recipient
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
+                      <a
+                        href={`/causes/${campaign.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
+                      >
+                        View public page <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            )
+          })}
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  )
+}
