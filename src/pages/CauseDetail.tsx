@@ -51,7 +51,9 @@ export default function CauseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { activeWallet, isConnected } = useActiveWallet()
   const [donateOpen, setDonateOpen] = useState(false)
+  const [walletModalOpen, setWalletModalOpen] = useState(false)
 
   const { data: campaign, isLoading, error } = useCampaign(slug!)
   const { data: donations } = useCampaignDonations(campaign?.id ?? '')
