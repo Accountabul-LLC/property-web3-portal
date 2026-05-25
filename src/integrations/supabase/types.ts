@@ -279,6 +279,7 @@ export type Database = {
           campaign_id: string
           created_at: string
           currency: string
+          donor_display_name: string | null
           donor_message: string | null
           donor_user_id: string | null
           donor_wallet_address: string
@@ -296,6 +297,7 @@ export type Database = {
           campaign_id: string
           created_at?: string
           currency?: string
+          donor_display_name?: string | null
           donor_message?: string | null
           donor_user_id?: string | null
           donor_wallet_address: string
@@ -313,6 +315,7 @@ export type Database = {
           campaign_id?: string
           created_at?: string
           currency?: string
+          donor_display_name?: string | null
           donor_message?: string | null
           donor_user_id?: string | null
           donor_wallet_address?: string
