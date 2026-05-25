@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useXRPLPortfolio } from './useXRPLPortfolio';
 import { useTokenMeta } from './useTokenMeta';
+import { sumMptIssuerUsd } from '@/lib/mptValuation';
 import type { TreasuryWalletConfig } from '@/config/treasuryWallets';
 
 export interface WalletValuation {
