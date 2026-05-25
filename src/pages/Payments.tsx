@@ -270,6 +270,15 @@ export default function Payments() {
       </main>
 
       <Footer />
+
+      <StripeCheckoutModal
+        open={stripeModalOpen}
+        onOpenChange={setStripeModalOpen}
+        clientSecret={response?.provider?.client_secret ?? null}
+        publishableKey={response?.provider?.publishable_key ?? null}
+        amountLabel={formatPaymentAmount(draft.amount, draft.currency)}
+        onSuccess={() => setStripeModalOpen(false)}
+      />
     </div>
   );
 }
