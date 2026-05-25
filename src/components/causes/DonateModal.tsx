@@ -20,6 +20,7 @@ type Props = {
 
 export default function DonateModal({ campaign, open, onClose }: Props) {
   const [step, setStep] = useState<Step>('form')
+  const [asset, setAsset] = useState<'XRP' | 'RLUSD'>('XRP')
   const [amount, setAmount] = useState('')
   const [message, setMessage] = useState('')
   const [isAnonymous, setIsAnonymous] = useState(false)
@@ -37,6 +38,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
     if (pollInterval) clearInterval(pollInterval)
     setStep('form')
     setAmount('')
+    setAsset('XRP')
     setMessage('')
     setIsAnonymous(false)
     setQrUrl('')
@@ -46,9 +48,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   }
 
   async function handleSubmit() {
-    const xrp = parseFloat(amount)
-    if (!xrp || xrp < 1) {
-      toast.error('Minimum donation is 1 XRP')
+    if (asset === 'RLUSD') {
+      toast.info('RLUSD donations coming soon — switch to XRP to donate now.')
+      return
+    }
+    const amt = parseFloat(amount)
+    if (!amt || amt < 1) {
+      toast.error(`Minimum donation is 1 ${asset}`)
       return
     }
     setLoading(true)
@@ -68,7 +74,8 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
         },
         body: JSON.stringify({
           campaign_id: campaign.id,
-          amount: xrp,
+          amount: amt,
+          currency: asset,
           donor_message: message || null,
           is_anonymous: isAnonymous,
         }),
@@ -135,14 +142,40 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 flex gap-3">
               <Lock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Your donation goes directly into <strong>XRPL escrow</strong> — locked on-chain until{' '}
+                Your donation is locked on the <strong>XRP Ledger</strong> until{' '}
                 <strong>{releaseDate}</strong>, then sent directly to the recipient's wallet.
-                No platform handles your funds.
+                You sign the transaction in your connected wallet — no platform holds your funds.
               </p>
             </div>
 
+            {/* Asset toggle */}
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount (XRP)</Label>
+              <Label>Asset</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['XRP', 'RLUSD'] as const).map((a) => (
+                  <button
+                    key={a}
+                    type="button"
+                    onClick={() => setAsset(a)}
+                    className={`h-10 rounded-md border text-sm font-medium transition-colors ${
+                      asset === a
+                        ? 'border-primary bg-primary/10 text-foreground'
+                        : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {a}
+                  </button>
+                ))}
+              </div>
+              {asset === 'RLUSD' && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  RLUSD donations coming soon — switch to XRP to donate now.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount ({asset})</Label>
               <Input
                 id="amount"
                 type="number"
@@ -152,7 +185,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Minimum 1 XRP</p>
+              <p className="text-xs text-muted-foreground">Minimum 1 {asset}</p>
             </div>
 
             <div className="space-y-2">
@@ -173,9 +206,9 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
             </div>
 
             <div className="pt-2 space-y-2">
-              <Button onClick={handleSubmit} disabled={loading} className="w-full">
+              <Button onClick={handleSubmit} disabled={loading || asset === 'RLUSD'} className="w-full">
                 {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Heart className="w-4 h-4 mr-2" />}
-                {loading ? 'Preparing...' : 'Donate with Xaman'}
+                {loading ? 'Preparing...' : 'Donate'}
               </Button>
               <Button variant="ghost" onClick={resetAndClose} className="w-full text-muted-foreground">
                 Cancel
@@ -187,7 +220,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
         {step === 'qr' && (
           <div className="text-center space-y-4">
             <p className="text-sm text-muted-foreground">
-              Scan with your Xaman app to sign the escrow transaction.
+              Scan with your wallet app to sign the escrow transaction.
             </p>
             {qrUrl ? (
               <img src={qrUrl} alt="Xaman QR Code" className="mx-auto w-52 h-52 rounded-lg" />

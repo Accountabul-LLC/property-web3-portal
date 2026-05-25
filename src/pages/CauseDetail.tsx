@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2 } from 'lucide-react'
+import { Heart, Users, Calendar, Lock, ArrowLeft, ExternalLink, CheckCircle2, Wallet } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import DonateModal from '@/components/causes/DonateModal'
+import { WalletConnectModal } from '@/components/WalletConnectModal'
 import { useCampaign, useCampaignDonations } from '@/hooks/useCampaigns'
 import { useAuth } from '@/hooks/useAuth'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 
 function daysUntil(date: string) {
   const diff = new Date(date).getTime() - Date.now()
@@ -49,7 +51,9 @@ export default function CauseDetail() {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { activeWallet, isConnected } = useActiveWallet()
   const [donateOpen, setDonateOpen] = useState(false)
+  const [walletModalOpen, setWalletModalOpen] = useState(false)
 
   const { data: campaign, isLoading, error } = useCampaign(slug!)
   const { data: donations } = useCampaignDonations(campaign?.id ?? '')
@@ -300,14 +304,19 @@ export default function CauseDetail() {
               </div>
 
               {campaign.status !== 'completed' && !released && (
-                user ? (
-                  <Button className="w-full" size="lg" onClick={() => setDonateOpen(true)}>
-                    <Heart className="w-4 h-4 mr-2" />
-                    Donate with Xaman
-                  </Button>
-                ) : (
+                !user ? (
                   <Button className="w-full" size="lg" onClick={() => navigate('/auth')}>
                     Sign In to Donate
+                  </Button>
+                ) : !isConnected ? (
+                  <Button className="w-full" size="lg" onClick={() => setWalletModalOpen(true)}>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Connect Wallet to Donate
+                  </Button>
+                ) : (
+                  <Button className="w-full" size="lg" onClick={() => setDonateOpen(true)}>
+                    <Heart className="w-4 h-4 mr-2" />
+                    Donate
                   </Button>
                 )
               )}
@@ -332,6 +341,15 @@ export default function CauseDetail() {
           onClose={() => setDonateOpen(false)}
         />
       )}
+
+      <WalletConnectModal
+        isOpen={walletModalOpen}
+        onClose={() => setWalletModalOpen(false)}
+        onWalletConnected={() => {
+          setWalletModalOpen(false)
+          setDonateOpen(true)
+        }}
+      />
     </div>
   )
 }
