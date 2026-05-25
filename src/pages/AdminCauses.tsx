@@ -1006,6 +1006,12 @@ export default function AdminCauses() {
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                         {badge.label}
                       </span>
+                      {campaign.visibility === 'hidden' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                          <EyeOff className="w-3 h-3" />
+                          Hidden
+                        </span>
+                      )}
                       <span className="text-xs text-muted-foreground">
                         Submitted {new Date(campaign.created_at).toLocaleDateString()}
                       </span>
