@@ -199,6 +199,7 @@ const Navigation = () => {
           {/* Mobile/tablet strip actions (< lg): theme + wallet/sign-in only */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
+            {user && isConnected && <NotificationBell />}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />
