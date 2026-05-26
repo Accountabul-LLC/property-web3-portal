@@ -18,6 +18,19 @@ export default function Pricing() {
   const { data: myTier } = useMyMembership()
   const selectMembership = useSelectMembership()
 
+  function getDisplayedPrice(tier: NonNullable<typeof tiers>[number]) {
+    if (tier.price_label) return tier.price_label
+    if (annual && tier.price_annual != null) {
+      return `$${Math.round(Number(tier.price_annual) / 12)}`
+    }
+    if (tier.slug === 'starter') return '$16'
+    return `$${Math.round(Number(tier.price_monthly))}`
+  }
+
+  function isSelectable(tier: NonNullable<typeof tiers>[number]) {
+    return tier.slug === 'starter'
+  }
+
   async function handleSelect(tierId: string, tierName: string) {
     if (!user) {
       navigate('/auth', { state: { next: '/pricing' }, replace: false })
@@ -36,18 +49,26 @@ export default function Pricing() {
       <Navigation />
 
       <main className="flex-1 w-full overflow-x-hidden">
-
-        {/* Hero */}
         <div className="text-center py-16 px-4">
           <Badge variant="secondary" className="mb-4">Membership Plans</Badge>
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
-            Protect and tokenize<br />your property
+            Membership that grows<br />with your property
           </h1>
           <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-8">
-            Real estate on the blockchain. Deed fraud monitoring. Verified compliance. All in one platform.
+            NFT membership, rewards access, and future fractional real estate perks built into one platform.
           </p>
 
-          {/* Billing toggle */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mb-8">
+            {['Membership NFT', 'Rewards access', 'Fractional real estate'].map((item) => (
+              <span
+                key={item}
+                className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground shadow-sm"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
+
           <div className="inline-flex items-center gap-3 bg-muted rounded-full px-4 py-2">
             <span className={cn('text-sm font-medium transition-colors', !annual ? 'text-foreground' : 'text-muted-foreground')}>
               Monthly
@@ -72,7 +93,6 @@ export default function Pricing() {
           </div>
         </div>
 
-        {/* Tier cards */}
         <div className="max-w-6xl mx-auto px-4 pb-24">
           {isLoading ? (
             <div className="flex justify-center py-16">
@@ -81,10 +101,9 @@ export default function Pricing() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
               {tiers?.map((tier) => {
-                const monthlyEquivalent = annual && tier.price_annual
-                  ? tier.price_annual / 12
-                  : tier.price_monthly
                 const isCurrentTier = myTier?.id === tier.id
+                const displayPrice = getDisplayedPrice(tier)
+                const lockedPlan = !isSelectable(tier) || tier.price_label === 'TBD'
 
                 return (
                   <div
@@ -112,28 +131,35 @@ export default function Pricing() {
                       </div>
                     )}
 
-                    {/* Name + description */}
                     <div className="mb-6">
                       <h2 className="text-xl font-bold text-foreground mb-1">{tier.name}</h2>
                       <p className="text-sm text-muted-foreground leading-relaxed">{tier.description}</p>
                     </div>
 
-                    {/* Price */}
                     <div className="mb-6">
                       <div className="flex items-end gap-1">
                         <span className="text-4xl font-bold text-foreground">
-                          ${Math.round(monthlyEquivalent)}
+                          {displayPrice}
                         </span>
-                        <span className="text-muted-foreground mb-1.5 text-sm">/month</span>
+                        {tier.price_label === 'TBD' ? (
+                          <span className="text-muted-foreground mb-1.5 text-sm">pricing coming soon</span>
+                        ) : (
+                          <span className="text-muted-foreground mb-1.5 text-sm">/month</span>
+                        )}
                       </div>
-                      {annual && tier.price_annual && (
+                      {tier.price_label !== 'TBD' && annual && tier.price_annual && (
                         <p className="text-xs text-muted-foreground mt-1">
                           Billed ${tier.price_annual.toFixed(0)}/year
                         </p>
                       )}
-                      {!annual && (
+                      {tier.price_label !== 'TBD' && !annual && (
                         <p className="text-xs text-muted-foreground mt-1">
                           Or ${tier.price_annual?.toFixed(0)}/year (save 16%)
+                        </p>
+                      )}
+                      {tier.price_label === 'TBD' && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This plan is being finalized. Join the waitlist for updates.
                         </p>
                       )}
                       {tier.highlight_feature && (
@@ -144,7 +170,6 @@ export default function Pricing() {
                       )}
                     </div>
 
-                    {/* Features */}
                     <ul className="space-y-3 mb-8 flex-1">
                       {(tier.features as string[]).map((feature, i) => (
                         <li key={i} className="flex items-start gap-2.5 text-sm text-muted-foreground">
@@ -157,12 +182,11 @@ export default function Pricing() {
                       ))}
                     </ul>
 
-                    {/* CTA */}
                     <Button
                       className="w-full"
                       variant={tier.is_popular ? 'default' : 'outline'}
                       size="lg"
-                      disabled={isCurrentTier || selectMembership.isPending}
+                      disabled={isCurrentTier || selectMembership.isPending || lockedPlan}
                       onClick={() => handleSelect(tier.id, tier.name)}
                     >
                       {isCurrentTier ? 'Current Plan' : tier.cta_label}
@@ -173,11 +197,9 @@ export default function Pricing() {
             </div>
           )}
 
-          {/* Trust line */}
           <p className="text-center text-xs sm:text-sm text-muted-foreground mt-10 px-4 break-words">
-            All plans include XRPL-backed security · Cancel anytime · Missouri deed monitoring powered by BatchData + Regrid
+            All plans include XRPL-backed security · Cancel anytime · Membership rewards included · Missouri deed monitoring powered by BatchData + Regrid
           </p>
-
         </div>
       </main>
 

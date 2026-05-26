@@ -7,6 +7,7 @@ export type MembershipTier = {
   slug: string
   price_monthly: number
   price_annual: number | null
+  price_label: string | null
   description: string | null
   features: string[]
   highlight_feature: string | null
@@ -19,7 +20,7 @@ export type MembershipTier = {
 }
 
 const MEMBERSHIP_TIER_SELECT = `
-  id, name, slug, price_monthly, price_annual, description, features,
+  id, name, slug, price_monthly, price_annual, price_label, description, features,
   highlight_feature, is_popular, is_active, sort_order, cta_label,
   created_at, updated_at
 `
