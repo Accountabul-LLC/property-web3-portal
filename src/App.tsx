@@ -32,6 +32,7 @@ const AdminKyc = lazyPage(() => import("./pages/AdminKyc"));
 const Admin = lazyPage(() => import("./pages/Admin"));
 const AdminAIPanel = lazyPage(() => import("./pages/AdminAIPanel"));
 const AdminCredentials = lazyPage(() => import("./pages/AdminCredentials"));
+const AdminVendors = lazyPage(() => import("./pages/AdminVendors"));
 const AdminPayments = lazyPage(() => import("./pages/AdminPayments"));
 const AdminPaymentsConsole = lazyPage(() => import("./pages/AdminPaymentsConsole"));
 const AdminUsers = lazyPage(() => import("./pages/AdminUsers"));
@@ -94,6 +95,7 @@ const App = () => (
                 <Route path="/admin/kyc" element={<AdminKyc />} />
                 <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
                 <Route path="/admin/credentials" element={<AdminCredentials />} />
+                <Route path="/admin/vendors" element={<AdminVendors />} />
                 <Route path="/admin/payments" element={<AdminPayments />} />
                 <Route path="/admin/payments/console" element={<AdminPaymentsConsole />} />
                 <Route path="/admin/users" element={<AdminUsers />} />

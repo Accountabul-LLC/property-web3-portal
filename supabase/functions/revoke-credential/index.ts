@@ -115,9 +115,9 @@ Deno.serve(async (req) => {
     const { data: credential, error: credError } = await serviceClient
       .from('wallet_credentials')
       .select(`
-        id, ledger_status, credential_type_hex, issuer_address, issuer_wallet_id,
+        id, ledger_status, credential_type, credential_type_hex, issuer_address, issuer_wallet_id,
         wallet_id,
-        user_wallets!inner ( id, wallet_address, network )
+        user_wallets!inner ( id, user_id, wallet_address, network )
       `)
       .eq('id', credential_id)
       .maybeSingle()
@@ -141,6 +141,11 @@ Deno.serve(async (req) => {
     }
 
     const wallet = (credential as any).user_wallets
+    const { data: userProfile } = await serviceClient
+      .from('profiles')
+      .select('id, company_name')
+      .eq('id', wallet.user_id)
+      .maybeSingle()
 
     // ── Load issuer seed ─────────────────────────────────────
     let secretEnvKey = 'XRPL_TESTNET_ISSUER_SEED'
@@ -231,6 +236,24 @@ Deno.serve(async (req) => {
     .eq('wallet_id', credential.wallet_id)
     .eq('permission_profile_code', 'TRADE_GLOBAL')
     .eq('status', 'active')
+
+    if ((credential as any).credential_type === 'vendor') {
+      await serviceClient
+        .from('vendor_profiles')
+        .upsert({
+          user_id: wallet.user_id,
+          profile_id: userProfile?.id ?? wallet.user_id,
+          company_name: userProfile?.company_name ?? 'Vendor',
+          verification_status: 'revoked',
+          reviewed_at: now,
+          updated_at: now,
+        }, { onConflict: 'user_id' })
+
+      await serviceClient
+        .from('professionals')
+        .update({ verified: false })
+        .eq('wallet_address', wallet.wallet_address)
+    }
 
     return new Response(JSON.stringify({
       ledger_status: 'deleted',
