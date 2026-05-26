@@ -6,6 +6,8 @@ export const LIVE_PRODUCT_PATHS = new Set([
   '/professionals',
   '/ai-agents',
   '/portfolio',
+  '/payments',
+  '/payments/history',
 ])
 
 export const LOCKED_PRODUCT_PATHS = new Set([
@@ -14,8 +16,6 @@ export const LOCKED_PRODUCT_PATHS = new Set([
   '/swap',
   '/pools',
   '/tokenize',
-  '/payments',
-  '/payments/history',
   '/smart-escrow',
   '/escrow',
 ])
