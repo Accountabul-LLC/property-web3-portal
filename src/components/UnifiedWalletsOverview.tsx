@@ -108,11 +108,38 @@ export default function UnifiedWalletsOverview() {
     return { totalXrp, totalUsd, totalTokens, count: summaries.length };
   }, [summaries]);
 
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
   if (wallets.length < 2) return null;
 
-  const handleSelect = (address: string) => {
+  const toggleExpanded = (address: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(address)) next.delete(address);
+      else next.add(address);
+      return next;
+    });
+  };
+
+  const handleSwitch = (e: React.MouseEvent, address: string) => {
+    e.stopPropagation();
     setActiveWallet(address);
     navigate(`/portfolio?account=${address}`);
+  };
+
+  const decodeCurrency = (cur: string) => {
+    if (cur.length === 40 && /^[0-9A-Fa-f]+$/.test(cur)) {
+      try {
+        const bytes = cur.match(/.{2}/g) || [];
+        const str = bytes
+          .map((b) => String.fromCharCode(parseInt(b, 16)))
+          .join('')
+          .replace(/\0+$/, '')
+          .trim();
+        if (str) return str;
+      } catch {/* noop */}
+    }
+    return cur;
   };
 
   return (
