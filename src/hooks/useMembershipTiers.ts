@@ -18,13 +18,19 @@ export type MembershipTier = {
   updated_at: string
 }
 
+const MEMBERSHIP_TIER_SELECT = `
+  id, name, slug, price_monthly, price_annual, description, features,
+  highlight_feature, is_popular, is_active, sort_order, cta_label,
+  created_at, updated_at
+`
+
 export function useMembershipTiers() {
   return useQuery({
     queryKey: ['membership-tiers'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('membership_tiers')
-        .select('*')
+        .select(MEMBERSHIP_TIER_SELECT)
         .eq('is_active', true)
         .order('sort_order')
       if (error) throw error
@@ -38,9 +44,9 @@ export function useAllMembershipTiers() {
   return useQuery({
     queryKey: ['membership-tiers-all'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('membership_tiers')
-        .select('*')
+        .select(MEMBERSHIP_TIER_SELECT)
         .order('sort_order')
       if (error) throw error
       return data as MembershipTier[]
@@ -55,9 +61,14 @@ export function useMyMembership() {
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return null
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('profiles')
-        .select('membership_tier_id, membership_tiers(*)')
+        .select(`
+          membership_tier_id,
+          membership_tiers (
+            ${MEMBERSHIP_TIER_SELECT}
+          )
+        `)
         .eq('id', user.id)
         .single()
       if (error) throw error
@@ -73,7 +84,7 @@ export function useSelectMembership() {
     mutationFn: async (tierId: string) => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('profiles')
         .update({ membership_tier_id: tierId, updated_at: new Date().toISOString() })
         .eq('id', user.id)
@@ -89,7 +100,7 @@ export function useUpdateTier() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MembershipTier> & { id: string }) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from('membership_tiers')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
