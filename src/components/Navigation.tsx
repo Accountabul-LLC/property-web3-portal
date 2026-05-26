@@ -54,7 +54,7 @@ const Navigation = () => {
   const navItems = [
     { path: '/causes',       label: 'Causes',       shortLabel: 'Causes',  icon: Heart },
     ...(user ? [{ path: '/causes/my-donations', label: 'My Donations', shortLabel: 'Donations', icon: Coins }] : []),
-    { path: '/smart-escrow', label: 'Escrow', shortLabel: 'Escrow', icon: Lock },
+    { path: '/escrow', label: 'Escrow', shortLabel: 'Escrow', icon: Lock },
     { path: '/payments', label: 'Payments', shortLabel: 'Pay', icon: ReceiptText },
     { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },

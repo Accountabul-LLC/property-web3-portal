@@ -325,6 +325,9 @@ export function useMyData() {
 ### 2026-05-26 | lovable
 - Updated the homepage membership modal to render the Starter, Professional, and Portfolio cards immediately using DB tiers with a static fallback, so pricing is visible from the first CTA instead of only on `/pricing`.
 
+### 2026-05-26 | lovable
+- Split public escrow from smart escrow: `/escrow` now shows the regular escrow hub, navigation points there, and `/smart-escrow` remains admin-only.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
