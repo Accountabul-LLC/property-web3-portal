@@ -8,7 +8,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Wallet, Layers, ChevronRight, FlaskConical } from 'lucide-react';
+import { Wallet, Layers, ChevronRight, FlaskConical, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { walletShortId } from '@/lib/walletLabel';
