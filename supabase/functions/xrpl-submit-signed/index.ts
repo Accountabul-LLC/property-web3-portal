@@ -99,14 +99,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { tx_json, wallet_address, network } = await req.json();
+    let parsedBody: Record<string, unknown>;
+    try {
+      parsedBody = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ success: false, error: 'Invalid request body' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const { tx_json, wallet_address, network } = parsedBody;
 
     if (network !== 'testnet') {
-      throw new Error('Server-side signing is only supported on testnet');
+      return new Response(JSON.stringify({ success: false, error: 'Server-side signing is only supported on testnet' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     if (!tx_json || !wallet_address) {
-      throw new Error('Missing tx_json or wallet_address');
+      return new Response(JSON.stringify({ success: false, error: 'Missing tx_json or wallet_address' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const txJsonStr = JSON.stringify(tx_json);
+    if (txJsonStr.length > 65_536) {
+      return new Response(JSON.stringify({ success: false, error: 'tx_json too large' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const nodes = TESTNET_NODES;

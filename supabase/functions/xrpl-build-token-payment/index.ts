@@ -72,30 +72,28 @@ function isPositiveDecimal(s: string): boolean {
   return /^\d+(\.\d+)?$/.test(s) && compareDecimalStrings(s, '0') > 0;
 }
 
-function jsonError(message: string, status: number) {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-}
-
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const jsonError = (message: string, status: number) =>
+    new Response(JSON.stringify({ error: message }), {
+      status,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
   try {
-    const { from_address, to_address, currency, issuer, amount, destination_tag, memo, network } = await req.json();
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return jsonError('Invalid request body', 400);
+    }
+    const { from_address, to_address, currency, issuer, amount, destination_tag, memo, network } = body;
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
-    const warnings: string[] = [];
-
-    if (!from_address || !isValidXRPLAddress(from_address)) return jsonError('Invalid sender address', 400);
-    if (!to_address || !isValidXRPLAddress(to_address)) return jsonError('Invalid destination address', 400);
-    if (from_address === to_address) return jsonError('Cannot send to yourself', 400);
-
-    // --- Auth + Wallet ownership verification ---
+    // --- Auth first, before exposing validation signals ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -110,6 +108,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) return jsonError('Invalid authentication', 401);
     const userId = user.id;
+
+    const nodes = (network as string) === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const warnings: string[] = [];
+
+    if (!from_address || !isValidXRPLAddress(from_address as string)) return jsonError('Invalid sender address', 400);
+    if (!to_address || !isValidXRPLAddress(to_address as string)) return jsonError('Invalid destination address', 400);
+    if (from_address === to_address) return jsonError('Cannot send to yourself', 400);
 
     const { data: walletLink } = await db
       .from('user_wallets')

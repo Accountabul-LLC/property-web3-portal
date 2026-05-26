@@ -91,18 +91,17 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
   throw lastError ?? new Error("All XRPL nodes failed");
 }
 
-function jsonError(message: string, status = 400) {
-  return new Response(JSON.stringify({ success: false, error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const jsonError = (message: string, status = 400) =>
+    new Response(JSON.stringify({ success: false, error: message }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -123,13 +122,19 @@ Deno.serve(async (req) => {
       return jsonError("Invalid authentication", 401);
     }
 
+    let parsedBody: Record<string, unknown>;
+    try {
+      parsedBody = await req.json();
+    } catch {
+      return jsonError("Invalid request body", 400);
+    }
     const {
       wallet_address,
       source_asset,
       destination_asset,
       source_amount,
       network,
-    } = await req.json();
+    } = parsedBody;
 
     const nodes = network === "testnet" ? TESTNET_NODES : MAINNET_NODES;
 

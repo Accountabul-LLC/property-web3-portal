@@ -32,16 +32,15 @@ function isValidXRPLAddress(addr: string): boolean {
   return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr);
 }
 
-function jsonError(message: string, status = 400, extra: Record<string, unknown> = {}) {
-  return new Response(JSON.stringify({ success: false, error: message, ...extra }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  const jsonError = (message: string, status = 400, extra: Record<string, unknown> = {}) =>
+    new Response(JSON.stringify({ success: false, error: message, ...extra }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
 
   let client: Client | null = null;
   try {
@@ -59,7 +58,13 @@ Deno.serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
     if (userError || !user) return jsonError("Invalid authentication", 401);
 
-    const { wallet_address, currency, issuer, network } = await req.json();
+    let parsedBody: Record<string, unknown>;
+    try {
+      parsedBody = await req.json();
+    } catch {
+      return jsonError("Invalid request body", 400);
+    }
+    const { wallet_address, currency, issuer, network } = parsedBody;
     if (!wallet_address || !isValidXRPLAddress(wallet_address)) return jsonError("Valid wallet_address required");
     if (!issuer || !isValidXRPLAddress(issuer)) return jsonError("Valid issuer required");
     if (!currency || typeof currency !== "string") return jsonError("currency required");
