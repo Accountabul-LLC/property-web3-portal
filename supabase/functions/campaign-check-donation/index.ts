@@ -18,6 +18,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { logAppAudit } from '../_shared/app-audit.ts'
+import { fetchHistoricalXrpUsd } from '../_shared/xrp-price.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -39,6 +40,7 @@ const XRPL_NODES = {
   mainnet: 'https://xrplcluster.com',
   testnet: 'https://s.altnet.rippletest.net:51234',
 }
+const RIPPLE_EPOCH_OFFSET = 946684800
 
 async function fetchXrplTx(txHash: string, network: string): Promise<any> {
   const node = XRPL_NODES[network as keyof typeof XRPL_NODES] ?? XRPL_NODES.mainnet
@@ -360,6 +362,17 @@ Deno.serve(async (req) => {
     }
 
     const now = new Date().toISOString()
+    const txUnixSeconds = Number.isFinite(Number(txData?.date))
+      ? Number(txData.date) + RIPPLE_EPOCH_OFFSET
+      : null
+    const donationAmountXrp = Number(meta.amount_xrp ?? meta.amount ?? 0)
+    const donationCurrency = String(meta.currency ?? 'XRP').toUpperCase()
+    const xrpPriceQuote = donationCurrency === 'XRP' && txUnixSeconds
+      ? await fetchHistoricalXrpUsd(txUnixSeconds)
+      : null
+    const xrpUsdValue = xrpPriceQuote && donationAmountXrp > 0
+      ? donationAmountXrp * xrpPriceQuote.price
+      : null
 
     const newDonationStatus = campaign.campaign_type === 'direct' ? 'released' : 'escrowed'
     await Promise.all([
@@ -372,6 +385,10 @@ Deno.serve(async (req) => {
         escrow_status: newDonationStatus,
         escrow_tx_hash: txHash,
         escrow_sequence: campaign.campaign_type === 'direct' ? null : escrowSequence,
+        xrp_usd_rate: xrpPriceQuote?.price ?? null,
+        xrp_usd_value: xrpUsdValue,
+        xrp_usd_quoted_at: xrpPriceQuote?.quoted_at ?? null,
+        xrp_usd_source: xrpPriceQuote?.source ?? null,
         updated_at: now,
       }).eq('xaman_payload_uuid', xaman_uuid),
     ])

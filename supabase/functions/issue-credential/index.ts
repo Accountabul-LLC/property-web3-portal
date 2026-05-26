@@ -148,6 +148,39 @@ Deno.serve(async (req) => {
       })
     }
 
+    const { data: userProfile } = await serviceClient
+      .from('profiles')
+      .select('id, company_name')
+      .eq('id', app.user_id)
+      .maybeSingle()
+
+    async function syncVendorVerification(isVerified: boolean) {
+      if (app.credential_key !== 'vendor') return
+      const { error: vendorError } = await serviceClient
+        .from('vendor_profiles')
+        .upsert({
+          user_id: app.user_id,
+          profile_id: userProfile?.id ?? app.user_id,
+          company_name: userProfile?.company_name ?? 'Vendor',
+          verification_status: isVerified ? 'verified' : 'requested',
+          verified_at: isVerified ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+
+      if (vendorError) {
+        console.warn('Failed to sync vendor verification flag:', vendorError.message)
+      }
+
+      const { error: professionalError } = await serviceClient
+        .from('professionals')
+        .update({ verified: isVerified })
+        .eq('wallet_address', app.wallet_address)
+
+      if (professionalError) {
+        console.warn('Failed to sync professional verification flag:', professionalError.message)
+      }
+    }
+
     const { data: walletCred, error: credFetchError } = await serviceClient
       .from('wallet_credentials')
       .select('id, ledger_status, credential_type')
@@ -253,6 +286,8 @@ Deno.serve(async (req) => {
         .update({ ledger_status: 'issued', updated_at: now })
         .eq('id', walletCred.id)
 
+      await syncVendorVerification(true)
+
       return new Response(
         JSON.stringify({
           ledger_status: 'issued',
@@ -328,6 +363,8 @@ Deno.serve(async (req) => {
       .from('wallet_credentials')
       .update({ xaman_uuid: uuid, updated_at: now })
       .eq('id', walletCred.id)
+
+    await syncVendorVerification(true)
 
     return new Response(
       JSON.stringify({

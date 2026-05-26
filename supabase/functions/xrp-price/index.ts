@@ -1,24 +1,10 @@
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { Client } from 'npm:xrpl@3.1.0'
+import { fetchCurrentXrpUsd } from '../_shared/xrp-price.ts'
 
 // Ripple's official RLUSD issuer (mainnet)
 const RLUSD_ISSUER = 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De'
 const RLUSD_HEX = '524C555344000000000000000000000000000000' // "RLUSD"
-
-async function fromCoingecko(): Promise<number | null> {
-  try {
-    const res = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd',
-      { headers: { accept: 'application/json' } },
-    )
-    if (!res.ok) return null
-    const j = await res.json()
-    const n = Number(j?.ripple?.usd)
-    return Number.isFinite(n) && n > 0 ? n : null
-  } catch {
-    return null
-  }
-}
 
 async function fromXrplRlusd(): Promise<number | null> {
   const nodes = ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com']
@@ -52,7 +38,8 @@ async function fromXrplRlusd(): Promise<number | null> {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   try {
-    let price = await fromCoingecko()
+    const current = await fetchCurrentXrpUsd()
+    let price = current?.price ?? null
     let source = 'coingecko'
     if (!price) {
       price = await fromXrplRlusd()

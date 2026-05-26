@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -149,9 +150,12 @@ const MarketplaceSection = () => {
                     <div className="flex items-center space-x-2 mb-1">
                       <h3 className="font-semibold text-lg truncate">{professional.name}</h3>
                       {professional.verified && (
-                        <Badge variant="secondary" className="text-xs">
-                          <Shield className="w-3 h-3 mr-1" />
-                          Verified
+                        <Badge
+                          variant="outline"
+                          className="text-xs border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        >
+                          <Star className="w-3 h-3 mr-1 fill-current" />
+                          Verified Vendor
                         </Badge>
                       )}
                     </div>
@@ -244,12 +248,12 @@ const MarketplaceSection = () => {
 
       {/* Call to Action */}
       <Card className="p-8 mt-12 bg-gradient-hero text-primary-foreground text-center">
-        <h3 className="text-2xl font-bold mb-4">Are you a real estate professional?</h3>
+        <h3 className="text-2xl font-bold mb-4">Want to join the verified vendor network?</h3>
         <p className="text-lg mb-6 opacity-90">
-          Join our marketplace and connect with property owners looking for verified services.
+          Business profiles can join as vendors first, then request the verified star badge for trusted marketplace visibility.
         </p>
-        <Button variant="secondary" size="lg">
-          Apply to Join Marketplace
+        <Button variant="secondary" size="lg" asChild>
+          <Link to="/credentials">Request Verified Vendor Status</Link>
         </Button>
       </Card>
     </div>

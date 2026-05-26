@@ -34,24 +34,24 @@ CREATE POLICY "Admins can manage tiers"
 INSERT INTO public.membership_tiers (name, slug, price_monthly, price_annual, description, features, highlight_feature, is_popular, sort_order, cta_label)
 VALUES
   (
-    'Starter', 'starter', 19.00, 190.00,
-    'For individual homeowners protecting their first property.',
-    '["1 identity verification (KYC)", "1 wallet registration", "1 tokenized property", "Deed monitoring for 1 property", "5 AI panel sessions per month", "Up to 5 XRPL transactions per month"]'::jsonb,
-    'Deed fraud monitoring included',
+    'Starter', 'starter', 16.00, 160.00,
+    'For individual homeowners protecting their first property with a membership NFT and rewards access.',
+    '["Membership NFT", "Member rewards access", "1 wallet registration", "1 tokenized property", "Deed monitoring for 1 property", "5 AI panel sessions per month", "Up to 5 XRPL transactions per month"]'::jsonb,
+    'Membership NFT included',
     false, 1, 'Get Started'
   ),
   (
     'Professional', 'professional', 49.00, 490.00,
-    'For active investors and small landlords managing multiple properties.',
-    '["3 identity verifications (KYC)", "3 wallet registrations", "Up to 3 tokenized properties", "Deed monitoring for all properties", "20 AI panel sessions per month", "Up to 20 XRPL transactions per month", "Priority support"]'::jsonb,
-    'Best value for small portfolios',
+    'For active investors and small landlords building a rewards-enabled property stack.',
+    '["Premium membership NFT", "Member rewards boosts", "Up to 3 tokenized properties", "Deed monitoring for all properties", "20 AI panel sessions per month", "Up to 20 XRPL transactions per month", "Priority support", "Fractional real estate access"]'::jsonb,
+    'Best value for growing portfolios',
     true, 2, 'Get Started'
   ),
   (
     'Portfolio', 'portfolio', 99.00, 990.00,
-    'For property developers and portfolio managers at scale.',
-    '["Unlimited KYC verifications", "10 wallet registrations", "Unlimited property tokenization", "Deed monitoring for up to 10 properties", "Unlimited AI panel sessions", "Unlimited XRPL transactions", "API access", "White-label deed certificates"]'::jsonb,
-    'Everything unlimited',
+    'For property developers and portfolio managers who want the full membership experience at scale.',
+    '["Portfolio membership NFT", "Highest rewards tier", "Unlimited property tokenization", "Deed monitoring for up to 10 properties", "Unlimited AI panel sessions", "Unlimited XRPL transactions", "API access", "White-label deed certificates", "Fractional real estate access"]'::jsonb,
+    'Built for scale',
     false, 3, 'Get Started'
   );
 
