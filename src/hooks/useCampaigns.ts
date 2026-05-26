@@ -46,7 +46,13 @@ export function useCampaigns() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
-        .select('*')
+        .select(`
+          id, title, slug, description, image_url, gallery_urls, video_url,
+          network, campaign_mode, default_release_offset_days,
+          goal_amount, currency, accepted_assets,
+          recipient_wallet_address, release_date, status, visibility,
+          total_raised, donor_count, created_at, updated_at
+        `)
         .in('status', ['active', 'completed'])
         .order('created_at', { ascending: false })
       if (error) throw error
@@ -62,7 +68,13 @@ export function useCampaign(slug: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('campaigns')
-        .select('*')
+        .select(`
+          id, title, slug, description, image_url, gallery_urls, video_url,
+          network, campaign_mode, default_release_offset_days,
+          goal_amount, currency, accepted_assets,
+          recipient_wallet_address, release_date, status, visibility,
+          total_raised, donor_count, created_at, updated_at
+        `)
         .eq('slug', slug)
         .single()
       if (error) throw error
