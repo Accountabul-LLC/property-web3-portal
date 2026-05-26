@@ -56,7 +56,7 @@ export function useCampaigns() {
         .in('status', ['active', 'completed'])
         .order('created_at', { ascending: false })
       if (error) throw error
-      return data as Campaign[]
+      return data as unknown as Campaign[]
     },
     staleTime: 30_000,
   })
@@ -78,7 +78,7 @@ export function useCampaign(slug: string) {
         .eq('slug', slug)
         .single()
       if (error) throw error
-      return data as Campaign
+      return data as unknown as Campaign
     },
     enabled: !!slug,
     staleTime: 30_000,
