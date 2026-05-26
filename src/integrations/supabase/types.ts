@@ -785,6 +785,57 @@ export type Database = {
           },
         ]
       }
+      membership_tiers: {
+        Row: {
+          created_at: string
+          cta_label: string
+          description: string | null
+          features: Json
+          highlight_feature: string | null
+          id: string
+          is_active: boolean
+          is_popular: boolean
+          name: string
+          price_annual: number | null
+          price_monthly: number
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          cta_label?: string
+          description?: string | null
+          features?: Json
+          highlight_feature?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name: string
+          price_annual?: number | null
+          price_monthly: number
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          cta_label?: string
+          description?: string | null
+          features?: Json
+          highlight_feature?: string | null
+          id?: string
+          is_active?: boolean
+          is_popular?: boolean
+          name?: string
+          price_annual?: number | null
+          price_monthly?: number
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       newsletter_subscribers: {
         Row: {
           email: string
@@ -980,6 +1031,7 @@ export type Database = {
           gender: string | null
           id: string
           last_name: string | null
+          membership_tier_id: string | null
           phone: string | null
           state: string | null
           updated_at: string
@@ -1001,6 +1053,7 @@ export type Database = {
           gender?: string | null
           id: string
           last_name?: string | null
+          membership_tier_id?: string | null
           phone?: string | null
           state?: string | null
           updated_at?: string
@@ -1022,12 +1075,21 @@ export type Database = {
           gender?: string | null
           id?: string
           last_name?: string | null
+          membership_tier_id?: string | null
           phone?: string | null
           state?: string | null
           updated_at?: string
           zip?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_membership_tier_id_fkey"
+            columns: ["membership_tier_id"]
+            isOneToOne: false
+            referencedRelation: "membership_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       properties: {
         Row: {
