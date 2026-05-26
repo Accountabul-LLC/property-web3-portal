@@ -4,7 +4,6 @@ import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 
 const NODES: Record<string, string> = {
   testnet: 'wss://s.altnet.rippletest.net:51233',
-  devnet: 'wss://s.devnet.rippletest.net:51233',
 }
 
 Deno.serve(async (req) => {

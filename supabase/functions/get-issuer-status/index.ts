@@ -124,7 +124,7 @@ Deno.serve(async (req) => {
     // ── Fetch live XRPL account info ─────────────────────────
     let xrplInfo: Record<string, unknown> = { found: false }
     try {
-      const nodes = TESTNET_NODES // Phase 1A: testnet only
+      const nodes = TESTNET_NODES
       const accountInfo = await xrplRequest(nodes, 'account_info', [
         { account: issuer.issuer_address, ledger_index: 'validated' },
       ])

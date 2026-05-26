@@ -38,7 +38,6 @@ function buildCors(req: Request): Record<string, string> {
 const XRPL_NODES = {
   mainnet: 'https://xrplcluster.com',
   testnet: 'https://s.altnet.rippletest.net:51234',
-  devnet:  'https://s.devnet.rippletest.net:51234',
 }
 
 async function fetchXrplTx(txHash: string, network: string): Promise<any> {

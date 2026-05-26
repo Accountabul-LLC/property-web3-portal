@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { requireEdgeUser } from "../_shared/auth.ts";
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -11,6 +12,14 @@ function buildCors(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Vary': 'Origin',
   };
+}
+
+async function hashIpHint(ipHint: string | null): Promise<string | null> {
+  if (!ipHint) return null;
+  const salt = Deno.env.get('WALLET_AUDIT_LOG_IP_SALT') || Deno.env.get('APP_URL') || 'accountabul-wallet-audit-log';
+  const input = `${salt}:${ipHint.trim()}`;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
+  return `sha256:${Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, '0')).join('')}`;
 }
 
 serve(async (req) => {
@@ -35,28 +44,14 @@ serve(async (req) => {
       });
     }
 
-    const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user?.id) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const auth = await requireEdgeUser(req, corsHeaders);
+    if (auth instanceof Response) return auth;
+    const { user } = auth;
 
     // Extract client info from headers
     const userAgent = req.headers.get('user-agent') || null;
-    const ipHint = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null;
+    const ipHint = await hashIpHint(req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null);
 
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);

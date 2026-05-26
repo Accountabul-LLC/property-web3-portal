@@ -1,6 +1,6 @@
 # Authentication System — Property Web3 Portal (RWA)
 
-> **Status**: V1 prototype reference
+> **Status**: testnet-only
 > **Last Updated**: 2026-03-06
 
 ---
@@ -131,7 +131,7 @@ Users can connect multiple XRPL wallets. The system supports:
 | Provider | Network | Signing Method |
 |---|---|---|
 | `xaman` | mainnet or testnet | Xaman QR scan |
-| `testnet_faucet` | testnet only | Server-side auto-sign |
+| `testnet_faucet` | testnet-only | Server-side auto-sign |
 
 **Wallet object shape** (`ConnectedWallet`):
 ```typescript

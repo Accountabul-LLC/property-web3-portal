@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { requireEdgeUser } from '../_shared/auth.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -10,7 +11,9 @@ function buildCors(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Vary': 'Origin',
   };
-}async function resolveAccountName(address: string): Promise<string | null> {
+}
+
+async function resolveAccountName(address: string): Promise<string | null> {
   try {
     const res = await fetch(`https://api.xrpscan.com/api/v1/account/${address}/name`, {
       signal: AbortSignal.timeout(3000),
@@ -53,7 +56,6 @@ Deno.serve(async (req) => {
     }
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
@@ -62,25 +64,9 @@ Deno.serve(async (req) => {
       throw new Error('Xaman API credentials not configured');
     }
 
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Authentication required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user?.id) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Authentication required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-      );
-    }
-
+    const auth = await requireEdgeUser(req, corsHeaders);
+    if (auth instanceof Response) return auth;
+    const { user } = auth;
     const userId = user.id;
 
     console.log('Checking Xaman payload status:', uuid, 'userId:', userId);

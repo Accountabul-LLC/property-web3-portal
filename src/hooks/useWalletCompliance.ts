@@ -1,15 +1,3 @@
-/**
- * useWalletCompliance
- *
- * Fetches and caches the Phase 1A compliance state for a given wallet address.
- * Drives the WalletRegistrationPanel step UI and the TradeGuard.
- *
- * Usage:
- *   const { data, isLoading, refetch } = useWalletCompliance(walletAddress)
- *
- * Returns null when walletAddress is falsy (no wallet connected).
- */
-
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 

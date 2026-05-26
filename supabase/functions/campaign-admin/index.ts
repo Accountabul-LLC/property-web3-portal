@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
         throw new Error('Release date is invalid')
       }
       if (!['under_review', 'active'].includes(status)) throw new Error('Status must be under_review or active')
-      if (!['testnet', 'mainnet', 'devnet'].includes(network)) throw new Error('Network is invalid')
+      if (!['testnet', 'mainnet'].includes(network)) throw new Error('Network is invalid')
 
       const goalAmount = goalAmountRaw === '' || goalAmountRaw == null ? null : Number(goalAmountRaw)
       if (goalAmountRaw !== '' && goalAmountRaw != null && (!Number.isFinite(goalAmount) || (goalAmount ?? 0) < 0)) {

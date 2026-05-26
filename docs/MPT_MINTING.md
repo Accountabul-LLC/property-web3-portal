@@ -1,6 +1,6 @@
 # MPT Minting — Property Web3 Portal (RWA)
 
-> **Status**: V1 prototype reference — testnet only
+> **Status**: testnet-only
 > **Standard**: XLS-33 (MPToken), XLS-89 (compressed metadata)
 > **Last Updated**: 2026-03-06
 
@@ -71,7 +71,7 @@ Edge function returns `tx_json` (a `MPTokenIssuanceCreate` transaction).
 - Returns `tx_hash`
 
 **Xaman signing path**:
-- Calls `xaman-send-payment` with `tx_json` (misnamed — handles any tx type)
+- Calls `xaman-send-payment` with `tx_json`
 - Returns `uuid` + `qr_code` URL
 - Frontend polls `xaman-check-payload` every 3 seconds
 - On `signed: true` → gets `tx_hash`, updates `token_mints` to `validated`

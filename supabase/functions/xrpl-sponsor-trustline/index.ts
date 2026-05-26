@@ -1,6 +1,6 @@
 // Sponsors a user's trustline by funding the 0.2 XRP reserve from a treasury
-// wallet, then either signing the TrustSet server-side (testnet/devnet, where
-// we hold the user's faucet seed) or returning the unsigned TrustSet JSON so
+// wallet, then either signing the TrustSet server-side on testnet (where we
+// hold the user's faucet seed) or returning the unsigned TrustSet JSON so
 // the client can push it through Xaman (mainnet).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { Client, Wallet, xrpToDrops } from "npm:xrpl@3.1.0";
@@ -20,7 +20,6 @@ function buildCors(req: Request): Record<string, string> {
 const NODES: Record<string, string> = {
   mainnet: "wss://s2.ripple.com",
   testnet: "wss://s.altnet.rippletest.net:51233",
-  devnet: "wss://s.devnet.rippletest.net:51233",
 };
 
 // Exactly the owner reserve (0.2 XRP) for one TrustLine object + a tiny buffer
@@ -64,7 +63,7 @@ Deno.serve(async (req) => {
     if (!wallet_address || !isValidXRPLAddress(wallet_address)) return jsonError("Valid wallet_address required");
     if (!issuer || !isValidXRPLAddress(issuer)) return jsonError("Valid issuer required");
     if (!currency || typeof currency !== "string") return jsonError("currency required");
-    const net = network === "mainnet" || network === "testnet" || network === "devnet" ? network : "mainnet";
+    const net = network === "mainnet" || network === "testnet" ? network : "mainnet";
 
     // Verify wallet ownership
     const { data: walletLink } = await admin
@@ -164,8 +163,8 @@ Deno.serve(async (req) => {
       },
     };
 
-    // Testnet/devnet: sign server-side if we have the user's seed
-    if (net !== "mainnet" && walletLink.wallet_secret) {
+    // Testnet: sign server-side if we have the user's seed
+    if (net === "testnet" && walletLink.wallet_secret) {
       try {
         const userWallet = Wallet.fromSeed(walletLink.wallet_secret);
         const prepared = await client.autofill(trustSet as any);

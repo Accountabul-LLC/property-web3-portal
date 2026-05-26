@@ -19,6 +19,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { logAppAudit } from '../_shared/app-audit.ts'
+import { requireEdgeUser } from '../_shared/auth.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
@@ -38,18 +39,16 @@ function buildCors(req: Request): Record<string, string> {
 
 // XRPL epoch starts Jan 1, 2000 — Unix epoch offset in seconds
 const RIPPLE_EPOCH_OFFSET = 946684800
-const XRPL_NODES: Record<'mainnet' | 'testnet' | 'devnet', string[]> = {
+const XRPL_NODES: Record<'mainnet' | 'testnet', string[]> = {
   mainnet: ['https://xrplcluster.com', 'https://s1.ripple.com:51234', 'https://s2.ripple.com:51234'],
   testnet: ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'],
-  devnet: ['https://s.devnet.rippletest.net:51234'],
 }
 
 // RLUSD = "RLUSD" padded to 40-hex characters per XRPL IOU currency code spec.
 const RLUSD_CURRENCY_HEX = '524C555344000000000000000000000000000000'
-const RLUSD_ISSUER: Record<'mainnet' | 'testnet' | 'devnet', string | null> = {
+const RLUSD_ISSUER: Record<'mainnet' | 'testnet', string | null> = {
   mainnet: 'rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De',
   testnet: 'rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV',
-  devnet: null,
 }
 
 function toDrops(xrp: number): string {
@@ -61,7 +60,7 @@ function toXrplTime(isoDate: string): number {
   return unixSeconds - RIPPLE_EPOCH_OFFSET
 }
 
-async function xrplRpc(network: 'mainnet' | 'testnet' | 'devnet', method: string, params: Record<string, unknown>[]) {
+async function xrplRpc(network: 'mainnet' | 'testnet', method: string, params: Record<string, unknown>[]) {
   const nodes = XRPL_NODES[network] ?? XRPL_NODES.mainnet
   let lastError: Error | null = null
   for (const node of nodes) {
@@ -92,7 +91,7 @@ function isDepositAuthEnabled(accountData: Record<string, unknown> | null | unde
 async function preflightRecipient(
   recipientAddress: string,
   donorAddress: string,
-  network: 'mainnet' | 'testnet' | 'devnet',
+  network: 'mainnet' | 'testnet',
   requireDepositAuthCheck: boolean,
 ) {
   const accountInfo = await xrplRpc(network, 'account_info', [{ account: recipientAddress, ledger_index: 'validated' }])
@@ -134,7 +133,6 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY')
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET')
@@ -144,20 +142,9 @@ Deno.serve(async (req) => {
     }
 
     // ── Auth ─────────────────────────────────────────────────
-    const authHeader = req.headers.get('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey)
-    const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''))
-    if (!user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
+    const auth = await requireEdgeUser(req, corsHeaders)
+    if (auth instanceof Response) return auth
+    const { user } = auth
 
     const svc = createClient(supabaseUrl, supabaseServiceKey)
 
@@ -258,7 +245,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const recipientNetwork = (campaign.network === 'testnet' || campaign.network === 'devnet' || campaign.network === 'mainnet')
+    const recipientNetwork = (campaign.network === 'testnet' || campaign.network === 'mainnet')
       ? campaign.network
       : 'mainnet'
     const recipientPreflight = await preflightRecipient(

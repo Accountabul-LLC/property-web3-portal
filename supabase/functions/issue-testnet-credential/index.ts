@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    const nodes = TESTNET_NODES // Phase 1A: testnet only
+    const nodes = TESTNET_NODES
 
     const [accountInfoRes, serverInfoRes] = await Promise.all([
       xrplRequest(nodes, 'account_info', [{ account: issuerRecord.issuer_address, ledger_index: 'current' }]),

@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { requireEdgeUser } from '../_shared/auth.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -10,7 +11,9 @@ function buildCors(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Vary': 'Origin',
   };
-}interface XamanPayloadResponse {
+}
+
+interface XamanPayloadResponse {
   uuid: string;
   next: {
     always: string;
@@ -31,37 +34,22 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const xamanApiKey = Deno.env.get('XAMAN_API_KEY');
     const xamanApiSecret = Deno.env.get('XAMAN_API_SECRET');
+
+    if (!supabaseServiceKey) {
+      throw new Error('Supabase service role key not configured');
+    }
 
     if (!xamanApiKey || !xamanApiSecret) {
       console.error('Missing XAMAN_API_KEY or XAMAN_API_SECRET');
       throw new Error('Xaman API credentials not configured');
     }
 
-    // Require auth so anonymous callers cannot create or persist payload rows.
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Authentication required' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401,
-        }
-      );
-    }
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: { user } } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (!user?.id) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Authentication required' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 401,
-        }
-      );
-    }
+    const auth = await requireEdgeUser(req, corsHeaders);
+    if (auth instanceof Response) return auth;
+    const { user } = auth;
 
     // SEC-004: Bind payloads to the signed-in caller.
     // This prevents an attacker from submitting another user's signed QR response under their own auth token.

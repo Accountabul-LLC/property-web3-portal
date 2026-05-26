@@ -100,7 +100,6 @@ const AI_KEY_LABELS: Record<string, string> = {
   adr: 'Address', ct: 'City', st: 'State', zip: 'ZIP', cc: 'Country',
   pt: 'Type', b: 'Beds', ba: 'Baths', sf: 'SqFt', yb: 'Built',
   val: 'Value', cur: 'Currency', asof: 'As Of', em: 'Contact',
-  // Long-form keys (legacy/uncompressed builder output)
   address: 'Address', city: 'City', state: 'State', country: 'Country',
   property_type: 'Type', bedrooms: 'Beds', bathrooms: 'Baths', sqft: 'SqFt', year_built: 'Built',
   value_usd: 'Asset Value (USD)', contact: 'Contact',
@@ -122,7 +121,6 @@ function parseMPTIssuances(objects: any[]) {
         }
       }
 
-      // Detect format: compressed (XLS-89) has 'n' key, legacy (XLS-24d) has 'name' key
       const isCompressed = 'n' in metadata || 't' in metadata;
 
       let name: string | null = null;
@@ -172,7 +170,6 @@ function parseMPTIssuances(objects: any[]) {
           if (attrs.length > 0) attributes = attrs;
         }
       } else {
-        // Legacy XLS-24d format
         name = metadata.name || null;
         description = metadata.description || null;
         image = metadata.image || null;

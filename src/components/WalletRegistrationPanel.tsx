@@ -1,19 +1,3 @@
-/**
- * WalletRegistrationPanel
- *
- * Displays the Phase 1A compliance steps for a connected wallet and lets the user
- * take actions at each step. Designed to be embedded in the Dashboard or a
- * dedicated /compliance page.
- *
- * Steps:
- *   1. Authenticated           — always satisfied if this component renders
- *   2. KYC Approved            — redirect to /kyc if not done
- *   3. Wallet Connected        — reflects ActiveWalletContext
- *   4. Registration Requested  — calls wallet-register
- *   5. Credential Issued       — admin action, shows pending state
- *   6. Credential Accepted     — calls credential-accept; completes the flow
- */
-
 import { useState } from 'react'
 import { CheckCircle2, Circle, Clock, AlertCircle, Loader2, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'

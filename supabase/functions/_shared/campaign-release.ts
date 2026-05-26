@@ -5,7 +5,6 @@ import { Client, Wallet } from 'npm:xrpl@3.1.0'
 const XRPL_NODES: Record<string, string[]> = {
   mainnet: ['wss://xrplcluster.com', 'wss://s1.ripple.com', 'wss://s2.ripple.com'],
   testnet: ['wss://s.altnet.rippletest.net:51233', 'wss://testnet.xrpl-labs.com'],
-  devnet: ['wss://s.devnet.rippletest.net:51233'],
 }
 
 export type CampaignReleaseCampaign = {
@@ -41,7 +40,7 @@ export type CampaignReleaseSummary = {
 }
 
 function resolveNetwork(network: string | null | undefined): keyof typeof XRPL_NODES {
-  if (network === 'testnet' || network === 'devnet' || network === 'mainnet') return network
+  if (network === 'testnet' || network === 'mainnet') return network
   return 'mainnet'
 }
 
@@ -203,7 +202,7 @@ export async function releaseCampaignEscrows(opts: {
       const rawMsg = err instanceof Error ? err.message : String(err)
       let friendly = rawMsg
       if (rawMsg.includes('Account not found')) {
-        friendly = `Signer wallet ${signerWallet.address} does not exist on XRPL ${network}. Fund it with at least 10 XRP (use the ${network} faucet if testnet/devnet) and retry.`
+        friendly = `Signer wallet ${signerWallet.address} does not exist on XRPL ${network}. Fund it with at least 10 XRP (use the ${network} faucet if testnet) and retry.`
       } else if (rawMsg.includes('tecNO_PERMISSION')) {
         friendly = `XRPL rejected EscrowFinish with tecNO_PERMISSION — the escrow's FinishAfter time has not been reached on-ledger yet. Wait ~10 seconds past release_date and retry.`
       }

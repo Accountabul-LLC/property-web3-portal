@@ -1,25 +1,3 @@
-/**
- * compliance-check
- *
- * Returns the full Phase 1A compliance state for a wallet address.
- * Used by the frontend to drive the WalletRegistrationPanel UI and
- * by edge functions as a guard before order placement / property purchase.
- *
- * Body: { wallet_address: string }
- *
- * Returns:
- * {
- *   wallet_address: string
- *   is_trade_enabled: boolean       ← the authoritative gate
- *   kyc_status: string              ← 'not_started' | 'in_progress' | 'submitted' | 'under_review' | 'approved' | 'rejected' | 'expired'
- *   wallet_status: string           ← 'active' | 'revoked' | 'not_found'
- *   registration_status: string     ← 'not_started' | 'pending' | 'under_review' | 'approved' | 'rejected' | 'revoked'
- *   credential_status: string       ← 'none' | 'pending_issuance' | 'issued' | 'accepted' | 'expired' | 'deleted' | 'failed'
- *   credential_id?: string
- *   permission_profiles: string[]   ← active profile codes assigned to this wallet
- * }
- */
-
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';

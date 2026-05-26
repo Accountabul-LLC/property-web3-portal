@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS public.campaigns (
   status                  TEXT NOT NULL DEFAULT 'under_review'
                           CHECK (status IN ('under_review','approved','active','completed','rejected')),
   network                 TEXT NOT NULL DEFAULT 'testnet'
-                          CHECK (network IN ('testnet','mainnet','devnet')),
+                          CHECK (network IN ('testnet','mainnet')),
   submitted_by_user_id    UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   submitted_by_email      TEXT,
   submission_notes        TEXT,

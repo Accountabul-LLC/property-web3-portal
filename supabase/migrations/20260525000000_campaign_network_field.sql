@@ -5,6 +5,6 @@
 
 ALTER TABLE public.campaigns
   ADD COLUMN IF NOT EXISTS network TEXT NOT NULL DEFAULT 'testnet'
-  CHECK (network IN ('testnet', 'mainnet', 'devnet'));
+  CHECK (network IN ('testnet', 'mainnet'));
 
 CREATE INDEX IF NOT EXISTS campaigns_network_idx ON public.campaigns (network);
