@@ -187,55 +187,201 @@ export default function UnifiedWalletsOverview() {
       </div>
 
       <div className="space-y-1">
-        {summaries.map((s) => (
-          <button
-            key={s.address}
-            onClick={() => handleSelect(s.address)}
-            className={`w-full flex items-center justify-between gap-3 py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-muted/40 ${
-              s.address === activeAddress ? 'bg-primary/5' : ''
-            }`}
-          >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <Wallet className="w-4 h-4 text-primary" />
-              </div>
-              <div className="min-w-0 text-left">
-                <div className="flex items-center gap-1.5">
-                  <p className="text-sm font-semibold truncate">{s.label}</p>
-                  {s.address === activeAddress && (
-                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                      Active
-                    </Badge>
+        {summaries.map((s, idx) => {
+          const isOpen = expanded.has(s.address);
+          const pData = portfolioQueries[idx].data;
+          const mData = metaQueries[idx].data;
+          const xrpUsd = mData?.xrpUsd ?? 0;
+          const tokenHoldings = pData?.token_holdings ?? [];
+          const mptIssuances = pData?.mpt_issuances ?? [];
+          const mptHoldings = pData?.mpt_holdings ?? [];
+          const hasAssets =
+            (pData?.xrp_balance ?? 0) > 0 ||
+            tokenHoldings.length > 0 ||
+            mptIssuances.length > 0 ||
+            mptHoldings.length > 0;
+
+          return (
+            <div key={s.address}>
+              <button
+                onClick={() => toggleExpanded(s.address)}
+                aria-expanded={isOpen}
+                className={`w-full flex items-center justify-between gap-3 py-2.5 px-3 -mx-3 rounded-lg transition-colors hover:bg-muted/40 ${
+                  s.address === activeAddress ? 'bg-primary/5' : ''
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Wallet className="w-4 h-4 text-primary" />
+                  </div>
+                  <div className="min-w-0 text-left">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold truncate">{s.label}</p>
+                      {s.address === activeAddress && (
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                          Active
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-[11px] font-mono text-muted-foreground">
+                      {walletShortId(s.address)}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 flex-shrink-0">
+                  <div className="text-right">
+                    {s.isLoading ? (
+                      <span className="text-xs text-muted-foreground">Loading…</span>
+                    ) : (
+                      <>
+                        {s.hasUsd && (
+                          <p className="text-sm font-semibold">
+                            ${s.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </p>
+                        )}
+                        <p className={`text-[11px] ${s.hasUsd ? 'text-muted-foreground' : 'text-sm font-semibold text-foreground'}`}>
+                          {s.xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} XRP
+                          {s.tokenCount > 0 && ` · ${s.tokenCount} tok`}
+                          {s.mptCount > 0 && ` · ${s.mptCount} MPT`}
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleSwitch(e, s.address)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') handleSwitch(e as unknown as React.MouseEvent, s.address);
+                    }}
+                    title="Open this wallet"
+                    className="p-1.5 -m-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </span>
+                  <ChevronRight
+                    className={`w-4 h-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`}
+                  />
+                </div>
+              </button>
+
+              {isOpen && (
+                <div className="ml-12 mr-2 mb-2 mt-1 p-3 rounded-lg bg-muted/30 border border-border/50 max-h-72 overflow-y-auto">
+                  {s.isLoading ? (
+                    <div className="space-y-2">
+                      <div className="h-4 bg-muted animate-pulse rounded w-2/3" />
+                      <div className="h-4 bg-muted animate-pulse rounded w-1/2" />
+                    </div>
+                  ) : !hasAssets ? (
+                    <p className="text-xs text-muted-foreground">No assets in this wallet.</p>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {/* XRP */}
+                      {(pData?.xrp_balance ?? 0) > 0 && (
+                        <div className="flex items-center justify-between gap-3 text-xs py-1">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                              <span className="text-[10px] font-bold text-primary">X</span>
+                            </div>
+                            <span className="font-semibold">XRP</span>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="font-medium">
+                              {(pData?.xrp_balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                            </p>
+                            {xrpUsd > 0 && (
+                              <p className="text-[10px] text-muted-foreground">
+                                ${((pData?.xrp_balance ?? 0) * xrpUsd).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* IOU tokens */}
+                      {tokenHoldings.map((t) => {
+                        const meta = mData?.tokenMap.get(`${t.currency}:${t.issuer}`);
+                        const display = meta?.name || decodeCurrency(t.currency);
+                        const bal = Number(t.balance);
+                        const usd = meta?.price ? bal * meta.price : 0;
+                        return (
+                          <div
+                            key={`${t.currency}:${t.issuer}`}
+                            className="flex items-center justify-between gap-3 text-xs py-1"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              {meta?.icon ? (
+                                <img src={meta.icon} alt="" className="w-6 h-6 rounded-full flex-shrink-0" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
+                                  <span className="text-[9px] font-bold text-muted-foreground">
+                                    {display.slice(0, 2).toUpperCase()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <p className="font-semibold truncate">{display}</p>
+                                <p className="text-[10px] font-mono text-muted-foreground truncate">
+                                  {walletShortId(t.issuer)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right flex-shrink-0">
+                              <p className="font-medium">
+                                {bal.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                              </p>
+                              {usd > 0 && (
+                                <p className="text-[10px] text-muted-foreground">
+                                  ${usd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      {/* MPT issuances */}
+                      {mptIssuances.map((m: any) => (
+                        <div
+                          key={`iss-${m.mpt_issuance_id || m.MPTokenIssuanceID}`}
+                          className="flex items-center justify-between gap-3 text-xs py-1"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant="secondary" className="text-[9px] px-1.5 py-0">MPT</Badge>
+                            <span className="font-mono text-[10px] truncate text-muted-foreground">
+                              {(m.mpt_issuance_id || m.MPTokenIssuanceID || '').slice(0, 16)}…
+                            </span>
+                          </div>
+                          <p className="font-medium flex-shrink-0">
+                            {Number(m.outstanding_amount ?? m.OutstandingAmount ?? 0).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+
+                      {/* MPT holdings */}
+                      {mptHoldings.map((m: any) => (
+                        <div
+                          key={`hold-${m.mpt_issuance_id || m.MPTokenIssuanceID}`}
+                          className="flex items-center justify-between gap-3 text-xs py-1"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0">MPT</Badge>
+                            <span className="font-mono text-[10px] truncate text-muted-foreground">
+                              {(m.mpt_issuance_id || m.MPTokenIssuanceID || '').slice(0, 16)}…
+                            </span>
+                          </div>
+                          <p className="font-medium flex-shrink-0">
+                            {Number(m.amount ?? m.MPTAmount ?? 0).toLocaleString()}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-                <p className="text-[11px] font-mono text-muted-foreground">
-                  {walletShortId(s.address)}
-                </p>
-              </div>
+              )}
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <div className="text-right">
-                {s.isLoading ? (
-                  <span className="text-xs text-muted-foreground">Loading…</span>
-                ) : (
-                  <>
-                    {s.hasUsd && (
-                      <p className="text-sm font-semibold">
-                        ${s.totalUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </p>
-                    )}
-                    <p className={`text-[11px] ${s.hasUsd ? 'text-muted-foreground' : 'text-sm font-semibold text-foreground'}`}>
-                      {s.xrpBalance.toLocaleString(undefined, { maximumFractionDigits: 4 })} XRP
-                      {s.tokenCount > 0 && ` · ${s.tokenCount} tok`}
-                      {s.mptCount > 0 && ` · ${s.mptCount} MPT`}
-                    </p>
-                  </>
-                )}
-              </div>
-              <ChevronRight className="w-4 h-4 text-muted-foreground" />
-            </div>
-          </button>
-        ))}
+          );
+        })}
       </div>
     </Card>
   );
