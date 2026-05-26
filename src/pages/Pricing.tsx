@@ -75,8 +75,20 @@ export default function Pricing() {
         {/* Tier cards */}
         <div className="max-w-6xl mx-auto px-4 pb-24">
           {isLoading ? (
-            <div className="flex justify-center py-16">
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="rounded-2xl border border-border bg-card p-8 animate-pulse">
+                  <div className="h-5 w-24 bg-muted rounded mb-3" />
+                  <div className="h-3 w-full bg-muted rounded mb-6" />
+                  <div className="h-10 w-32 bg-muted rounded mb-6" />
+                  <div className="space-y-3 mb-8">
+                    {[...Array(5)].map((_, j) => (
+                      <div key={j} className="h-3 w-full bg-muted rounded" />
+                    ))}
+                  </div>
+                  <div className="h-10 w-full bg-muted rounded" />
+                </div>
+              ))}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
