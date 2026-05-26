@@ -37,7 +37,36 @@ export type MyDonation = {
   donor_message: string | null
   donor_wallet_address: string
   created_at: string
+  xrp_usd_rate: number | null
+  xrp_usd_value: number | null
+  xrp_usd_quoted_at: string | null
+  xrp_usd_source: string | null
   campaigns: Pick<Campaign, 'id' | 'title' | 'slug' | 'release_date' | 'campaign_mode' | 'network' | 'currency' | 'recipient_wallet_address'> | null
+}
+
+type PriceHistoryResponse = {
+  quotes?: Record<string, {
+    price: number
+    source: string
+    quoted_at: string
+    fetched_at: string
+  }>
+}
+
+export function getDonationUsdValue(donation: MyDonation): number | null {
+  if (donation.currency === 'RLUSD') {
+    return Number.isFinite(Number(donation.amount)) ? Number(donation.amount) : null
+  }
+
+  if (Number.isFinite(Number(donation.xrp_usd_value)) && Number(donation.xrp_usd_value) > 0) {
+    return Number(donation.xrp_usd_value)
+  }
+
+  if (Number.isFinite(Number(donation.xrp_usd_rate)) && Number(donation.xrp_usd_rate) > 0) {
+    return Number(donation.amount) * Number(donation.xrp_usd_rate)
+  }
+
+  return null
 }
 
 export function useCampaigns() {
@@ -107,12 +136,50 @@ export function useMyDonations(userId?: string) {
         .from('campaign_donations')
         .select(`
           id, amount, currency, escrow_status, donor_message, donor_wallet_address, created_at,
+          xrp_usd_rate, xrp_usd_value, xrp_usd_quoted_at, xrp_usd_source,
           campaigns (id, title, slug, release_date, campaign_mode, network, currency, recipient_wallet_address)
         `)
         .eq('donor_user_id', userId)
         .order('created_at', { ascending: false })
       if (error) throw error
-      return data as MyDonation[]
+
+      const rows = (data ?? []) as MyDonation[]
+      const needsHistoricalQuote = rows
+        .filter((donation) => donation.currency === 'XRP' && !getDonationUsdValue(donation))
+        .map((donation) => Math.floor(new Date(donation.created_at).getTime() / 1000))
+
+      if (needsHistoricalQuote.length === 0) {
+        return rows
+      }
+
+      const timestamps = Array.from(new Set(needsHistoricalQuote))
+      const { data: historyData, error: historyError } = await supabase.functions.invoke('xrp-price-history', {
+        body: { timestamps },
+      })
+
+      if (historyError) {
+        return rows
+      }
+
+      const quotes = (historyData as PriceHistoryResponse | null)?.quotes ?? {}
+
+      return rows.map((donation) => {
+        if (donation.currency !== 'XRP' || getDonationUsdValue(donation)) {
+          return donation
+        }
+
+        const quote = quotes[String(Math.floor(new Date(donation.created_at).getTime() / 1000))]
+        if (!quote) return donation
+
+        const xrpUsdValue = Number(donation.amount) * quote.price
+        return {
+          ...donation,
+          xrp_usd_rate: quote.price,
+          xrp_usd_value: xrpUsdValue,
+          xrp_usd_quoted_at: quote.quoted_at,
+          xrp_usd_source: quote.source,
+        }
+      })
     },
     enabled: !!userId,
     staleTime: 15_000,

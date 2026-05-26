@@ -52,6 +52,7 @@ The repo already has a working Causes scaffold from the Lovable build. That scaf
 - signed-in gating for cause submission
 - admin release messaging that reflects actual escrow status
 - campaign network field for mainnet/testnet awareness
+- donation history that can show XRP and USD value snapshots over time
 
 ### Still Needs Ongoing Hardening
 

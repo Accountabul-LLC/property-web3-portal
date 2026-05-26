@@ -2,10 +2,11 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import KycGate from "./components/KycGate";
+import { LockedProductGate } from "./components/LockedProductGate";
 import { RouteGuard } from "./components/RouteGuard";
 import { RouteSeo } from "./components/RouteSeo";
 import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
@@ -17,7 +18,6 @@ const lazyPage = <T extends Record<string, unknown>>(loader: () => Promise<{ def
 
 const Index = lazyPage(() => import("./pages/Index"));
 const Marketplace = lazyPage(() => import("./pages/Marketplace"));
-const Tokenize = lazyPage(() => import("./pages/Tokenize"));
 const Auth = lazyPage(() => import("./pages/Auth"));
 const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
 const Dashboard = lazyPage(() => import("./pages/Dashboard"));
@@ -26,9 +26,6 @@ const AIAgents = lazyPage(() => import("./pages/AIAgents"));
 const Portfolio = lazyPage(() => import("./pages/Portfolio"));
 const PropertyDetail = lazyPage(() => import("./pages/PropertyDetail"));
 const Mint = lazyPage(() => import("./pages/Mint"));
-const Swap = lazyPage(() => import("./pages/Swap"));
-const Pools = lazyPage(() => import("./pages/Pools"));
-const Treasury = lazyPage(() => import("./pages/Treasury"));
 const Kyc = lazyPage(() => import("./pages/Kyc"));
 const KycStatus = lazyPage(() => import("./pages/KycStatus"));
 const AdminKyc = lazyPage(() => import("./pages/AdminKyc"));
@@ -46,14 +43,11 @@ const Causes = lazyPage(() => import("./pages/Causes"));
 const CauseDetail = lazyPage(() => import("./pages/CauseDetail"));
 const CauseApply = lazyPage(() => import("./pages/CauseApply"));
 const MyDonations = lazyPage(() => import("./pages/MyDonations"));
-const Payments = lazyPage(() => import("./pages/Payments"));
 const Settings = lazyPage(() => import("./pages/Settings"));
-const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
-const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
-const Pricing = lazyPage(() => import("./pages/Pricing"));
-const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
+
+const lockedProductRoute = <LockedProductGate />;
 
 function RouteFallback() {
   return (
@@ -79,18 +73,18 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/tokenize" element={<RouteGuard adminOnly><KycGate><Tokenize /></KycGate></RouteGuard>} />
+                <Route path="/tokenize" element={lockedProductRoute} />
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/payments" element={<Payments />} />
-                <Route path="/payments/history" element={<RouteGuard><KycGate><PaymentsHistory /></KycGate></RouteGuard>} />
-                <Route path="/payments/:id" element={<RouteGuard><KycGate><PaymentDetail /></KycGate></RouteGuard>} />
-                <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
-                <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
-                <Route path="/treasury" element={<Treasury />} />
-                <Route path="/smart-escrow" element={<SmartEscrow />} />
-                <Route path="/escrow" element={<Navigate to="/smart-escrow" replace />} />
+                <Route path="/payments" element={lockedProductRoute} />
+                <Route path="/payments/history" element={lockedProductRoute} />
+                <Route path="/payments/:id" element={lockedProductRoute} />
+                <Route path="/swap" element={lockedProductRoute} />
+                <Route path="/pools" element={lockedProductRoute} />
+                <Route path="/treasury" element={lockedProductRoute} />
+                <Route path="/smart-escrow" element={lockedProductRoute} />
+                <Route path="/escrow" element={lockedProductRoute} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 
@@ -105,7 +99,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/causes" element={<AdminCauses />} />
                 <Route path="/admin/pricing" element={<AdminPricing />} />
-                <Route path="/pricing" element={<Pricing />} />
+                <Route path="/pricing" element={lockedProductRoute} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/action-items" element={<ActionItems />} />
                 <Route path="/credentials" element={<Credentials />} />
