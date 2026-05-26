@@ -149,7 +149,7 @@ export default function Payments() {
 
       <Navigation />
 
-      <main className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-8 lg:px-8">
+      <main className="mx-auto flex w-full max-w-[1600px] flex-col gap-8 px-4 py-8 lg:px-8 2xl:max-w-[1800px]">
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_420px] xl:items-end">
           <div className="space-y-5">
             <Badge variant="secondary" className="w-fit rounded-full px-3 py-1 text-xs uppercase tracking-[0.18em]">
