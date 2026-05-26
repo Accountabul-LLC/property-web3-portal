@@ -1,8 +1,9 @@
 // UnifiedWalletsOverview — aggregates XRP + token + MPT USD value across every
 // connected wallet on the active network. Rendered above PortfolioSection
-// when the user has more than one wallet connected.
+// when the user has more than one wallet connected. Rows expand inline to
+// reveal each wallet's assets without leaving the overview card.
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
