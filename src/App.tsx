@@ -89,7 +89,7 @@ const App = () => (
                 <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
                 <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
                 <Route path="/treasury" element={<Treasury />} />
-                <Route path="/smart-escrow" element={<SmartEscrow />} />
+                <Route path="/smart-escrow" element={<RouteGuard adminOnly><SmartEscrow /></RouteGuard>} />
                 <Route path="/escrow" element={<Navigate to="/smart-escrow" replace />} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
