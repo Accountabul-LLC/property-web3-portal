@@ -51,6 +51,7 @@ const Settings = lazyPage(() => import("./pages/Settings"));
 const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
 const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
 const Pricing = lazyPage(() => import("./pages/Pricing"));
+const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
@@ -90,7 +91,7 @@ const App = () => (
                 <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
                 <Route path="/treasury" element={<Treasury />} />
                 <Route path="/smart-escrow" element={<RouteGuard adminOnly><SmartEscrow /></RouteGuard>} />
-                <Route path="/escrow" element={<Navigate to="/smart-escrow" replace />} />
+                <Route path="/escrow" element={<Escrow />} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 
