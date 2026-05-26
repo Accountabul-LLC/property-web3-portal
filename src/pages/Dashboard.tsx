@@ -14,11 +14,15 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
+import { useCredentialEligibility } from '@/hooks/useCredentialEligibility';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { VendorNetworkCard } from '@/components/vendor/VendorNetworkCard';
+import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
+import { getVendorCredential } from '@/lib/vendorNetwork';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -55,6 +59,12 @@ const Dashboard = () => {
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
   const { data: savedPropertyIds = [] } = useSavedPropertyIds();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
+  const {
+    results: credentialResults,
+    applyForCredential,
+    acceptCredential,
+    triggerAutoIssue,
+  } = useCredentialEligibility(activeWallet?.address ?? null);
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -77,6 +87,7 @@ const Dashboard = () => {
   const [walletLabel, setWalletLabel] = useState('');
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [vendorActionLoading, setVendorActionLoading] = useState(false);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -239,6 +250,7 @@ const Dashboard = () => {
   };
 
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.full_name || 'Your Profile';
+  const vendorCredential = getVendorCredential(credentialResults);
 
   return (
     <div className="min-h-screen bg-background">
@@ -554,6 +566,65 @@ const Dashboard = () => {
             </div>
           )}
         </Card>
+
+        <VendorNetworkCard
+          accountType={profile?.account_type}
+          companyName={profile?.company_name}
+          isConnected={isConnected}
+          kycApproved={kycApproved}
+          vendorCredential={vendorCredential}
+          actionLoading={vendorActionLoading}
+          onConnectWallet={openConnectModal}
+          onStartKyc={() => navigate('/kyc')}
+          onEditProfile={() => setEditing(true)}
+          onRequestVerification={async () => {
+            if (!activeWallet?.address) {
+              openConnectModal()
+              return
+            }
+            if (!kycApproved) {
+              navigate('/kyc')
+              return
+            }
+            setVendorActionLoading(true)
+            try {
+              if (vendorCredential?.ui_section === 'auto_issuable') {
+                await triggerAutoIssue('vendor')
+              } else {
+                await applyForCredential('vendor')
+              }
+              toast.success('Verified vendor request submitted')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to submit vendor request')
+            } finally {
+              setVendorActionLoading(false)
+            }
+          }}
+          onAcceptBadge={async () => {
+            const walletCredentialId = vendorCredential?.existing_application?.wallet_credential_id
+            if (!walletCredentialId) {
+              toast.error('No vendor credential is ready to accept')
+              return
+            }
+            setVendorActionLoading(true)
+            try {
+              await acceptCredential(walletCredentialId)
+              toast.success('Verified vendor badge accepted')
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : 'Failed to accept vendor badge')
+            } finally {
+              setVendorActionLoading(false)
+            }
+          }}
+          onOpenCredentials={() => navigate('/credentials')}
+        />
+
+        {profile?.account_type === 'business' && (
+          <VendorProfileForm
+            profileId={profile?.id}
+            companyName={profile?.company_name}
+          />
+        )}
 
         {/* Connected Wallets */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

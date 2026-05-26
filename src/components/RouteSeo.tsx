@@ -58,6 +58,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/admin/kyc': { title: `Admin KYC | ${SITE_NAME}`, description: 'Admin KYC review.', noindex: true },
   '/admin/ai-panel': { title: `Admin AI Panel | ${SITE_NAME}`, description: 'Admin AI panel.', noindex: true },
   '/admin/credentials': { title: `Admin Credentials | ${SITE_NAME}`, description: 'Admin credentials management.', noindex: true },
+  '/admin/vendors': { title: `Admin Vendors | ${SITE_NAME}`, description: 'Admin verified vendor CRM.', noindex: true },
   '/admin/payments': { title: `Admin Payments | ${SITE_NAME}`, description: 'Admin payments ledger.', noindex: true },
   '/admin/payments/console': { title: `Payments Console | ${SITE_NAME}`, description: 'Payments developer console.', noindex: true },
   '/admin/users': { title: `Admin Users | ${SITE_NAME}`, description: 'Admin user management redirect.', noindex: true },

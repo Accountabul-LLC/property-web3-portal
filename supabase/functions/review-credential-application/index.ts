@@ -81,6 +81,40 @@ function buildCors(req: Request): Record<string, string> {
     }
 
     const now = new Date().toISOString()
+    const { data: userProfile } = await serviceClient
+      .from('profiles')
+      .select('id, company_name')
+      .eq('id', app.user_id)
+      .maybeSingle()
+
+    async function syncVendorVerification(isVerified: boolean) {
+      if (app.credential_key !== 'vendor') return
+      const status = isVerified ? 'verified' : 'rejected'
+      const { error: vendorError } = await serviceClient
+        .from('vendor_profiles')
+        .upsert({
+          user_id: app.user_id,
+          profile_id: userProfile?.id ?? app.user_id,
+          company_name: userProfile?.company_name ?? 'Vendor',
+          verification_status: status,
+          reviewed_at: now,
+          verified_at: isVerified ? now : null,
+          updated_at: now,
+        }, { onConflict: 'user_id' })
+
+      if (vendorError) {
+        console.warn('Failed to sync vendor verification flag:', vendorError.message)
+      }
+
+      const { error: professionalError } = await serviceClient
+        .from('professionals')
+        .update({ verified: isVerified })
+        .eq('wallet_address', app.wallet_address)
+
+      if (professionalError) {
+        console.warn('Failed to sync professional verification flag:', professionalError.message)
+      }
+    }
 
     if (action === 'start_review') {
       const { data: updated, error: updateError } = await serviceClient
@@ -95,6 +129,19 @@ function buildCors(req: Request): Record<string, string> {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
+      }
+
+      if (app.credential_key === 'vendor') {
+        await serviceClient
+          .from('vendor_profiles')
+          .upsert({
+            user_id: app.user_id,
+            profile_id: userProfile?.id ?? app.user_id,
+            company_name: userProfile?.company_name ?? 'Vendor',
+            verification_status: 'under_review',
+            reviewed_at: now,
+            updated_at: now,
+          }, { onConflict: 'user_id' })
       }
 
       return new Response(JSON.stringify({ application: updated }), {
@@ -121,6 +168,8 @@ function buildCors(req: Request): Record<string, string> {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+
+      await syncVendorVerification(true)
 
       return new Response(JSON.stringify({ application: updated }), {
         status: 200,
@@ -154,6 +203,8 @@ function buildCors(req: Request): Record<string, string> {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+
+      await syncVendorVerification(false)
 
       return new Response(JSON.stringify({ application: updated }), {
         status: 200,
@@ -246,6 +297,8 @@ function buildCors(req: Request): Record<string, string> {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+
+      await syncVendorVerification(true)
 
       return new Response(
         JSON.stringify({

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
-import { useMyDonations } from '@/hooks/useCampaigns'
+import { getDonationUsdValue, useMyDonations } from '@/hooks/useCampaigns'
 
 function explorerBase(network?: string | null) {
   return network === 'testnet'
@@ -19,6 +19,26 @@ function formatDate(date: string) {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+  })
+}
+
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
+function formatUsd(value: number | null | undefined) {
+  if (!Number.isFinite(Number(value))) return '—'
+  return Number(value).toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })
 }
 
@@ -69,6 +89,7 @@ export default function MyDonations() {
   }
 
   const totalDonated = (donations ?? []).reduce((sum, donation) => sum + Number(donation.amount || 0), 0)
+  const totalUsdDonated = (donations ?? []).reduce((sum, donation) => sum + (getDonationUsdValue(donation) ?? 0), 0)
   const releasedCount = (donations ?? []).filter((d) => d.escrow_status === 'released').length
   const escrowedCount = (donations ?? []).filter((d) => d.escrow_status === 'escrowed').length
 
@@ -96,10 +117,14 @@ export default function MyDonations() {
               Track what you have supported, how much you have given, and whether each donation is still in escrow or has been released.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 w-full lg:w-auto">
             <Card className="p-4 text-center">
-              <p className="text-xs text-muted-foreground">Total Donated</p>
+              <p className="text-xs text-muted-foreground">Total Donated XRP</p>
               <p className="text-lg font-bold mt-1">{totalDonated.toLocaleString()} XRP</p>
+            </Card>
+            <Card className="p-4 text-center">
+              <p className="text-xs text-muted-foreground">Total Donated USD</p>
+              <p className="text-lg font-bold mt-1">{formatUsd(totalUsdDonated)}</p>
             </Card>
             <Card className="p-4 text-center">
               <p className="text-xs text-muted-foreground">In Escrow</p>
@@ -137,6 +162,7 @@ export default function MyDonations() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {donations.map((donation) => {
               const campaign = donation.campaigns
+              const donationUsdValue = getDonationUsdValue(donation)
               const explorerUrl = campaign
                 ? `${explorerBase(campaign.network)}/accounts/${campaign.recipient_wallet_address}`
                 : null
@@ -166,6 +192,25 @@ export default function MyDonations() {
                       <p className="text-xs text-muted-foreground">Amount</p>
                       <p className="text-2xl font-bold text-foreground">
                         {Number(donation.amount).toLocaleString()} {donation.currency}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {donation.currency === 'XRP' ? (
+                          donationUsdValue !== null
+                            ? (
+                              <>
+                                {formatUsd(donationUsdValue)} USD at donation time
+                                {donation.xrp_usd_quoted_at ? (
+                                  <>
+                                    {' '}
+                                    <span className="text-xs">({formatDateTime(donation.xrp_usd_quoted_at)})</span>
+                                  </>
+                                ) : null}
+                              </>
+                            )
+                            : 'USD price pending'
+                        ) : (
+                          'RLUSD is dollar-pegged, so the USD value matches the donation amount.'
+                        )}
                       </p>
                     </div>
                     <div className="text-right">

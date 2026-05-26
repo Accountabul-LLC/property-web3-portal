@@ -208,7 +208,7 @@ const Credentials = () => {
             <div>
               <h1 className="text-2xl font-bold">My Credentials</h1>
               <p className="text-sm text-muted-foreground">
-                Manage your on-chain credentials for platform access
+                Manage your on-chain credentials, including verified vendor status
               </p>
             </div>
           </div>
@@ -246,7 +246,7 @@ const Credentials = () => {
               <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm text-amber-700 dark:text-amber-400">
-                  Identity verification required before credentials can be issued.
+                  Identity verification required before vendor or trading credentials can be issued.
                 </p>
               </div>
               <Button size="sm" variant="outline" onClick={() => navigate('/kyc')}>

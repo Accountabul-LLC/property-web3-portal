@@ -9,6 +9,12 @@ import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, Receip
 
 const ADMIN_LINKS = [
   {
+    title: 'Verified Vendors',
+    description: 'Review vendor requests, manage business CRM details, and track verified badges across the network.',
+    href: '/admin/vendors',
+    icon: ShieldCheck,
+  },
+  {
     title: 'Causes',
     description: 'Review campaign submissions, approve or reject causes, and trigger escrow release when funds are ready.',
     href: '/admin/causes',
@@ -28,7 +34,7 @@ const ADMIN_LINKS = [
   },
   {
     title: 'Credential Management',
-    description: 'Manage the testnet XRPL credential issuer, approve wallet registrations, and issue or revoke trading credentials.',
+    description: 'Manage the verified vendor network, approve wallet registrations, and issue or revoke trading credentials.',
     href: '/admin/credentials',
     icon: KeyRound,
   },

@@ -75,7 +75,7 @@ function buildCors(req: Request): Record<string, string> {
     // Check account type
     const { data: profile, error: profileError } = await serviceClient
       .from('profiles')
-      .select('account_type')
+      .select('id, account_type, company_name')
       .eq('id', user.id)
       .single()
 
@@ -183,6 +183,23 @@ function buildCors(req: Request): Record<string, string> {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
+    }
+
+    if (credential_key === 'vendor') {
+      const { error: vendorError } = await serviceClient
+        .from('vendor_profiles')
+        .upsert({
+          user_id: user.id,
+          profile_id: profile.id,
+          company_name: profile.company_name ?? catalog.credential_name,
+          verification_status: 'requested',
+          requested_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'user_id' })
+
+      if (vendorError) {
+        console.warn('Failed to sync vendor request status:', vendorError.message)
+      }
     }
 
     return new Response(
