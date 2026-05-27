@@ -136,14 +136,21 @@ export function useMyDonations(userId?: string) {
         .from('campaign_donations')
         .select(`
           id, amount, currency, escrow_status, donor_message, donor_wallet_address, created_at,
-          xrp_usd_rate, xrp_usd_value, xrp_usd_quoted_at, xrp_usd_source,
           campaigns (id, title, slug, release_date, campaign_mode, network, currency, recipient_wallet_address)
         `)
         .eq('donor_user_id', userId)
         .order('created_at', { ascending: false })
       if (error) throw error
 
-      const rows = (data ?? []) as unknown as MyDonation[]
+
+      const rows = ((data ?? []) as any[]).map((d) => ({
+        ...d,
+        xrp_usd_rate: null,
+        xrp_usd_value: null,
+        xrp_usd_quoted_at: null,
+        xrp_usd_source: null,
+      })) as MyDonation[]
+
       const needsHistoricalQuote = rows
         .filter((donation) => donation.currency === 'XRP' && !getDonationUsdValue(donation))
         .map((donation) => Math.floor(new Date(donation.created_at).getTime() / 1000))
