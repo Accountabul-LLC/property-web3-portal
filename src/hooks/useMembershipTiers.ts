@@ -35,7 +35,7 @@ export function useMembershipTiers() {
         .eq('is_active', true)
         .order('sort_order')
       if (error) throw error
-      return data as MembershipTier[]
+      return data as unknown as MembershipTier[]
     },
     staleTime: 60_000,
   })
@@ -50,7 +50,7 @@ export function useAllMembershipTiers() {
         .select(MEMBERSHIP_TIER_SELECT)
         .order('sort_order')
       if (error) throw error
-      return data as MembershipTier[]
+      return data as unknown as MembershipTier[]
     },
     staleTime: 30_000,
   })
@@ -73,7 +73,7 @@ export function useMyMembership() {
         .eq('id', user.id)
         .single()
       if (error) throw error
-      return (data?.membership_tiers ?? null) as MembershipTier | null
+      return (data?.membership_tiers ?? null) as unknown as MembershipTier | null
     },
     staleTime: 30_000,
   })

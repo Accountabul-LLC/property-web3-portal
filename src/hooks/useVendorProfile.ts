@@ -32,7 +32,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
     queryKey: ['vendor-profile', user?.id, profileId],
     queryFn: async () => {
       if (!user || !profileId) return null
-      const { data, error } = await (supabase.from('vendor_profiles') as any)
+      const { data, error } = await ((supabase as any).from('vendor_profiles'))
         .select('*')
         .eq('user_id', user.id)
         .eq('profile_id', profileId)
@@ -62,7 +62,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
       updated_at: new Date().toISOString(),
     }
 
-    const { error } = await (supabase.from('vendor_profiles') as any)
+    const { error } = await ((supabase as any).from('vendor_profiles'))
       .upsert(payload, { onConflict: 'user_id' })
 
     if (error) throw error
