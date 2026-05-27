@@ -112,7 +112,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/causes" element={<AdminCauses />} />
                 <Route path="/admin/pricing" element={<AdminPricing />} />
-                <Route path="/pricing" element={lockedProductRoute} />
+                <Route path="/pricing" element={<AdminOrLocked><Pricing /></AdminOrLocked>} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/action-items" element={<ActionItems />} />
                 <Route path="/credentials" element={<Credentials />} />
