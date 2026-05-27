@@ -50,7 +50,7 @@ export function useAllMembershipTiers() {
         .select(MEMBERSHIP_TIER_SELECT)
         .order('sort_order')
       if (error) throw error
-      return data as MembershipTier[]
+      return data as unknown as MembershipTier[]
     },
     staleTime: 30_000,
   })
