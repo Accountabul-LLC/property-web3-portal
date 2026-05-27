@@ -32,7 +32,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
     queryKey: ['vendor-profile', user?.id, profileId],
     queryFn: async () => {
       if (!user || !profileId) return null
-      const { data, error } = await (supabase.from('vendor_profiles') as any)
+      const { data, error } = await ((supabase as any).from('vendor_profiles'))
         .select('*')
         .eq('user_id', user.id)
         .eq('profile_id', profileId)
