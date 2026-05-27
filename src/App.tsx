@@ -7,6 +7,7 @@ import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import KycGate from "./components/KycGate";
 import { LockedProductGate } from "./components/LockedProductGate";
+import { AdminOrLocked } from "./components/AdminOrLocked";
 import { RouteGuard } from "./components/RouteGuard";
 import { RouteSeo } from "./components/RouteSeo";
 import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
