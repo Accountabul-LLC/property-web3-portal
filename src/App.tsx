@@ -85,18 +85,18 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/tokenize" element={lockedProductRoute} />
+                <Route path="/tokenize" element={<AdminOrLocked><Tokenize /></AdminOrLocked>} />
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/payments" element={lockedProductRoute} />
-                <Route path="/payments/history" element={lockedProductRoute} />
-                <Route path="/payments/:id" element={lockedProductRoute} />
-                <Route path="/swap" element={lockedProductRoute} />
-                <Route path="/pools" element={lockedProductRoute} />
-                <Route path="/treasury" element={lockedProductRoute} />
-                <Route path="/smart-escrow" element={lockedProductRoute} />
-                <Route path="/escrow" element={lockedProductRoute} />
+                <Route path="/payments" element={<AdminOrLocked><Payments /></AdminOrLocked>} />
+                <Route path="/payments/history" element={<AdminOrLocked><PaymentsHistory /></AdminOrLocked>} />
+                <Route path="/payments/:id" element={<AdminOrLocked><PaymentDetail /></AdminOrLocked>} />
+                <Route path="/swap" element={<AdminOrLocked><Swap /></AdminOrLocked>} />
+                <Route path="/pools" element={<AdminOrLocked><Pools /></AdminOrLocked>} />
+                <Route path="/treasury" element={<AdminOrLocked><Treasury /></AdminOrLocked>} />
+                <Route path="/smart-escrow" element={<AdminOrLocked><SmartEscrow /></AdminOrLocked>} />
+                <Route path="/escrow" element={<AdminOrLocked><Escrow /></AdminOrLocked>} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 
