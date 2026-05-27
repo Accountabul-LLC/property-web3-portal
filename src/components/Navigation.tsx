@@ -74,6 +74,7 @@ const Navigation = () => {
 
 
   const currentPath = location.pathname;
+  const isLocked = (path: string) => isLockedProductPath(path) && !isAdminOrCompliance;
 
   return (
     <nav className="bg-card/80 backdrop-blur-md border-b border-border sticky top-0 z-50 shadow-card h-[72px]">
