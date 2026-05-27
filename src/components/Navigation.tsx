@@ -115,25 +115,25 @@ const Navigation = () => {
                   <button
                     key={item.path}
                     onClick={() => {
-                      if (isLockedProductPath(item.path)) return;
+                      if (isLocked(item.path)) return;
                       navigate(item.path);
                     }}
-                    disabled={isLockedProductPath(item.path)}
-                    title={isLockedProductPath(item.path) ? `${item.label} is locked for now` : undefined}
+                    disabled={isLocked(item.path)}
+                    title={isLocked(item.path) ? `${item.label} is locked for now` : undefined}
                     className={`flex items-center gap-1.5 px-2 xl:px-3 py-1.5 text-sm font-medium whitespace-nowrap rounded-md transition-all duration-300 ${
                       isActive
                         ? 'text-primary bg-primary/5'
-                        : isLockedProductPath(item.path)
+                        : isLocked(item.path)
                           ? 'text-muted-foreground/60 bg-muted/20 cursor-not-allowed'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                     }`}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    {isLockedProductPath(item.path) && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-80" />}
+                    {isLocked(item.path) && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-80" />}
                     {/* lg–xl: short label; xl+: full label */}
                     <span className="lg:inline xl:hidden">{item.shortLabel ?? item.label}</span>
                     <span className="hidden xl:inline">{item.label}</span>
-                    {isLockedProductPath(item.path) && (
+                    {isLocked(item.path) && (
                       <span className="ml-1 inline-flex items-center rounded-full border border-border/70 bg-muted/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Soon
                       </span>
@@ -271,24 +271,24 @@ const Navigation = () => {
                   <button
                     key={item.path}
                     onClick={() => {
-                      if (isLockedProductPath(item.path)) return;
+                      if (isLocked(item.path)) return;
                       navigate(item.path);
                       setIsMobileMenuOpen(false);
                     }}
-                    disabled={isLockedProductPath(item.path)}
-                    title={isLockedProductPath(item.path) ? `${item.label} is locked for now` : undefined}
+                    disabled={isLocked(item.path)}
+                    title={isLocked(item.path) ? `${item.label} is locked for now` : undefined}
                     className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
                       currentPath === item.path
                         ? 'bg-primary text-primary-foreground'
-                        : isLockedProductPath(item.path)
+                        : isLocked(item.path)
                           ? 'text-muted-foreground/60 bg-muted/20 cursor-not-allowed'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
-                    {isLockedProductPath(item.path) && <Lock className="w-3.5 h-3.5 opacity-80" />}
+                    {isLocked(item.path) && <Lock className="w-3.5 h-3.5 opacity-80" />}
                     <span>{item.label}</span>
-                    {isLockedProductPath(item.path) && (
+                    {isLocked(item.path) && (
                       <span className="ml-auto inline-flex items-center rounded-full border border-border/70 bg-muted/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                         Soon
                       </span>
