@@ -6,7 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import KycGate from "./components/KycGate";
-import { LockedProductGate } from "./components/LockedProductGate";
+
+import { AdminOrLocked } from "./components/AdminOrLocked";
 import { RouteGuard } from "./components/RouteGuard";
 import { RouteSeo } from "./components/RouteSeo";
 import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
@@ -47,8 +48,18 @@ const MyDonations = lazyPage(() => import("./pages/MyDonations"));
 const Settings = lazyPage(() => import("./pages/Settings"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
+const Tokenize = lazyPage(() => import("./pages/Tokenize"));
+const Payments = lazyPage(() => import("./pages/Payments"));
+const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
+const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
+const Swap = lazyPage(() => import("./pages/Swap"));
+const Pools = lazyPage(() => import("./pages/Pools"));
+const Treasury = lazyPage(() => import("./pages/Treasury"));
+const Escrow = lazyPage(() => import("./pages/Escrow"));
+const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
+const Pricing = lazyPage(() => import("./pages/Pricing"));
 
-const lockedProductRoute = <LockedProductGate />;
+
 
 function RouteFallback() {
   return (
@@ -74,18 +85,18 @@ const App = () => (
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/tokenize" element={lockedProductRoute} />
+                <Route path="/tokenize" element={<AdminOrLocked><Tokenize /></AdminOrLocked>} />
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/payments" element={lockedProductRoute} />
-                <Route path="/payments/history" element={lockedProductRoute} />
-                <Route path="/payments/:id" element={lockedProductRoute} />
-                <Route path="/swap" element={lockedProductRoute} />
-                <Route path="/pools" element={lockedProductRoute} />
-                <Route path="/treasury" element={lockedProductRoute} />
-                <Route path="/smart-escrow" element={lockedProductRoute} />
-                <Route path="/escrow" element={lockedProductRoute} />
+                <Route path="/payments" element={<AdminOrLocked><Payments /></AdminOrLocked>} />
+                <Route path="/payments/history" element={<AdminOrLocked><PaymentsHistory /></AdminOrLocked>} />
+                <Route path="/payments/:id" element={<AdminOrLocked><PaymentDetail /></AdminOrLocked>} />
+                <Route path="/swap" element={<AdminOrLocked><Swap /></AdminOrLocked>} />
+                <Route path="/pools" element={<AdminOrLocked><Pools /></AdminOrLocked>} />
+                <Route path="/treasury" element={<AdminOrLocked><Treasury /></AdminOrLocked>} />
+                <Route path="/smart-escrow" element={<AdminOrLocked><SmartEscrow /></AdminOrLocked>} />
+                <Route path="/escrow" element={<AdminOrLocked><Escrow /></AdminOrLocked>} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 
@@ -101,7 +112,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/causes" element={<AdminCauses />} />
                 <Route path="/admin/pricing" element={<AdminPricing />} />
-                <Route path="/pricing" element={lockedProductRoute} />
+                <Route path="/pricing" element={<AdminOrLocked><Pricing /></AdminOrLocked>} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/action-items" element={<ActionItems />} />
                 <Route path="/credentials" element={<Credentials />} />
