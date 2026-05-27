@@ -35,7 +35,7 @@ export function useMembershipTiers() {
         .eq('is_active', true)
         .order('sort_order')
       if (error) throw error
-      return data as MembershipTier[]
+      return data as unknown as MembershipTier[]
     },
     staleTime: 60_000,
   })
