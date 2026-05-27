@@ -330,6 +330,7 @@ export function useMyData() {
 
 ### 2026-05-27 | lovable
 - Fixed live-site blank/runtime issues by applying the missing `membership_tiers.price_label` database column and removing the isolated QR vendor chunk that caused a production initialization error.
+- Re-opened `/pricing`, `/payments`, payment detail/history, and `/escrow` as public/user routes instead of showing the generic `AdminOrLocked` product gate.
 - Gotcha: if published UI diverges from preview, check both live browser console chunks and live database schema drift before assuming frontend logic is broken.
 
 ### 2026-03-06 | claude-sonnet-4-6
