@@ -48,6 +48,16 @@ const MyDonations = lazyPage(() => import("./pages/MyDonations"));
 const Settings = lazyPage(() => import("./pages/Settings"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
+const Tokenize = lazyPage(() => import("./pages/Tokenize"));
+const Payments = lazyPage(() => import("./pages/Payments"));
+const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
+const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
+const Swap = lazyPage(() => import("./pages/Swap"));
+const Pools = lazyPage(() => import("./pages/Pools"));
+const Treasury = lazyPage(() => import("./pages/Treasury"));
+const Escrow = lazyPage(() => import("./pages/Escrow"));
+const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
+const Pricing = lazyPage(() => import("./pages/Pricing"));
 
 const lockedProductRoute = <LockedProductGate />;
 
