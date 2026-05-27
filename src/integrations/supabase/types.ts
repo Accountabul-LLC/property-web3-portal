@@ -797,6 +797,7 @@ export type Database = {
           is_popular: boolean
           name: string
           price_annual: number | null
+          price_label: string | null
           price_monthly: number
           slug: string
           sort_order: number
@@ -813,6 +814,7 @@ export type Database = {
           is_popular?: boolean
           name: string
           price_annual?: number | null
+          price_label?: string | null
           price_monthly: number
           slug: string
           sort_order?: number
@@ -829,6 +831,7 @@ export type Database = {
           is_popular?: boolean
           name?: string
           price_annual?: number | null
+          price_label?: string | null
           price_monthly?: number
           slug?: string
           sort_order?: number
