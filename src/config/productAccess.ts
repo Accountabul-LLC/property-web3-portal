@@ -11,13 +11,11 @@ export const LIVE_PRODUCT_PATHS = new Set([
 ])
 
 export const LOCKED_PRODUCT_PATHS = new Set([
-  '/pricing',
   '/treasury',
   '/swap',
   '/pools',
   '/tokenize',
   '/smart-escrow',
-  '/escrow',
 ])
 
 export function isLockedProductPath(path: string) {
