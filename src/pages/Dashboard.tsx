@@ -570,7 +570,7 @@ const Dashboard = () => {
         <VendorNetworkCard
           accountType={profile?.account_type}
           companyName={profile?.company_name}
-          isConnected={isConnected}
+          isConnected={!!activeWallet?.address}
           kycApproved={kycApproved}
           vendorCredential={vendorCredential}
           actionLoading={vendorActionLoading}
