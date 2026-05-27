@@ -89,14 +89,14 @@ const App = () => (
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />
-                <Route path="/payments" element={<AdminOrLocked><Payments /></AdminOrLocked>} />
-                <Route path="/payments/history" element={<AdminOrLocked><PaymentsHistory /></AdminOrLocked>} />
-                <Route path="/payments/:id" element={<AdminOrLocked><PaymentDetail /></AdminOrLocked>} />
+                <Route path="/payments" element={<Payments />} />
+                <Route path="/payments/history" element={<PaymentsHistory />} />
+                <Route path="/payments/:id" element={<PaymentDetail />} />
                 <Route path="/swap" element={<AdminOrLocked><Swap /></AdminOrLocked>} />
                 <Route path="/pools" element={<AdminOrLocked><Pools /></AdminOrLocked>} />
                 <Route path="/treasury" element={<AdminOrLocked><Treasury /></AdminOrLocked>} />
                 <Route path="/smart-escrow" element={<AdminOrLocked><SmartEscrow /></AdminOrLocked>} />
-                <Route path="/escrow" element={<AdminOrLocked><Escrow /></AdminOrLocked>} />
+                <Route path="/escrow" element={<Escrow />} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
 
@@ -112,7 +112,7 @@ const App = () => (
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/causes" element={<AdminCauses />} />
                 <Route path="/admin/pricing" element={<AdminPricing />} />
-                <Route path="/pricing" element={<AdminOrLocked><Pricing /></AdminOrLocked>} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/action-items" element={<ActionItems />} />
                 <Route path="/credentials" element={<Credentials />} />
