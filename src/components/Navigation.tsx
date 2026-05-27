@@ -43,6 +43,10 @@ const Navigation = () => {
   });
 
   React.useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
     if (!isMobileMenuOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsMobileMenuOpen(false);
