@@ -333,6 +333,10 @@ export function useMyData() {
 - Re-opened `/pricing`, `/payments`, payment detail/history, and `/escrow` as public/user routes instead of showing the generic `AdminOrLocked` product gate.
 - Gotcha: if published UI diverges from preview, check both live browser console chunks and live database schema drift before assuming frontend logic is broken.
 
+### 2026-05-27 | lovable
+- Fixed the published homepage white screen caused by production chunk initialization order (`Cannot access 'ne' before initialization` in `assets/vendor-*.js`) by removing the custom Vite `manualChunks` split and letting Rollup choose safe chunks.
+- Gotcha: if preview works but published is blank, inspect the published browser console before changing app logic; production-only bundle splitting can crash while dev/Vite preview stays healthy.
+
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
 - Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
