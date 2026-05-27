@@ -1,0 +1,1 @@
+CREATE POLICY "campaign_images_user_upload" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'campaign-images' AND auth.uid()::text = (storage.foldername(name))[1]);
