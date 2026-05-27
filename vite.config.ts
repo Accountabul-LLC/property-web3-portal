@@ -27,7 +27,6 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("recharts")) return "charts-vendor";
           if (id.includes("lucide-react")) return "icons-vendor";
           if (id.includes("date-fns")) return "date-vendor";
-          if (id.includes("qrcode.react") || id.includes("html5-qrcode")) return "qr-vendor";
           if (id.includes("react-hook-form") || id.includes("@hookform/resolvers") || id.includes("zod")) return "forms-vendor";
           if (id.includes("next-themes")) return "theme-vendor";
           if (id.includes("embla-carousel-react")) return "carousel-vendor";
