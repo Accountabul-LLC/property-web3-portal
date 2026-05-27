@@ -62,7 +62,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
       updated_at: new Date().toISOString(),
     }
 
-    const { error } = await (supabase.from('vendor_profiles') as any)
+    const { error } = await ((supabase as any).from('vendor_profiles'))
       .upsert(payload, { onConflict: 'user_id' })
 
     if (error) throw error
