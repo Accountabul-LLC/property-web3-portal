@@ -143,7 +143,14 @@ export function useMyDonations(userId?: string) {
       if (error) throw error
 
 
-      const rows = (data ?? []) as unknown as MyDonation[]
+      const rows = ((data ?? []) as any[]).map((d) => ({
+        ...d,
+        xrp_usd_rate: null,
+        xrp_usd_value: null,
+        xrp_usd_quoted_at: null,
+        xrp_usd_source: null,
+      })) as MyDonation[]
+
       const needsHistoricalQuote = rows
         .filter((donation) => donation.currency === 'XRP' && !getDonationUsdValue(donation))
         .map((donation) => Math.floor(new Date(donation.created_at).getTime() / 1000))
