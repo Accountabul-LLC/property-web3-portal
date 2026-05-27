@@ -253,7 +253,7 @@ const MarketplaceSection = () => {
           Business profiles can join as vendors first, then request the verified star badge for trusted marketplace visibility.
         </p>
         <Button variant="secondary" size="lg" asChild>
-          <Link to="/credentials">Request Verified Vendor Status</Link>
+          <Link to="/auth?mode=signup&intent=vendor">Request Verified Vendor Status</Link>
         </Button>
       </Card>
     </div>
