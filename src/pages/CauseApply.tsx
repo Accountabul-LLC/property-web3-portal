@@ -319,17 +319,89 @@ export default function CauseApply() {
 
             <FormField control={form.control} name="image_url" render={({ field }) => (
               <FormItem>
-                <FormLabel>Campaign Image URL (optional)</FormLabel>
-                <FormControl>
-                  <Input
-                    type="url"
-                    placeholder="https://example.com/image.jpg"
-                    {...field}
-                  />
-                </FormControl>
+                <FormLabel>Campaign Image (optional)</FormLabel>
+                <div className="space-y-3">
+                  {field.value ? (
+                    <div className="relative rounded-lg border border-border overflow-hidden bg-muted/20">
+                      <img
+                        src={field.value}
+                        alt="Campaign preview"
+                        className="w-full max-h-64 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => field.onChange('')}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-background/90 hover:bg-background border border-border flex items-center justify-center transition-colors"
+                        aria-label="Remove image"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center gap-2 cursor-pointer border-2 border-dashed border-border rounded-lg p-6 hover:bg-muted/30 transition-colors">
+                      {uploading ? (
+                        <>
+                          <Loader2 className="w-6 h-6 text-muted-foreground animate-spin" />
+                          <span className="text-sm text-muted-foreground">Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-6 h-6 text-muted-foreground" />
+                          <span className="text-sm font-medium text-foreground">Upload from your device</span>
+                          <span className="text-xs text-muted-foreground">PNG, JPG, or WebP up to 5MB</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp"
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0]
+                          if (!file) return
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('File must be 5MB or smaller')
+                            return
+                          }
+                          if (!user) return
+                          setUploading(true)
+                          try {
+                            const ext = file.name.split('.').pop() || 'jpg'
+                            const path = `${user.id}/${Date.now()}.${ext}`
+                            const { error: upErr } = await supabase.storage
+                              .from('campaign-images')
+                              .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type })
+                            if (upErr) throw upErr
+                            const { data } = supabase.storage.from('campaign-images').getPublicUrl(path)
+                            field.onChange(data.publicUrl)
+                            toast.success('Image uploaded')
+                          } catch (err: any) {
+                            toast.error(err.message || 'Upload failed')
+                          } finally {
+                            setUploading(false)
+                            e.target.value = ''
+                          }
+                        }}
+                      />
+                    </label>
+                  )}
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or paste a URL</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <FormControl>
+                    <Input
+                      type="url"
+                      placeholder="https://example.com/image.jpg"
+                      {...field}
+                    />
+                  </FormControl>
+                </div>
                 <FormMessage />
               </FormItem>
             )} />
+
 
             <div className="border-t border-border pt-6">
               <h3 className="font-medium text-foreground mb-4">Contact & Review</h3>
