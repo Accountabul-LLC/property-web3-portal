@@ -88,12 +88,12 @@ export default function VendorCRMPanel() {
     queryKey: ['admin-vendor-crm'],
     queryFn: async () => {
       const [vendorRes, appRes, profileRes] = await Promise.all([
-        (supabase.from('vendor_profiles') as any).select('*').order('updated_at', { ascending: false }),
-        (supabase.from('credential_applications') as any)
+        ((supabase as any).from('vendor_profiles')).select('*').order('updated_at', { ascending: false }),
+        ((supabase as any).from('credential_applications'))
           .select('id, user_id, wallet_address, credential_key, status, applied_at, reviewed_at, rejection_reason, issued_at, expires_at, accepted_at, revoked_at, notes, wallet_credential_id')
           .eq('credential_key', 'vendor')
           .order('applied_at', { ascending: false }),
-        (supabase.from('profiles') as any)
+        ((supabase as any).from('profiles'))
           .select('id, first_name, last_name, full_name, email, company_name, account_type, avatar_url'),
       ])
 
