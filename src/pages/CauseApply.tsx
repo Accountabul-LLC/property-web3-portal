@@ -48,6 +48,7 @@ export default function CauseApply() {
   const { user, loading } = useAuth()
   const { activeAddress } = useActiveWallet()
   const [submitted, setSubmitted] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const minDate = new Date()
   minDate.setDate(minDate.getDate() + 30)
