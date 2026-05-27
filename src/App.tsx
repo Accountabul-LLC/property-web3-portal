@@ -59,7 +59,7 @@ const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const Pricing = lazyPage(() => import("./pages/Pricing"));
 
-const lockedProductRoute = <LockedProductGate />;
+
 
 function RouteFallback() {
   return (
