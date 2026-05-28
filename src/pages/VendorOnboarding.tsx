@@ -1,443 +1,261 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
-import { Seo } from '@/components/Seo';
-import Navigation from '@/components/Navigation';
-import Footer from '@/components/Footer';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle, Loader2, ShieldCheck, Building2, CreditCard, Award, ChevronDown, ChevronUp } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '@/hooks/useAuth';
-import { useProfile } from '@/hooks/useProfile';
-import { useVendorProfile } from '@/hooks/useVendorProfile';
-import { useKycStatus } from '@/hooks/useKycStatus';
-import { useMyMembership, useMembershipTiers, useSelectMembership } from '@/hooks/useMembershipTiers';
-import { useVendorApplication } from '@/hooks/useVendorApplication';
-import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
-import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
+import { AlertTriangle, ArrowRight, CheckCircle2, Loader2, Lock, Wallet } from 'lucide-react'
+import Navigation from '@/components/Navigation'
+import Footer from '@/components/Footer'
+import { Seo } from '@/components/Seo'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { VendorBenefitsCard } from '@/components/vendors/VendorBenefitsCard'
+import { useVendorApplication } from '@/hooks/useVendorApplication'
+import { useKycStatus } from '@/hooks/useKycStatus'
+import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useProfile } from '@/hooks/useProfile'
+import { useAuth } from '@/hooks/useAuth'
+import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
 
-type StepStatus = 'todo' | 'in_progress' | 'done';
-
-interface OnboardingStep {
-  key: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  status: StepStatus;
-  cta?: { label: string; onClick: () => void };
-  body?: React.ReactNode;
-}
-
-function StepIcon({ status }: { status: StepStatus }) {
-  if (status === 'done') return <CheckCircle2 className="w-6 h-6 text-success" />;
-  if (status === 'in_progress') return <Loader2 className="w-6 h-6 text-primary animate-spin" />;
-  return <Circle className="w-6 h-6 text-muted-foreground" />;
-}
-
-function StatusBadge({ status }: { status: StepStatus }) {
-  const label = status === 'done' ? 'Complete' : status === 'in_progress' ? 'In progress' : 'To do';
-  return (
-    <Badge
-      variant="outline"
-      className={cn(
-        'hidden w-24 justify-center whitespace-nowrap sm:inline-flex',
-        status === 'done' && 'border-success/40 text-success',
-        status === 'in_progress' && 'border-primary/40 text-primary',
-      )}
-    >
-      {label}
-    </Badge>
-  );
-}
-
-const VendorOnboarding = () => {
-  const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading, updateProfile } = useProfile();
-  const [upgrading, setUpgrading] = useState(false);
-  const { vendorProfile, isLoading: vendorLoading } = useVendorProfile(profile?.id);
-  const { status: kycStatus, rejectionReason, isLoading: kycLoading } = useKycStatus();
-  const { data: myTier, isLoading: membershipLoading } = useMyMembership();
-  const { data: tiers, isLoading: tiersLoading } = useMembershipTiers();
-  const selectMembership = useSelectMembership();
-
+export default function VendorOnboarding() {
+  const navigate = useNavigate()
+  const { user, loading: authLoading } = useAuth()
+  const { profile, loading: profileLoading } = useProfile()
+  const { isApproved: kycApproved, isLoading: kycLoading } = useKycStatus()
+  const { openConnectModal, isConnected, activeAddress } = useActiveWallet()
   const {
-    submitVendorApplication,
+    vendorApplication,
+    vendorEligibility,
+    status,
+    isVerified,
     isPendingReview,
-    isVerified: isCredentialVerified,
-    activeAddress,
-  } = useVendorApplication();
-  const [submitting, setSubmitting] = useState(false);
+    canApply,
+    submitVendorApplication,
+    isLoading,
+  } = useVendorApplication()
+  const [submitting, setSubmitting] = useState(false)
 
-  const isBusiness = profile?.account_type === 'business';
-  const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading || membershipLoading || tiersLoading));
-
-  async function handleBusinessUpgrade() {
-    setUpgrading(true);
-    const { error } = await updateProfile({ account_type: 'business' });
-    setUpgrading(false);
-
-    if (error) {
-      toast.error(error);
-      return;
-    }
-
-    toast.success('Business account enabled. Continue your vendor setup.');
-  }
-
-  // 1. Business profile completeness
-  const profileStatus: StepStatus = useMemo(() => {
-    if (!vendorProfile) return 'todo';
-    const hasRequired =
-      !!vendorProfile.company_name &&
-      !!vendorProfile.business_email &&
-      !!vendorProfile.business_phone &&
-      !!vendorProfile.place_of_business;
-    return hasRequired ? 'done' : 'in_progress';
-  }, [vendorProfile]);
-
-  // 2. KYC status
-  const kycStepStatus: StepStatus =
-    kycStatus === 'approved'
-      ? 'done'
-      : kycStatus === 'submitted' || kycStatus === 'under_review' || kycStatus === 'in_progress'
-      ? 'in_progress'
-      : 'todo';
-
-  // 3. Membership status — prefer a dedicated vendor tier, then use the Professional plan as the current vendor-network path.
-  const vendorTier = useMemo(
-    () => tiers?.find((t) => t.slug === 'vendor') ?? tiers?.find((t) => t.slug === 'professional') ?? null,
-    [tiers],
-  );
-  const paymentStatus: StepStatus = vendorTier && myTier?.id === vendorTier.id ? 'done' : 'todo';
-
-  const completedCount = [profileStatus, kycStepStatus, paymentStatus].filter((s) => s === 'done').length;
-  const progress = (completedCount / 3) * 100;
-  const allDone = completedCount === 3;
-  // isVerified: either the profile table marks them verified OR their credential application is active
-  const isVerified = vendorProfile?.verification_status === 'verified' || isCredentialVerified;
-
-  // Accordion: track which step is expanded
-  type StepKey = 'profile' | 'kyc' | 'payment';
-  const stepStatuses: Record<StepKey, StepStatus> = {
-    profile: profileStatus,
-    kyc: kycStepStatus,
-    payment: paymentStatus,
-  };
-  const firstIncomplete = (): StepKey | null => {
-    const order: StepKey[] = ['profile', 'kyc', 'payment'];
-    return order.find((k) => stepStatuses[k] !== 'done') ?? null;
-  };
-  const [expandedStep, setExpandedStep] = useState<StepKey | null>(null);
-  const [initialized, setInitialized] = useState(false);
-  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
-
-  // Initialize expanded step once data is loaded
   useEffect(() => {
-    if (!loading && !initialized) {
-      setExpandedStep(firstIncomplete());
-      setInitialized(true);
+    if (authLoading || profileLoading || kycLoading || isLoading) return
+    if (!user) {
+      navigate('/auth?next=/vendor/onboarding', { replace: true })
+      return
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, initialized]);
-
-  function toggleStep(key: StepKey) {
-    setExpandedStep((prev) => (prev === key ? null : key));
-  }
-
-  function advanceAfterProfileSave() {
-    const order: StepKey[] = ['kyc', 'payment'];
-    const next = order.find((k) => stepStatuses[k] !== 'done') ?? null;
-    setExpandedStep(next);
-    if (next) {
-      setTimeout(() => {
-        cardRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+    const normalized = normalizeVendorStatus(vendorApplication?.status)
+    if (normalized === 'active') {
+      navigate(getVendorNextRoute(normalized), { replace: true })
+      return
     }
-  }
-
-  async function handleSelectVendorPlan() {
-    if (!vendorTier) {
-      toast.error('Vendor membership is not available yet.');
-      return;
+    if (normalized !== 'none' && normalized !== 'unknown') {
+      navigate(getVendorNextRoute(normalized), { replace: true })
     }
+  }, [
+    authLoading,
+    profileLoading,
+    kycLoading,
+    isLoading,
+    navigate,
+    user,
+    vendorApplication?.status,
+  ])
 
+  const blockers: string[] = []
+  if ((profile?.account_type ?? 'individual') !== 'business') blockers.push('Switch your account type to business.')
+  if (!isConnected) blockers.push('Connect the wallet tied to this application.')
+  if (!kycApproved) blockers.push('Complete identity verification first.')
+
+  const vendorEligibilityBlockers = vendorEligibility?.blocking_reasons ?? []
+  const mergedBlockers = [...new Set([...blockers, ...vendorEligibilityBlockers])]
+
+  const handleSubmit = async () => {
+    setSubmitting(true)
     try {
-      await selectMembership.mutateAsync(vendorTier.id);
-      toast.success(`${vendorTier.name} membership activated.`);
-      setExpandedStep(kycStepStatus !== 'done' ? 'kyc' : null);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to activate vendor membership');
+      await submitVendorApplication()
+      toast.success('Vendor application submitted. We will review it within 24 to 48 hours.')
+      navigate('/vendor/status', { replace: true })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not submit vendor application.')
+    } finally {
+      setSubmitting(false)
     }
   }
-
-  // Redirect unauthenticated users to vendor signup
-  if (!authLoading && !user) {
-    return <Navigate to="/auth/vendor" replace />;
-  }
-
-  const steps: OnboardingStep[] = [
-    {
-      key: 'profile',
-      title: 'Business Profile',
-      description: 'Tell us about your company. We use this for your vendor badge and CRM record.',
-      icon: Building2,
-      status: profileStatus,
-      body: <VendorProfileForm profileId={profile?.id} companyName={profile?.company_name} onSaved={advanceAfterProfileSave} />,
-    },
-    {
-      key: 'kyc',
-      title: 'Identity Verification',
-      description:
-        kycStatus === 'rejected'
-          ? 'Your previous KYC submission was rejected. Please resubmit to continue.'
-          : 'Verify the principal owner with our identity check. Required for vendor approval.',
-      icon: ShieldCheck,
-      status: kycStepStatus,
-      body: (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <p className="text-sm font-medium">Current status: {kycStatus.replace(/_/g, ' ')}</p>
-            {rejectionReason && <p className="mt-1 text-sm text-muted-foreground">{rejectionReason}</p>}
-            <p className="mt-1 text-sm text-muted-foreground">
-              Complete identity verification when you're ready. You can return here and continue to vendor membership at any time.
-            </p>
-          </div>
-          {kycStepStatus !== 'done' && (
-            <div className="flex justify-end">
-              <Button
-                onClick={() => navigate(kycStatus === 'submitted' || kycStatus === 'under_review' ? '/kyc/status' : '/kyc')}
-                variant={kycStepStatus === 'in_progress' ? 'default' : 'outline'}
-              >
-                {kycStatus === 'submitted' || kycStatus === 'under_review' ? 'View KYC Status' : 'Start Identity Verification'}
-              </Button>
-            </div>
-          )}
-        </div>
-      ),
-    },
-    {
-      key: 'payment',
-      title: 'Vendor Membership',
-      description: vendorTier
-        ? `Activate the ${vendorTier.name} plan to join the verified vendor network.`
-        : 'The vendor membership tier is being finalized. Check back soon or contact support.',
-      icon: CreditCard,
-      status: paymentStatus,
-      body: (
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-muted/30 p-4">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm font-medium">{vendorTier ? vendorTier.name : 'Vendor membership'}</p>
-              {vendorTier && <span className="text-sm text-muted-foreground">${Number(vendorTier.price_monthly).toFixed(0)}/month</span>}
-            </div>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {paymentStatus === 'done'
-                ? 'Your vendor membership is active for this onboarding flow.'
-                : 'Activate the vendor membership manually here, or review all available plans first.'}
-            </p>
-          </div>
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="outline" onClick={() => navigate('/pricing')}>Review Plans</Button>
-            {paymentStatus !== 'done' && vendorTier && (
-              <Button onClick={handleSelectVendorPlan} disabled={selectMembership.isPending}>
-                {selectMembership.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Activate Vendor Membership
-              </Button>
-            )}
-          </div>
-        </div>
-      ),
-    },
-  ];
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-background">
       <Seo
-        title="Vendor Onboarding | Accountabul"
-        description="Complete your business profile, verify your identity, and activate your vendor membership to earn the verified badge on Accountabul."
+        title="Apply to Become a Vendor | Accountabul"
+        description="Submit a paid verified vendor application for manual review. Accountabul reviews vendor applications within 24 to 48 hours."
         path="/vendor/onboarding"
+        noindex
       />
       <Navigation />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 py-12">
-        <div className="text-center mb-8">
-          <Badge variant="secondary" className="mb-3">Verified Vendor Network</Badge>
-          <h1 className="text-3xl sm:text-4xl font-bold mb-3 bg-gradient-primary bg-clip-text text-transparent">
-            Become a Verified Vendor
-          </h1>
-          <p className="text-muted-foreground max-w-xl mx-auto">
-            Three quick steps to unlock the verified badge across the marketplace and start receiving qualified leads.
-          </p>
-        </div>
-
-        {/* Progress bar */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between mb-2 text-sm">
-              <span className="font-medium">Onboarding progress</span>
-              <span className="text-muted-foreground">{completedCount} of 3 complete</span>
+      <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-6">
+            <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
+              Verified vendor onboarding
+            </Badge>
+            <div className="space-y-3">
+              <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+                Submit your business for manual review.
+              </h1>
+              <p className="max-w-2xl text-lg text-muted-foreground">
+                Verified vendors are reviewed by the Accountabul team. Once submitted, you should hear back within 24
+                to 48 hours. If approved, you get the vendor credential and the business-facing tools that go with it.
+              </p>
             </div>
-            <Progress value={progress} className="h-2" />
-          </CardContent>
-        </Card>
 
-        {loading ? (
-          <Card>
-            <CardContent className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-            </CardContent>
-          </Card>
-        ) : profile && !isBusiness ? (
-          <Card>
-            <CardContent className="pt-6 text-center space-y-4">
-              <Building2 className="w-12 h-12 text-primary mx-auto" />
-              <h2 className="text-xl font-semibold">Upgrade to a business account</h2>
-              <p className="text-muted-foreground max-w-lg mx-auto">
-                Verified vendor access is available to business accounts. Upgrade your account first, then continue the vendor profile, KYC, and membership steps.
-              </p>
-              <Button onClick={handleBusinessUpgrade} disabled={upgrading}>
-                {upgrading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                Upgrade to Business Account
-              </Button>
-            </CardContent>
-          </Card>
-        ) : isVerified ? (
-          <Card className="border-success/30 bg-success/5">
-            <CardContent className="pt-6 text-center space-y-4">
-              <Award className="w-12 h-12 text-success mx-auto" />
-              <h2 className="text-xl font-semibold">You're a verified vendor</h2>
-              <p className="text-muted-foreground">
-                Your business is showing the verified badge across the Accountabul marketplace.
-              </p>
-              <Button onClick={() => navigate('/vendor/dashboard')}>Go to Vendor Dashboard</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {steps.map((step, idx) => {
-              const StepHeaderIcon = step.icon;
-              const stepKey = step.key as StepKey;
-              const isExpanded = expandedStep === stepKey;
-              const hasContent = !!(step.body || step.cta);
-              return (
-                <Card
-                  key={step.key}
-                  ref={(el) => { cardRefs.current[step.key] = el; }}
-                  className={cn(
-                    'overflow-hidden',
-                    step.status === 'done'
-                      ? 'border-success/30 bg-success/5'
-                      : step.status === 'in_progress'
-                      ? 'border-primary/40'
-                      : '',
-                  )}
-                >
-                  <CardHeader
-                    className="cursor-pointer select-none transition-colors hover:bg-muted/30"
-                    onClick={() => toggleStep(stepKey)}
-                    role="button"
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        toggleStep(stepKey);
-                      }
-                    }}
-                    aria-expanded={isExpanded}
-                  >
-                    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-4">
-                      <div className="pt-0.5">
-                        <StepIcon status={step.status} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex min-w-0 items-center gap-2 mb-1">
-                          <StepHeaderIcon className="w-4 h-4 text-muted-foreground" />
-                          <CardTitle className="text-base leading-snug">
-                            Step {idx + 1}: {step.title}
-                          </CardTitle>
-                        </div>
-                        <CardDescription>{step.description}</CardDescription>
-                      </div>
-                      <div className="flex items-center justify-end gap-3 text-muted-foreground">
-                        <StatusBadge status={step.status} />
-                        <span className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background">
-                          {hasContent && (isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
-                        </span>
-                      </div>
+            <Card className="border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Lock className="h-5 w-5 text-primary" />
+                  What this onboarding covers
+                </CardTitle>
+                <CardDescription>
+                  This is a paid, manually reviewed onboarding flow, not an instant badge generator.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>1. You connect a wallet.</p>
+                <p>2. You confirm a business account and KYC status.</p>
+                <p>3. We review the application and come back with an answer.</p>
+                <p>4. Approved vendors receive a verified vendor credential and dashboard access.</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Payment step</CardTitle>
+                <CardDescription>
+                  If the onboarding fee is handled separately, use the payments rail first and then submit the vendor
+                  file for review.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-3">
+                <Button asChild variant="outline">
+                  <Link to="/payments">Open payments</Link>
+                </Button>
+                <Button asChild variant="ghost">
+                  <Link to="/pricing">Review membership plans</Link>
+                </Button>
+              </CardContent>
+            </Card>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Card className="border-border/70 bg-card/90">
+                <CardContent className="p-4">
+                  <Wallet className="mb-2 h-5 w-5 text-primary" />
+                  <p className="font-medium">Wallet required</p>
+                  <p className="text-sm text-muted-foreground">We attach the review to the wallet you choose.</p>
+                </CardContent>
+              </Card>
+              <Card className="border-border/70 bg-card/90">
+                <CardContent className="p-4">
+                  <CheckCircle2 className="mb-2 h-5 w-5 text-primary" />
+                  <p className="font-medium">Business account required</p>
+                  <p className="text-sm text-muted-foreground">Vendor applications are for businesses only.</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {mergedBlockers.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/80 dark:border-amber-900/40 dark:bg-amber-950/20">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    Before you submit
+                  </CardTitle>
+                  <CardDescription>
+                    These items need attention before we can accept the vendor file.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {mergedBlockers.map((item) => (
+                    <div key={item} className="rounded-lg border border-amber-200 bg-white/70 p-3 dark:border-amber-900/30 dark:bg-background/50">
+                      {item}
                     </div>
-                  </CardHeader>
-                  {hasContent && isExpanded && (
-                    <CardContent>
-                      {step.body}
-                      {step.cta && (
-                        <div className="flex justify-end">
-                          <Button onClick={step.cta.onClick} variant={step.status === 'in_progress' ? 'default' : 'outline'}>
-                            {step.cta.label}
-                          </Button>
-                        </div>
-                      )}
-                    </CardContent>
-                  )}
-                </Card>
-              );
-            })}
-
-            {allDone && (
-              <Card className="border-primary/40 bg-primary/5">
-                <CardContent className="pt-6 text-center space-y-3">
-                  <Award className="w-10 h-10 text-primary mx-auto" />
-                  <h3 className="font-semibold text-lg">All steps complete!</h3>
-                  {isPendingReview ? (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        Your application has been submitted. Our team will review it and issue your verified vendor badge shortly.
-                      </p>
-                      <Button onClick={() => navigate('/vendor/status')}>View Application Status</Button>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">
-                        {activeAddress
-                          ? "You're ready to submit. Our team will review your application and issue your verified vendor badge."
-                          : 'Connect your wallet to submit your vendor application for review.'}
-                      </p>
-                      <Button
-                        disabled={!activeAddress || submitting}
-                        onClick={async () => {
-                          if (!activeAddress) {
-                            toast.error('Connect a wallet to submit your application.');
-                            return;
-                          }
-                          setSubmitting(true);
-                          try {
-                            await submitVendorApplication();
-                            toast.success("Application submitted! We'll review it shortly.");
-                            navigate('/vendor/status');
-                          } catch (err) {
-                            toast.error(err instanceof Error ? err.message : 'Submission failed. Please try again.');
-                          } finally {
-                            setSubmitting(false);
-                          }
-                        }}
-                      >
-                        {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                        {activeAddress ? 'Submit Application' : 'Connect Wallet to Submit'}
+                  ))}
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    {!isConnected && (
+                      <Button variant="outline" onClick={openConnectModal}>
+                        Connect wallet
                       </Button>
-                    </>
-                  )}
+                    )}
+                    {!kycApproved && (
+                      <Button asChild variant="outline">
+                        <Link to="/kyc">Complete KYC</Link>
+                      </Button>
+                    )}
+                    {(profile?.account_type ?? 'individual') !== 'business' && (
+                      <Button asChild variant="outline">
+                        <Link to="/settings">Switch to business account</Link>
+                      </Button>
+                    )}
+                  </div>
                 </CardContent>
               </Card>
             )}
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                size="lg"
+                onClick={handleSubmit}
+                disabled={submitting || !canApply}
+              >
+                {submitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                Submit paid vendor application
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              <Button asChild variant="outline" size="lg">
+                <Link to="/vendor/status">Check status</Link>
+              </Button>
+            </div>
+
+            <p className="text-xs text-muted-foreground">
+              We will confirm the result by review, not by automatic badge issuance.
+            </p>
           </div>
-        )}
+
+          <div className="space-y-6">
+            <VendorBenefitsCard
+              primaryHref="/vendor/status"
+              primaryLabel="Check status"
+              secondaryHref="/vendor"
+              secondaryLabel="Back to vendor entry"
+            />
+
+            <Card className="border-border/70 bg-card/90">
+              <CardHeader>
+                <CardTitle className="text-xl">Current application snapshot</CardTitle>
+                <CardDescription>Status and routing for this account.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="rounded-xl bg-muted/40 p-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</div>
+                  <div className="mt-1 font-medium capitalize">{status.replace('_', ' ')}</div>
+                </div>
+                <div className="rounded-xl bg-muted/40 p-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Next step</div>
+                  <div className="mt-1 font-medium">
+                    {isVerified
+                      ? 'Vendor dashboard'
+                      : isPendingReview
+                        ? 'Vendor status page'
+                        : 'Submit application'}
+                  </div>
+                </div>
+                <div className="rounded-xl bg-muted/40 p-3">
+                  <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Wallet</div>
+                  <div className="mt-1 font-medium">{activeAddress ?? 'Not connected'}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </main>
 
       <Footer />
     </div>
-  );
-};
+  )
+}
 
-export default VendorOnboarding;

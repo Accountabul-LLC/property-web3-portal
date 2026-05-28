@@ -6,8 +6,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import KycGate from "./components/KycGate";
-
-import { AdminOrLocked } from "./components/AdminOrLocked";
 import { RouteGuard } from "./components/RouteGuard";
 import { RouteSeo } from "./components/RouteSeo";
 import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
@@ -19,11 +17,8 @@ const lazyPage = <T extends Record<string, unknown>>(loader: () => Promise<{ def
 
 const Index = lazyPage(() => import("./pages/Index"));
 const Marketplace = lazyPage(() => import("./pages/Marketplace"));
+const Tokenize = lazyPage(() => import("./pages/Tokenize"));
 const Auth = lazyPage(() => import("./pages/Auth"));
-const AuthIndividual = lazyPage(() => import("./pages/AuthIndividual"));
-const AuthBusiness = lazyPage(() => import("./pages/AuthBusiness"));
-const AuthVendor = lazyPage(() => import("./pages/AuthVendor"));
-const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
 const Dashboard = lazyPage(() => import("./pages/Dashboard"));
 const Professionals = lazyPage(() => import("./pages/Professionals"));
@@ -31,13 +26,15 @@ const AIAgents = lazyPage(() => import("./pages/AIAgents"));
 const Portfolio = lazyPage(() => import("./pages/Portfolio"));
 const PropertyDetail = lazyPage(() => import("./pages/PropertyDetail"));
 const Mint = lazyPage(() => import("./pages/Mint"));
+const Swap = lazyPage(() => import("./pages/Swap"));
+const Pools = lazyPage(() => import("./pages/Pools"));
+const Treasury = lazyPage(() => import("./pages/Treasury"));
 const Kyc = lazyPage(() => import("./pages/Kyc"));
 const KycStatus = lazyPage(() => import("./pages/KycStatus"));
 const AdminKyc = lazyPage(() => import("./pages/AdminKyc"));
 const Admin = lazyPage(() => import("./pages/Admin"));
 const AdminAIPanel = lazyPage(() => import("./pages/AdminAIPanel"));
 const AdminCredentials = lazyPage(() => import("./pages/AdminCredentials"));
-const AdminVendors = lazyPage(() => import("./pages/AdminVendors"));
 const AdminPayments = lazyPage(() => import("./pages/AdminPayments"));
 const AdminPaymentsConsole = lazyPage(() => import("./pages/AdminPaymentsConsole"));
 const AdminUsers = lazyPage(() => import("./pages/AdminUsers"));
@@ -49,25 +46,19 @@ const Causes = lazyPage(() => import("./pages/Causes"));
 const CauseDetail = lazyPage(() => import("./pages/CauseDetail"));
 const CauseApply = lazyPage(() => import("./pages/CauseApply"));
 const MyDonations = lazyPage(() => import("./pages/MyDonations"));
-const Settings = lazyPage(() => import("./pages/Settings"));
-const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
-const NotFound = lazyPage(() => import("./pages/NotFound"));
-const Tokenize = lazyPage(() => import("./pages/Tokenize"));
 const Payments = lazyPage(() => import("./pages/Payments"));
+const Settings = lazyPage(() => import("./pages/Settings"));
 const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
 const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
-const Swap = lazyPage(() => import("./pages/Swap"));
-const Pools = lazyPage(() => import("./pages/Pools"));
-const Treasury = lazyPage(() => import("./pages/Treasury"));
+const Pricing = lazyPage(() => import("./pages/Pricing"));
 const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
-const Pricing = lazyPage(() => import("./pages/Pricing"));
+const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const Vendor = lazyPage(() => import("./pages/Vendor"));
+const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
-const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
-const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
-
+const NotFound = lazyPage(() => import("./pages/NotFound"));
 
 function RouteFallback() {
   return (
@@ -90,23 +81,20 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/auth/individual" element={<AuthIndividual />} />
-                <Route path="/auth/business" element={<AuthBusiness />} />
-                <Route path="/auth/vendor" element={<AuthVendor />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
-                <Route path="/tokenize" element={<AdminOrLocked><Tokenize /></AdminOrLocked>} />
+                <Route path="/tokenize" element={<RouteGuard adminOnly><KycGate><Tokenize /></KycGate></RouteGuard>} />
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />
                 <Route path="/payments" element={<Payments />} />
-                <Route path="/payments/history" element={<PaymentsHistory />} />
-                <Route path="/payments/:id" element={<PaymentDetail />} />
-                <Route path="/swap" element={<AdminOrLocked><Swap /></AdminOrLocked>} />
-                <Route path="/pools" element={<AdminOrLocked><Pools /></AdminOrLocked>} />
-                <Route path="/treasury" element={<AdminOrLocked><Treasury /></AdminOrLocked>} />
-                <Route path="/smart-escrow" element={<AdminOrLocked><SmartEscrow /></AdminOrLocked>} />
+                <Route path="/payments/history" element={<RouteGuard><KycGate><PaymentsHistory /></KycGate></RouteGuard>} />
+                <Route path="/payments/:id" element={<RouteGuard><KycGate><PaymentDetail /></KycGate></RouteGuard>} />
+                <Route path="/swap" element={<RouteGuard adminOnly><Swap /></RouteGuard>} />
+                <Route path="/pools" element={<RouteGuard adminOnly><Pools /></RouteGuard>} />
+                <Route path="/treasury" element={<Treasury />} />
+                <Route path="/smart-escrow" element={<RouteGuard adminOnly><SmartEscrow /></RouteGuard>} />
                 <Route path="/escrow" element={<Escrow />} />
                 <Route path="/property/:id" element={<PropertyDetail />} />
                 <Route path="/mint" element={<RouteGuard adminOnly><KycGate><Mint /></KycGate></RouteGuard>} />
@@ -117,7 +105,6 @@ const App = () => (
                 <Route path="/admin/kyc" element={<AdminKyc />} />
                 <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
                 <Route path="/admin/credentials" element={<AdminCredentials />} />
-                <Route path="/admin/vendors" element={<AdminVendors />} />
                 <Route path="/admin/payments" element={<AdminPayments />} />
                 <Route path="/admin/payments/console" element={<AdminPaymentsConsole />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
@@ -132,16 +119,12 @@ const App = () => (
                 <Route path="/causes/my-donations" element={<MyDonations />} />
                 <Route path="/causes/:slug" element={<CauseDetail />} />
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
-                {/* Vendor private routes — specific paths must come before /:slug */}
                 <Route path="/vendor" element={<Vendor />} />
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/vendor/status" element={<VendorStatus />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                {/* Public vendor network */}
-                <Route path="/vendors" element={<VendorsDirectory />} />
-                <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
-                {/* Legacy redirects */}
-                <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
+                <Route path="/vendors" element={<Navigate to="/vendor" replace />} />
+                <Route path="/vendors/apply" element={<Navigate to="/vendor/onboarding" replace />} />
                 <Route path="/vendors/status" element={<Navigate to="/vendor/status" replace />} />
                 <Route path="/vendors/dashboard" element={<Navigate to="/vendor/dashboard" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

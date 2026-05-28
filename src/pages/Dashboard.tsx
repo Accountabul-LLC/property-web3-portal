@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import { WalletRegistrationPanel } from '@/components/WalletRegistrationPanel';
 import { WalletHistoryPanel } from '@/components/WalletHistoryPanel';
@@ -14,15 +14,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
-import { useCredentialEligibility } from '@/hooks/useCredentialEligibility';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { User, Building2, Edit2, Save, Plus, Wallet, Trash2, Pencil, Check, X, AlertCircle, Camera, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useKycStatus } from '@/hooks/useKycStatus';
+import { useVendorApplication } from '@/hooks/useVendorApplication';
+import { getVendorStatusLabel } from '@/lib/vendorFlow';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { VendorNetworkCard } from '@/components/vendor/VendorNetworkCard';
-import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
-import { getVendorCredential, VERIFIED_VENDOR_CREDENTIAL_KEY } from '@/lib/vendorNetwork';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -43,6 +41,14 @@ const US_STATES = [
   'VA','WA','WV','WI','WY','DC',
 ];
 
+const PROFILE_NAME_MAX = 50;
+const COMPANY_NAME_MAX = 100;
+const ADDRESS_LINE1_MAX = 200;
+const ADDRESS_LINE2_MAX = 100;
+const CITY_MAX = 100;
+const COUNTRY_MAX = 100;
+const ZIP_MAX = 10;
+
 type DashboardProperty = {
   id: string;
   title: string;
@@ -59,12 +65,7 @@ const Dashboard = () => {
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
   const { data: savedPropertyIds = [] } = useSavedPropertyIds();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
-  const {
-    results: credentialResults,
-    applyForCredential,
-    acceptCredential,
-    triggerAutoIssue,
-  } = useCredentialEligibility(activeWallet?.address ?? null);
+  const { status: vendorStatus } = useVendorApplication();
   const [editing, setEditing] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -87,7 +88,6 @@ const Dashboard = () => {
   const [walletLabel, setWalletLabel] = useState('');
   const avatarInputRef = React.useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [vendorActionLoading, setVendorActionLoading] = useState(false);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -170,16 +170,56 @@ const Dashboard = () => {
       toast.error('First name is required');
       return;
     }
+    if (formData.first_name.trim().length > PROFILE_NAME_MAX) {
+      toast.error(`First name must be ${PROFILE_NAME_MAX} characters or fewer`);
+      return;
+    }
     if (!formData.last_name.trim()) {
       toast.error('Last name is required');
+      return;
+    }
+    if (formData.last_name.trim().length > PROFILE_NAME_MAX) {
+      toast.error(`Last name must be ${PROFILE_NAME_MAX} characters or fewer`);
+      return;
+    }
+    if (formData.account_type === 'business' && !formData.company_name.trim()) {
+      toast.error('Company name is required for business accounts');
+      return;
+    }
+    if (formData.company_name.trim().length > COMPANY_NAME_MAX) {
+      toast.error(`Company name must be ${COMPANY_NAME_MAX} characters or fewer`);
       return;
     }
     if (formData.phone && unformatPhone(formData.phone).length > 0 && unformatPhone(formData.phone).length < 10) {
       toast.error('Please enter a complete 10-digit phone number');
       return;
     }
+    if (formData.address_line1.trim().length > ADDRESS_LINE1_MAX) {
+      toast.error(`Address line 1 must be ${ADDRESS_LINE1_MAX} characters or fewer`);
+      return;
+    }
+    if (formData.address_line2.trim().length > ADDRESS_LINE2_MAX) {
+      toast.error(`Address line 2 must be ${ADDRESS_LINE2_MAX} characters or fewer`);
+      return;
+    }
+    if (formData.city.trim().length > CITY_MAX) {
+      toast.error(`City must be ${CITY_MAX} characters or fewer`);
+      return;
+    }
+    if (formData.state && !US_STATES.includes(formData.state)) {
+      toast.error('Please select a valid state');
+      return;
+    }
     if (formData.zip && !/^\d{5}(-\d{4})?$/.test(formData.zip) && formData.zip.length > 0) {
       toast.error('Please enter a valid ZIP code');
+      return;
+    }
+    if (formData.zip.trim().length > ZIP_MAX) {
+      toast.error(`ZIP must be ${ZIP_MAX} characters or fewer`);
+      return;
+    }
+    if (formData.country.trim().length > COUNTRY_MAX) {
+      toast.error(`Country must be ${COUNTRY_MAX} characters or fewer`);
       return;
     }
     if (formData.date_of_birth) {
@@ -210,7 +250,7 @@ const Dashboard = () => {
       city: formData.city.trim() || null,
       state: formData.state || null,
       zip: formData.zip.trim() || null,
-      country: formData.country || 'US',
+      country: formData.country.trim() || 'US',
     });
     if (error) {
       toast.error(error);
@@ -250,7 +290,25 @@ const Dashboard = () => {
   };
 
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.full_name || 'Your Profile';
-  const vendorCredential = getVendorCredential(credentialResults);
+  const vendorStatusLabel = getVendorStatusLabel(vendorStatus);
+  const vendorPrimaryRoute =
+    vendorStatus === 'active'
+      ? '/vendor/dashboard'
+      : vendorStatus === 'applied' ||
+          vendorStatus === 'under_review' ||
+          vendorStatus === 'approved' ||
+          vendorStatus === 'issued_pending_acceptance'
+        ? '/vendor/status'
+        : '/vendor/onboarding';
+  const vendorActionLabel =
+    vendorStatus === 'active'
+      ? 'Open vendor dashboard'
+      : vendorStatus === 'applied' ||
+          vendorStatus === 'under_review' ||
+          vendorStatus === 'approved' ||
+          vendorStatus === 'issued_pending_acceptance'
+        ? 'Check vendor status'
+        : 'Start vendor onboarding';
 
   return (
     <div className="min-h-screen bg-background">
@@ -286,6 +344,28 @@ const Dashboard = () => {
             </Button>
           </div>
         </div>
+
+        <Card className="p-5 mb-8 border-primary/20 bg-primary/5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-primary">Vendor onboarding</p>
+              <h2 className="text-lg font-semibold">Return to your verified vendor flow anytime</h2>
+              <p className="text-sm text-muted-foreground">
+                Current vendor state: <span className="font-medium text-foreground">{vendorStatusLabel}</span>
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild>
+                <Link to={vendorPrimaryRoute}>
+                  {vendorActionLabel}
+                </Link>
+              </Button>
+              <Button variant="outline" asChild>
+                <Link to="/vendor">View vendor program</Link>
+              </Button>
+            </div>
+          </div>
+        </Card>
 
         {/* Complete Profile Banner */}
         {profile && (!profile.first_name || !profile.phone) && !editing && (
@@ -380,13 +460,14 @@ const Dashboard = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>Phone Number</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
-                    placeholder="(555) 123-4567"
-                    className="mt-1"
-                    type="tel"
-                  />
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                      placeholder="(555) 123-4567"
+                      className="mt-1"
+                      type="tel"
+                      maxLength={14}
+                    />
                 </div>
                 <div>
                   <Label>Date of Birth</Label>
@@ -497,12 +578,13 @@ const Dashboard = () => {
                     </div>
                     <div>
                       <Label>ZIP</Label>
-                      <Input
-                        value={formData.zip}
-                        onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
-                        placeholder="10001"
-                        className="mt-1"
-                      />
+                    <Input
+                      value={formData.zip}
+                      onChange={(e) => setFormData(prev => ({ ...prev, zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
+                      placeholder="10001"
+                      className="mt-1"
+                      maxLength={ZIP_MAX}
+                    />
                     </div>
                   </div>
                 </div>
@@ -566,81 +648,6 @@ const Dashboard = () => {
             </div>
           )}
         </Card>
-
-        <VendorNetworkCard
-          accountType={profile?.account_type}
-          companyName={profile?.company_name}
-          isConnected={!!activeWallet?.address}
-          kycApproved={kycApproved}
-          vendorCredential={vendorCredential}
-          actionLoading={vendorActionLoading}
-          onConnectWallet={openConnectModal}
-          onStartKyc={() => navigate('/kyc')}
-          onEditProfile={() => setEditing(true)}
-          onRequestVerification={async () => {
-            if (!activeWallet?.address) {
-              openConnectModal()
-              return
-            }
-            if (!kycApproved) {
-              navigate('/kyc')
-              return
-            }
-            setVendorActionLoading(true)
-            try {
-              if (vendorCredential?.ui_section === 'auto_issuable') {
-                await triggerAutoIssue(VERIFIED_VENDOR_CREDENTIAL_KEY)
-              } else {
-                await applyForCredential(VERIFIED_VENDOR_CREDENTIAL_KEY)
-              }
-              toast.success('Verified vendor request submitted')
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : 'Failed to submit vendor request')
-            } finally {
-              setVendorActionLoading(false)
-            }
-          }}
-          onAcceptBadge={async () => {
-            const walletCredentialId = vendorCredential?.existing_application?.wallet_credential_id
-            if (!walletCredentialId) {
-              toast.error('No vendor credential is ready to accept')
-              return
-            }
-            setVendorActionLoading(true)
-            try {
-              await acceptCredential(walletCredentialId)
-              toast.success('Verified vendor badge accepted')
-            } catch (err) {
-              toast.error(err instanceof Error ? err.message : 'Failed to accept vendor badge')
-            } finally {
-              setVendorActionLoading(false)
-            }
-          }}
-          onOpenCredentials={() => navigate('/credentials')}
-        />
-
-        <div className="flex flex-wrap gap-2 mb-8 -mt-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/vendor/dashboard')}>
-            Vendor Dashboard & Leads
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/vendor/onboarding')}>
-            Vendor Onboarding
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/vendor')}>
-            Vendor Hub
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigate('/vendors')}>
-            Browse Vendor Directory
-          </Button>
-        </div>
-
-        {profile?.account_type === 'business' && (
-          <VendorProfileForm
-            profileId={profile?.id}
-            companyName={profile?.company_name}
-          />
-        )}
-
 
         {/* Connected Wallets */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

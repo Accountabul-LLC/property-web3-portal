@@ -25,6 +25,11 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
     description:
       'Connect with vetted real estate, legal, and compliance professionals supporting tokenized property transactions.',
   },
+  '/vendor': {
+    title: `Verified Vendors | ${SITE_NAME}`,
+    description:
+      'Apply to become a verified vendor on Accountabul and gain business profile, marketplace placement, and lead access after manual review.',
+  },
   '/credentials': {
     title: `Credentials Catalog | ${SITE_NAME}`,
     description:
@@ -65,6 +70,9 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/payments': { title: `Payments | ${SITE_NAME}`, description: 'Payments and invoices.', noindex: true },
   '/payments/history': { title: `Payment History | ${SITE_NAME}`, description: 'Payment history.', noindex: true },
   '/settings': { title: `Settings | ${SITE_NAME}`, description: 'Account settings and preferences.', noindex: true },
+  '/vendor/onboarding': { title: `Apply to Become a Vendor | ${SITE_NAME}`, description: 'Submit your vendor application.', noindex: true },
+  '/vendor/status': { title: `Vendor Application Status | ${SITE_NAME}`, description: 'Check your vendor application status.', noindex: true },
+  '/vendor/dashboard': { title: `Vendor Dashboard | ${SITE_NAME}`, description: 'Manage your vendor profile and tools.', noindex: true },
 };
 
 const matchDynamic = (pathname: string): RouteMeta | null => {

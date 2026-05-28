@@ -59,8 +59,7 @@ export function useVendorApplication() {
     isPendingReview,
     canApply,
     submitVendorApplication,
-    // walletsLoading ?? false: guard against undefined in case context shape changes
-    isLoading: authLoading || (walletsLoading ?? false) || profileLoading || appsLoading || eligibilityLoading,
+    isLoading: authLoading || walletsLoading || profileLoading || appsLoading || eligibilityLoading,
     onboardingRoute: VENDOR_ONBOARDING_ROUTE,
     dashboardRoute: VENDOR_DASHBOARD_ROUTE,
     statusRoute: VENDOR_STATUS_ROUTE,

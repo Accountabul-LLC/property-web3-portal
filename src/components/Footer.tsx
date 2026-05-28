@@ -7,6 +7,7 @@ const Footer = () => {
   const footerLinks = {
     Platform: [
       { label: 'Real Estate Marketplace', href: '/marketplace' },
+      { label: 'Verified Vendors', href: '/vendor' },
       { label: 'Smart Escrow', href: '/smart-escrow' },
       { label: 'Tokenize Property', href: '/tokenize' },
       { label: 'Professional Marketplace', href: '/professionals' },
