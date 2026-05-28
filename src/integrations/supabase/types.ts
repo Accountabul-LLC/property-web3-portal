@@ -1647,6 +1647,65 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_credentials: {
+        Row: {
+          created_at: string
+          credential_number: string
+          credential_type: string
+          document_name: string | null
+          document_path: string | null
+          expires_on: string | null
+          id: string
+          issuing_authority: string | null
+          issuing_state: string | null
+          notes: string | null
+          updated_at: string
+          user_id: string
+          vendor_profile_id: string
+          verification_status: string
+        }
+        Insert: {
+          created_at?: string
+          credential_number: string
+          credential_type: string
+          document_name?: string | null
+          document_path?: string | null
+          expires_on?: string | null
+          id?: string
+          issuing_authority?: string | null
+          issuing_state?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_profile_id: string
+          verification_status?: string
+        }
+        Update: {
+          created_at?: string
+          credential_number?: string
+          credential_type?: string
+          document_name?: string | null
+          document_path?: string | null
+          expires_on?: string | null
+          id?: string
+          issuing_authority?: string | null
+          issuing_state?: string | null
+          notes?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_profile_id?: string
+          verification_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_credentials_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_profiles: {
         Row: {
           advertising_opt_in: boolean
@@ -1654,9 +1713,11 @@ export type Database = {
           business_phone: string | null
           company_name: string
           created_at: string
+          ein_full: string | null
           ein_last4: string | null
           employee_count: number | null
           id: string
+          industry: string | null
           logo_url: string | null
           notes: string | null
           place_of_business: string | null
@@ -1664,6 +1725,8 @@ export type Database = {
           requested_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          tax_exempt: boolean
+          tax_exempt_ein: string | null
           updated_at: string
           user_id: string
           vendor_bio: string | null
@@ -1676,9 +1739,11 @@ export type Database = {
           business_phone?: string | null
           company_name: string
           created_at?: string
+          ein_full?: string | null
           ein_last4?: string | null
           employee_count?: number | null
           id?: string
+          industry?: string | null
           logo_url?: string | null
           notes?: string | null
           place_of_business?: string | null
@@ -1686,6 +1751,8 @@ export type Database = {
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          tax_exempt?: boolean
+          tax_exempt_ein?: string | null
           updated_at?: string
           user_id: string
           vendor_bio?: string | null
@@ -1698,9 +1765,11 @@ export type Database = {
           business_phone?: string | null
           company_name?: string
           created_at?: string
+          ein_full?: string | null
           ein_last4?: string | null
           employee_count?: number | null
           id?: string
+          industry?: string | null
           logo_url?: string | null
           notes?: string | null
           place_of_business?: string | null
@@ -1708,6 +1777,8 @@ export type Database = {
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          tax_exempt?: boolean
+          tax_exempt_ein?: string | null
           updated_at?: string
           user_id?: string
           vendor_bio?: string | null

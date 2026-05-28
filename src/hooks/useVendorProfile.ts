@@ -13,6 +13,10 @@ export interface VendorProfile {
   place_of_business: string | null
   employee_count: number | null
   ein_last4: string | null
+  ein_full: string | null
+  industry: string | null
+  tax_exempt: boolean
+  tax_exempt_ein: string | null
   advertising_opt_in: boolean
   vendor_bio: string | null
   verification_status: 'not_requested' | 'requested' | 'under_review' | 'verified' | 'rejected' | 'revoked'
@@ -57,17 +61,24 @@ export function useVendorProfile(profileId: string | null | undefined) {
       place_of_business: updates.place_of_business ?? null,
       employee_count: updates.employee_count ?? null,
       ein_last4: updates.ein_last4 ?? null,
+      ein_full: updates.ein_full ?? null,
+      industry: updates.industry ?? null,
+      tax_exempt: updates.tax_exempt ?? false,
+      tax_exempt_ein: updates.tax_exempt_ein ?? null,
       advertising_opt_in: updates.advertising_opt_in ?? false,
       vendor_bio: updates.vendor_bio ?? null,
       updated_at: new Date().toISOString(),
     }
 
-    const { error } = await ((supabase as any).from('vendor_profiles'))
+    const { data, error } = await ((supabase as any).from('vendor_profiles'))
       .upsert(payload, { onConflict: 'user_id' })
+      .select()
+      .single()
 
     if (error) throw error
     qc.invalidateQueries({ queryKey: ['vendor-profile', user.id, profileId] })
-    return refetch()
+    await refetch()
+    return data as VendorProfile
   }
 
   return { vendorProfile, isLoading, refetch, saveVendorProfile }
