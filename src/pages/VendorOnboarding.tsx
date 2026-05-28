@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Seo } from '@/components/Seo';
 import Navigation from '@/components/Navigation';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Circle, Loader2, ShieldCheck, Building2, CreditCard, Award } from 'lucide-react';
+import { CheckCircle2, Circle, Loader2, ShieldCheck, Building2, CreditCard, Award, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
@@ -88,6 +88,45 @@ const VendorOnboarding = () => {
   const allDone = completedCount === 3;
   const isVerified = vendorProfile?.verification_status === 'verified';
 
+  // Accordion: track which step is expanded
+  type StepKey = 'profile' | 'kyc' | 'payment';
+  const stepStatuses: Record<StepKey, StepStatus> = {
+    profile: profileStatus,
+    kyc: kycStepStatus,
+    payment: paymentStatus,
+  };
+  const firstIncomplete = (): StepKey | null => {
+    const order: StepKey[] = ['profile', 'kyc', 'payment'];
+    return order.find((k) => stepStatuses[k] !== 'done') ?? null;
+  };
+  const [expandedStep, setExpandedStep] = useState<StepKey | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Initialize expanded step once data is loaded
+  useEffect(() => {
+    if (!loading && !initialized) {
+      setExpandedStep(firstIncomplete());
+      setInitialized(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, initialized]);
+
+  function toggleStep(key: StepKey) {
+    setExpandedStep((prev) => (prev === key ? null : key));
+  }
+
+  function advanceAfterProfileSave() {
+    const order: StepKey[] = ['kyc', 'payment'];
+    const next = order.find((k) => stepStatuses[k] !== 'done') ?? null;
+    setExpandedStep(next);
+    if (next) {
+      setTimeout(() => {
+        cardRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }
+
   // Redirect unauthenticated users to vendor signup
   if (!authLoading && !user) {
     return <Navigate to="/auth/vendor" replace />;
@@ -100,7 +139,7 @@ const VendorOnboarding = () => {
       description: 'Tell us about your company. We use this for your vendor badge and CRM record.',
       icon: Building2,
       status: profileStatus,
-      body: <VendorProfileForm profileId={profile?.id} companyName={profile?.company_name} />,
+      body: <VendorProfileForm profileId={profile?.id} companyName={profile?.company_name} onSaved={advanceAfterProfileSave} />,
     },
     {
       key: 'kyc',
@@ -209,9 +248,13 @@ const VendorOnboarding = () => {
           <div className="space-y-4">
             {steps.map((step, idx) => {
               const StepHeaderIcon = step.icon;
+              const stepKey = step.key as StepKey;
+              const isExpanded = expandedStep === stepKey;
+              const hasContent = !!(step.body || step.cta);
               return (
                 <Card
                   key={step.key}
+                  ref={(el) => { cardRefs.current[step.key] = el; }}
                   className={
                     step.status === 'done'
                       ? 'border-green-500/30'
@@ -220,7 +263,19 @@ const VendorOnboarding = () => {
                       : ''
                   }
                 >
-                  <CardHeader>
+                  <CardHeader
+                    className="cursor-pointer select-none hover:bg-muted/30 transition-colors rounded-t-lg"
+                    onClick={() => toggleStep(stepKey)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleStep(stepKey);
+                      }
+                    }}
+                    aria-expanded={isExpanded}
+                  >
                     <div className="flex items-start gap-4">
                       <StepIcon status={step.status} />
                       <div className="flex-1 min-w-0">
@@ -237,9 +292,14 @@ const VendorOnboarding = () => {
                         </div>
                         <CardDescription>{step.description}</CardDescription>
                       </div>
+                      {hasContent && (
+                        <div className="ml-2 text-muted-foreground shrink-0">
+                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
-                  {(step.body || step.cta) && (
+                  {hasContent && isExpanded && (
                     <CardContent>
                       {step.body}
                       {step.cta && (

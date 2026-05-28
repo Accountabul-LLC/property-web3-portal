@@ -24,9 +24,10 @@ import { INDUSTRIES, normalizeEin, einLast4 } from '@/lib/vendorCredentialCatalo
 interface VendorProfileFormProps {
   profileId: string | null | undefined
   companyName: string | null | undefined
+  onSaved?: () => void
 }
 
-export function VendorProfileForm({ profileId, companyName }: VendorProfileFormProps) {
+export function VendorProfileForm({ profileId, companyName, onSaved }: VendorProfileFormProps) {
   const { user } = useAuth()
   const { vendorProfile, isLoading, saveVendorProfile } = useVendorProfile(profileId)
   const [saving, setSaving] = useState(false)
@@ -134,6 +135,7 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
         vendor_bio: form.vendor_bio.trim() || null,
       })
       toast.success('Vendor profile saved')
+      onSaved?.()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save vendor profile')
     } finally {
