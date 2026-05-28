@@ -19,6 +19,9 @@ const Index = lazyPage(() => import("./pages/Index"));
 const Marketplace = lazyPage(() => import("./pages/Marketplace"));
 const Tokenize = lazyPage(() => import("./pages/Tokenize"));
 const Auth = lazyPage(() => import("./pages/Auth"));
+const AuthIndividual = lazyPage(() => import("./pages/AuthIndividual"));
+const AuthBusiness = lazyPage(() => import("./pages/AuthBusiness"));
+const AuthVendor = lazyPage(() => import("./pages/AuthVendor"));
 const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
 const Dashboard = lazyPage(() => import("./pages/Dashboard"));
 const Professionals = lazyPage(() => import("./pages/Professionals"));
@@ -56,8 +59,6 @@ const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const Vendor = lazyPage(() => import("./pages/Vendor"));
 const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
-const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
-const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 
 function RouteFallback() {
@@ -81,6 +82,9 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/individual" element={<AuthIndividual />} />
+                <Route path="/auth/business" element={<AuthBusiness />} />
+                <Route path="/auth/vendor" element={<AuthVendor />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
@@ -121,12 +125,10 @@ const App = () => (
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
                 <Route path="/vendor" element={<Vendor />} />
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
-                <Route path="/vendor/status" element={<VendorStatus />} />
-                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
                 <Route path="/vendors" element={<Navigate to="/vendor" replace />} />
-                <Route path="/vendors/apply" element={<Navigate to="/vendor/onboarding" replace />} />
-                <Route path="/vendors/status" element={<Navigate to="/vendor/status" replace />} />
-                <Route path="/vendors/dashboard" element={<Navigate to="/vendor/dashboard" replace />} />
+                <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
+                <Route path="/vendors/status" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/vendors/dashboard" element={<Navigate to="/dashboard" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

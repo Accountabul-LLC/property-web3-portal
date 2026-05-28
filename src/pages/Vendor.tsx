@@ -1,111 +1,102 @@
-import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
+import { Link } from 'react-router-dom'
+import { ArrowRight, BadgeCheck, Building2, ShieldCheck, Star } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Seo } from '@/components/Seo'
-import { VendorBenefitsCard } from '@/components/vendors/VendorBenefitsCard'
-import { useVendorApplication } from '@/hooks/useVendorApplication'
-import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
-import { Building2, CalendarClock, ShieldCheck, Users2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+
+const benefits = [
+  'Business profile and marketplace visibility',
+  'Verified vendor badge after manual review',
+  'Customer leads and vendor-network exposure',
+  'Business-facing tools and trust credentials',
+]
 
 export default function Vendor() {
-  const navigate = useNavigate()
-  const { vendorApplication, isLoading, user } = useVendorApplication()
-
-  useEffect(() => {
-    if (isLoading) return
-    if (!user) {
-      navigate('/auth?next=/vendor/onboarding', { replace: true })
-      return
-    }
-    const normalized = normalizeVendorStatus(vendorApplication?.status)
-    if (normalized === 'active') {
-      navigate(getVendorNextRoute(normalized), { replace: true })
-      return
-    }
-    if (normalized !== 'none' && normalized !== 'unknown') {
-      navigate(getVendorNextRoute(normalized), { replace: true })
-    }
-  }, [isLoading, navigate, user, vendorApplication?.status])
-
   return (
     <div className="min-h-screen bg-background">
       <Seo
         title="Verified Vendors | Accountabul"
-        description="Apply to become a verified vendor on Accountabul. Paid, manually reviewed applications are typically answered within 24 to 48 hours."
+        description="Join the Accountabul verified vendor network, submit your business for review, and unlock marketplace visibility after approval."
         path="/vendor"
       />
       <Navigation />
 
-      <main className="relative overflow-hidden">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_24%),linear-gradient(180deg,_rgba(255,255,255,0.78),_rgba(255,255,255,0.96))] dark:bg-[radial-gradient(circle_at_top_left,_rgba(14,165,233,0.18),_transparent_28%),radial-gradient(circle_at_top_right,_rgba(16,185,129,0.12),_transparent_24%),linear-gradient(180deg,_rgba(2,6,23,0.98),_rgba(2,6,23,0.94))]" />
-
-        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-            <div className="space-y-6">
+      <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+          <Card className="border-border/70 bg-card/95 shadow-card">
+            <CardHeader>
               <Badge variant="secondary" className="w-fit rounded-full px-3 py-1">
-                <Building2 className="mr-2 h-3.5 w-3.5" />
-                Verified vendor onboarding
+                <Star className="mr-2 h-3.5 w-3.5" />
+                Verified vendor network
               </Badge>
-              <div className="space-y-3">
-                <h1 className="max-w-3xl text-4xl font-semibold tracking-tight sm:text-5xl">
-                  Become a verified vendor on Accountabul.
-                </h1>
-                <p className="max-w-2xl text-lg text-muted-foreground">
-                  This is the public entry point for businesses and service providers who want a business profile,
-                  marketplace exposure, and verified routing inside the platform.
-                </p>
+              <CardTitle className="text-3xl">Join as a verified vendor</CardTitle>
+              <CardDescription>
+                Accountabul reviews vendor requests manually. If approved, your business gets the verified vendor badge
+                and the tools that go with it.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {benefits.map((benefit) => (
+                  <div key={benefit} className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm">
+                    <BadgeCheck className="mb-2 h-4 w-4 text-primary" />
+                    {benefit}
+                  </div>
+                ))}
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Card className="border-border/70 bg-card/90">
-                  <CardContent className="p-4">
-                    <ShieldCheck className="mb-2 h-5 w-5 text-primary" />
-                    <p className="font-medium">Manual review</p>
-                    <p className="text-sm text-muted-foreground">No auto-badge. We verify each business first.</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/70 bg-card/90">
-                  <CardContent className="p-4">
-                    <CalendarClock className="mb-2 h-5 w-5 text-primary" />
-                    <p className="font-medium">24 to 48 hours</p>
-                    <p className="text-sm text-muted-foreground">That is the expected window for a first reply.</p>
-                  </CardContent>
-                </Card>
-                <Card className="border-border/70 bg-card/90">
-                  <CardContent className="p-4">
-                    <Users2 className="mb-2 h-5 w-5 text-primary" />
-                    <p className="font-medium">Business routing</p>
-                    <p className="text-sm text-muted-foreground">Verified vendors unlock the right marketplace paths.</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 pt-2">
                 <Button asChild size="lg">
-                  <Link to="/vendor/onboarding">Start vendor onboarding</Link>
+                  <Link to="/auth/vendor">
+                    Start vendor sign-up
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
                 </Button>
                 <Button asChild variant="outline" size="lg">
-                  <Link to="/vendor/status">Check application status</Link>
+                  <Link to="/vendor/onboarding">Continue vendor onboarding</Link>
                 </Button>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            <VendorBenefitsCard
-              primaryHref="/vendor/onboarding"
-              primaryLabel="Start vendor onboarding"
-              secondaryHref="/vendor/status"
-              secondaryLabel="Check status"
-            />
+          <div className="space-y-6">
+            <Card className="border-border/70 bg-card/95 shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <Building2 className="h-5 w-5 text-primary" />
+                  What vendors receive
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>• Business profile and marketplace placement</p>
+                <p>• Verified badge after manual review</p>
+                <p>• Customer leads and trust visibility</p>
+                <p>• Business-only tools and controls</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border/70 bg-card/95 shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-xl">
+                  <ShieldCheck className="h-5 w-5 text-primary" />
+                  Review process
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm text-muted-foreground">
+                <p>1. Sign up as a vendor.</p>
+                <p>2. Complete onboarding and business verification.</p>
+                <p>3. Our team reviews the request manually.</p>
+                <p>4. Approved vendors receive the verified badge and dashboard access.</p>
+              </CardContent>
+            </Card>
           </div>
-        </section>
+        </div>
       </main>
 
       <Footer />
     </div>
   )
 }
-
