@@ -1647,6 +1647,83 @@ export type Database = {
         }
         Relationships: []
       }
+      vendor_profiles: {
+        Row: {
+          advertising_opt_in: boolean
+          business_email: string | null
+          business_phone: string | null
+          company_name: string
+          created_at: string
+          ein_last4: string | null
+          employee_count: number | null
+          id: string
+          logo_url: string | null
+          notes: string | null
+          place_of_business: string | null
+          profile_id: string
+          requested_at: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          updated_at: string
+          user_id: string
+          vendor_bio: string | null
+          verification_status: string
+          verified_at: string | null
+        }
+        Insert: {
+          advertising_opt_in?: boolean
+          business_email?: string | null
+          business_phone?: string | null
+          company_name: string
+          created_at?: string
+          ein_last4?: string | null
+          employee_count?: number | null
+          id?: string
+          logo_url?: string | null
+          notes?: string | null
+          place_of_business?: string | null
+          profile_id: string
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          user_id: string
+          vendor_bio?: string | null
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Update: {
+          advertising_opt_in?: boolean
+          business_email?: string | null
+          business_phone?: string | null
+          company_name?: string
+          created_at?: string
+          ein_last4?: string | null
+          employee_count?: number | null
+          id?: string
+          logo_url?: string | null
+          notes?: string | null
+          place_of_business?: string | null
+          profile_id?: string
+          requested_at?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          updated_at?: string
+          user_id?: string
+          vendor_bio?: string | null
+          verification_status?: string
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       wallet_audit_log: {
         Row: {
           created_at: string
