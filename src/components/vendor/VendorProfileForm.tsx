@@ -9,8 +9,17 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Loader2, Upload, Building2, Megaphone } from 'lucide-react'
 import { toast } from 'sonner'
+import { IndustryCredentialsSection } from './IndustryCredentialsSection'
+import { INDUSTRIES, normalizeEin, einLast4 } from '@/lib/vendorCredentialCatalog'
 
 interface VendorProfileFormProps {
   profileId: string | null | undefined
@@ -29,7 +38,10 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
     business_phone: '',
     place_of_business: '',
     employee_count: '',
-    ein_last4: '',
+    industry: '',
+    ein_full: '',
+    tax_exempt: false,
+    tax_exempt_ein: '',
     advertising_opt_in: false,
     vendor_bio: '',
   })
@@ -42,7 +54,10 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
       business_phone: vendorProfile?.business_phone ?? '',
       place_of_business: vendorProfile?.place_of_business ?? '',
       employee_count: vendorProfile?.employee_count?.toString() ?? '',
-      ein_last4: vendorProfile?.ein_last4 ?? '',
+      industry: vendorProfile?.industry ?? '',
+      ein_full: vendorProfile?.ein_full ?? '',
+      tax_exempt: vendorProfile?.tax_exempt ?? false,
+      tax_exempt_ein: vendorProfile?.tax_exempt_ein ?? '',
       advertising_opt_in: vendorProfile?.advertising_opt_in ?? false,
       vendor_bio: vendorProfile?.vendor_bio ?? '',
     })
@@ -76,7 +91,31 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
     }
   }
 
+  function formatEin(input: string): string {
+    const digits = input.replace(/\D/g, '').slice(0, 9)
+    if (digits.length <= 2) return digits
+    return `${digits.slice(0, 2)}-${digits.slice(2)}`
+  }
+
   async function handleSave() {
+    // Validate EIN if provided
+    let einNormalized: string | null = null
+    if (form.ein_full.trim()) {
+      einNormalized = normalizeEin(form.ein_full)
+      if (!einNormalized) {
+        toast.error('EIN must be 9 digits (XX-XXXXXXX)')
+        return
+      }
+    }
+    let taxExemptEinNormalized: string | null = null
+    if (form.tax_exempt && form.tax_exempt_ein.trim()) {
+      taxExemptEinNormalized = normalizeEin(form.tax_exempt_ein)
+      if (!taxExemptEinNormalized) {
+        toast.error('Tax-exempt EIN must be 9 digits (XX-XXXXXXX)')
+        return
+      }
+    }
+
     setSaving(true)
     try {
       await saveVendorProfile({
@@ -86,7 +125,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
         business_phone: form.business_phone.trim() || null,
         place_of_business: form.place_of_business.trim() || null,
         employee_count: form.employee_count ? Number(form.employee_count) : null,
-        ein_last4: form.ein_last4.trim() || null,
+        industry: form.industry || null,
+        ein_full: einNormalized,
+        ein_last4: einLast4(einNormalized),
+        tax_exempt: form.tax_exempt,
+        tax_exempt_ein: form.tax_exempt ? taxExemptEinNormalized : null,
         advertising_opt_in: form.advertising_opt_in,
         vendor_bio: form.vendor_bio.trim() || null,
       })
@@ -120,10 +163,10 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
           </Badge>
         </div>
         <CardDescription>
-          Keep the business details, logo, and advertising preferences that power your vendor profile and admin CRM record.
+          Tell us about your business, your industry, and the licenses or certifications that verify you as a legitimate vendor.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <Label>Company Name</Label>
@@ -133,6 +176,22 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
               placeholder="Acme Holdings LLC"
               className="mt-1"
             />
+          </div>
+          <div>
+            <Label>Industry</Label>
+            <Select
+              value={form.industry}
+              onValueChange={(v) => setForm((prev) => ({ ...prev, industry: v }))}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select your industry" />
+              </SelectTrigger>
+              <SelectContent>
+                {INDUSTRIES.map((i) => (
+                  <SelectItem key={i.slug} value={i.slug}>{i.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label>Business Email</Label>
@@ -173,19 +232,65 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
               className="mt-1"
             />
           </div>
+        </div>
+
+        {/* Tax IDs */}
+        <div className="space-y-4 border-t border-border/60 pt-6">
           <div>
-            <Label>EIN Last 4</Label>
-            <Input
-              value={form.ein_last4}
-              onChange={(e) => setForm((prev) => ({ ...prev, ein_last4: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-              placeholder="1234"
-              className="mt-1"
-              maxLength={4}
-            />
+            <h3 className="font-semibold">Tax Identification</h3>
+            <p className="text-sm text-muted-foreground">Your federal EIN and (if applicable) 501(c)(3) tax-exempt status.</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <Label>EIN (Employer Identification Number)</Label>
+              <Input
+                value={form.ein_full}
+                onChange={(e) => setForm((prev) => ({ ...prev, ein_full: formatEin(e.target.value) }))}
+                placeholder="12-3456789"
+                maxLength={10}
+                className="mt-1 font-mono"
+              />
+              <p className="text-xs text-muted-foreground mt-1">9-digit federal tax ID, format XX-XXXXXXX</p>
+            </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-3 md:mt-6">
+              <div>
+                <p className="text-sm font-medium">501(c)(3) Tax-Exempt</p>
+                <p className="text-xs text-muted-foreground">Toggle on if your organization holds tax-exempt status.</p>
+              </div>
+              <Switch
+                checked={form.tax_exempt}
+                onCheckedChange={(checked) => setForm((prev) => ({ ...prev, tax_exempt: checked }))}
+              />
+            </div>
+            {form.tax_exempt && (
+              <div className="md:col-span-2">
+                <Label>Tax-Exempt EIN</Label>
+                <Input
+                  value={form.tax_exempt_ein}
+                  onChange={(e) => setForm((prev) => ({ ...prev, tax_exempt_ein: formatEin(e.target.value) }))}
+                  placeholder="12-3456789"
+                  maxLength={10}
+                  className="mt-1 font-mono"
+                />
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+        {/* Credentials */}
+        {vendorProfile?.id ? (
+          <IndustryCredentialsSection
+            vendorProfileId={vendorProfile.id}
+            industry={form.industry || null}
+          />
+        ) : (
+          <div className="rounded-lg border border-dashed border-border/60 bg-muted/20 p-4 text-sm text-muted-foreground">
+            Save your vendor profile first to add professional credentials and license documents.
+          </div>
+        )}
+
+        {/* Logo */}
+        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end border-t border-border/60 pt-6">
           <div>
             <Label>Logo URL</Label>
             <Input

@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle } from 'lucide-react'
+import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle, FileCheck2, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
+import { CREDENTIAL_CATALOG, INDUSTRIES } from '@/lib/vendorCredentialCatalog'
 
 type VendorProfile = {
   id: string
@@ -21,6 +22,10 @@ type VendorProfile = {
   place_of_business: string | null
   employee_count: number | null
   ein_last4: string | null
+  ein_full: string | null
+  industry: string | null
+  tax_exempt: boolean
+  tax_exempt_ein: string | null
   advertising_opt_in: boolean
   vendor_bio: string | null
   verification_status: 'not_requested' | 'requested' | 'under_review' | 'verified' | 'rejected' | 'revoked'
@@ -28,6 +33,20 @@ type VendorProfile = {
   requested_at: string | null
   reviewed_at: string | null
   notes: string | null
+}
+
+type VendorCredentialRow = {
+  id: string
+  vendor_profile_id: string
+  user_id: string
+  credential_type: string
+  credential_number: string
+  issuing_state: string | null
+  issuing_authority: string | null
+  expires_on: string | null
+  document_path: string | null
+  document_name: string | null
+  verification_status: string
 }
 
 type VendorApplication = {
@@ -87,7 +106,7 @@ export default function VendorCRMPanel() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-vendor-crm'],
     queryFn: async () => {
-      const [vendorRes, appRes, profileRes] = await Promise.all([
+      const [vendorRes, appRes, profileRes, credRes] = await Promise.all([
         ((supabase as any).from('vendor_profiles')).select('*').order('updated_at', { ascending: false }),
         ((supabase as any).from('credential_applications'))
           .select('id, user_id, wallet_address, credential_key, status, applied_at, reviewed_at, rejection_reason, issued_at, expires_at, accepted_at, revoked_at, notes, wallet_credential_id')
@@ -95,16 +114,21 @@ export default function VendorCRMPanel() {
           .order('applied_at', { ascending: false }),
         ((supabase as any).from('profiles'))
           .select('id, first_name, last_name, full_name, email, company_name, account_type, avatar_url'),
+        ((supabase as any).from('vendor_credentials'))
+          .select('id, vendor_profile_id, user_id, credential_type, credential_number, issuing_state, issuing_authority, expires_on, document_path, document_name, verification_status')
+          .order('created_at', { ascending: true }),
       ])
 
       if (vendorRes.error) throw vendorRes.error
       if (appRes.error) throw appRes.error
       if (profileRes.error) throw profileRes.error
+      if (credRes.error) throw credRes.error
 
       return {
         vendorProfiles: (vendorRes.data ?? []) as VendorProfile[],
         vendorApps: (appRes.data ?? []) as VendorApplication[],
         profiles: (profileRes.data ?? []) as ProfileRow[],
+        credentials: (credRes.data ?? []) as VendorCredentialRow[],
       }
     },
     staleTime: 30_000,
@@ -114,18 +138,26 @@ export default function VendorCRMPanel() {
   const vendorProfiles = data?.vendorProfiles ?? []
   const vendorApps = data?.vendorApps ?? []
   const profiles = data?.profiles ?? []
+  const allCredentials = data?.credentials ?? []
 
   const merged = useMemo(() => {
     const profilesById = new Map(profiles.map((p) => [p.id, p]))
     const profilesByUser = new Map(profiles.map((p) => [p.id, p]))
     const appsByUser = new Map(vendorApps.map((a) => [a.user_id, a]))
+    const credsByVendor = new Map<string, VendorCredentialRow[]>()
+    for (const c of allCredentials) {
+      const arr = credsByVendor.get(c.vendor_profile_id) ?? []
+      arr.push(c)
+      credsByVendor.set(c.vendor_profile_id, arr)
+    }
 
     return vendorProfiles.map((vendor) => ({
       vendor,
       profile: profilesById.get(vendor.profile_id) ?? profilesByUser.get(vendor.user_id),
       app: appsByUser.get(vendor.user_id) ?? null,
+      credentials: credsByVendor.get(vendor.id) ?? [],
     }))
-  }, [vendorProfiles, vendorApps, profiles])
+  }, [vendorProfiles, vendorApps, profiles, allCredentials])
 
   const filtered = merged.filter(({ vendor, profile }) => {
     const haystack = [
@@ -253,7 +285,14 @@ export default function VendorCRMPanel() {
               No vendors found.
             </CardContent>
           </Card>
-        ) : filtered.map(({ vendor, profile, app }) => (
+        ) : filtered.map(({ vendor, profile, app, credentials }) => {
+          const industryLabel = INDUSTRIES.find((i) => i.slug === vendor.industry)?.label ?? null
+          const openDoc = async (path: string) => {
+            const { data: signed } = await supabase.storage.from('vendor-credentials').createSignedUrl(path, 60 * 10)
+            if (signed?.signedUrl) window.open(signed.signedUrl, '_blank', 'noopener')
+            else toast.error('Unable to load document')
+          }
+          return (
           <Card key={vendor.id}>
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -383,9 +422,67 @@ export default function VendorCRMPanel() {
                   {app.notes}
                 </div>
               )}
+
+              {/* Industry + Tax IDs */}
+              <div className="grid gap-3 md:grid-cols-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <Briefcase className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Industry</p>
+                    <p className="font-medium">{industryLabel ?? '—'}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Full EIN</p>
+                  <p className="font-medium font-mono">{vendor.ein_full ?? (vendor.ein_last4 ? `•••-••-${vendor.ein_last4}` : '—')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tax-Exempt EIN</p>
+                  <p className="font-medium font-mono">{vendor.tax_exempt ? (vendor.tax_exempt_ein ?? '—') : 'Not tax-exempt'}</p>
+                </div>
+              </div>
+
+              {/* Credentials */}
+              {credentials.length > 0 && (
+                <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                    Professional Credentials ({credentials.length})
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {credentials.map((c) => {
+                      const def = CREDENTIAL_CATALOG[c.credential_type]
+                      return (
+                        <div key={c.id} className="rounded border border-border/60 bg-background p-2 text-xs space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{def?.label ?? c.credential_type}</span>
+                            <Badge variant={c.verification_status === 'verified' ? 'default' : 'outline'} className="text-[10px]">
+                              {c.verification_status}
+                            </Badge>
+                          </div>
+                          <div className="font-mono">{c.credential_number}{c.issuing_state ? ` · ${c.issuing_state}` : ''}</div>
+                          {c.expires_on && <div className="text-muted-foreground">Expires {c.expires_on}</div>}
+                          {c.issuing_authority && <div className="text-muted-foreground">Issued by {c.issuing_authority}</div>}
+                          {c.document_path && (
+                            <button
+                              type="button"
+                              onClick={() => openDoc(c.document_path!)}
+                              className="text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              <FileCheck2 className="w-3 h-3" />
+                              {c.document_name ?? 'View document'}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
