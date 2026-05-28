@@ -295,9 +295,9 @@ const VendorOnboarding = () => {
             </CardContent>
           </Card>
         ) : isVerified ? (
-          <Card className="border-green-500/30 bg-green-500/5">
+          <Card className="border-success/30 bg-success/5">
             <CardContent className="pt-6 text-center space-y-4">
-              <Award className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto" />
+              <Award className="w-12 h-12 text-success mx-auto" />
               <h2 className="text-xl font-semibold">You're a verified vendor</h2>
               <p className="text-muted-foreground">
                 Your business is showing the verified badge across the Accountabul marketplace.
