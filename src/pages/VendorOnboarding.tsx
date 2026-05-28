@@ -88,6 +88,45 @@ const VendorOnboarding = () => {
   const allDone = completedCount === 3;
   const isVerified = vendorProfile?.verification_status === 'verified';
 
+  // Accordion: track which step is expanded
+  type StepKey = 'profile' | 'kyc' | 'payment';
+  const stepStatuses: Record<StepKey, StepStatus> = {
+    profile: profileStatus,
+    kyc: kycStepStatus,
+    payment: paymentStatus,
+  };
+  const firstIncomplete = (): StepKey | null => {
+    const order: StepKey[] = ['profile', 'kyc', 'payment'];
+    return order.find((k) => stepStatuses[k] !== 'done') ?? null;
+  };
+  const [expandedStep, setExpandedStep] = useState<StepKey | null>(null);
+  const [initialized, setInitialized] = useState(false);
+  const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  // Initialize expanded step once data is loaded
+  useEffect(() => {
+    if (!loading && !initialized) {
+      setExpandedStep(firstIncomplete());
+      setInitialized(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, initialized]);
+
+  function toggleStep(key: StepKey) {
+    setExpandedStep((prev) => (prev === key ? null : key));
+  }
+
+  function advanceAfterProfileSave() {
+    const order: StepKey[] = ['kyc', 'payment'];
+    const next = order.find((k) => stepStatuses[k] !== 'done') ?? null;
+    setExpandedStep(next);
+    if (next) {
+      setTimeout(() => {
+        cardRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }
+
   // Redirect unauthenticated users to vendor signup
   if (!authLoading && !user) {
     return <Navigate to="/auth/vendor" replace />;
