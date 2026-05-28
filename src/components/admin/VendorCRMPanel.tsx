@@ -106,7 +106,7 @@ export default function VendorCRMPanel() {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-vendor-crm'],
     queryFn: async () => {
-      const [vendorRes, appRes, profileRes] = await Promise.all([
+      const [vendorRes, appRes, profileRes, credRes] = await Promise.all([
         ((supabase as any).from('vendor_profiles')).select('*').order('updated_at', { ascending: false }),
         ((supabase as any).from('credential_applications'))
           .select('id, user_id, wallet_address, credential_key, status, applied_at, reviewed_at, rejection_reason, issued_at, expires_at, accepted_at, revoked_at, notes, wallet_credential_id')
@@ -114,16 +114,21 @@ export default function VendorCRMPanel() {
           .order('applied_at', { ascending: false }),
         ((supabase as any).from('profiles'))
           .select('id, first_name, last_name, full_name, email, company_name, account_type, avatar_url'),
+        ((supabase as any).from('vendor_credentials'))
+          .select('id, vendor_profile_id, user_id, credential_type, credential_number, issuing_state, issuing_authority, expires_on, document_path, document_name, verification_status')
+          .order('created_at', { ascending: true }),
       ])
 
       if (vendorRes.error) throw vendorRes.error
       if (appRes.error) throw appRes.error
       if (profileRes.error) throw profileRes.error
+      if (credRes.error) throw credRes.error
 
       return {
         vendorProfiles: (vendorRes.data ?? []) as VendorProfile[],
         vendorApps: (appRes.data ?? []) as VendorApplication[],
         profiles: (profileRes.data ?? []) as ProfileRow[],
+        credentials: (credRes.data ?? []) as VendorCredentialRow[],
       }
     },
     staleTime: 30_000,
@@ -133,18 +138,26 @@ export default function VendorCRMPanel() {
   const vendorProfiles = data?.vendorProfiles ?? []
   const vendorApps = data?.vendorApps ?? []
   const profiles = data?.profiles ?? []
+  const allCredentials = data?.credentials ?? []
 
   const merged = useMemo(() => {
     const profilesById = new Map(profiles.map((p) => [p.id, p]))
     const profilesByUser = new Map(profiles.map((p) => [p.id, p]))
     const appsByUser = new Map(vendorApps.map((a) => [a.user_id, a]))
+    const credsByVendor = new Map<string, VendorCredentialRow[]>()
+    for (const c of allCredentials) {
+      const arr = credsByVendor.get(c.vendor_profile_id) ?? []
+      arr.push(c)
+      credsByVendor.set(c.vendor_profile_id, arr)
+    }
 
     return vendorProfiles.map((vendor) => ({
       vendor,
       profile: profilesById.get(vendor.profile_id) ?? profilesByUser.get(vendor.user_id),
       app: appsByUser.get(vendor.user_id) ?? null,
+      credentials: credsByVendor.get(vendor.id) ?? [],
     }))
-  }, [vendorProfiles, vendorApps, profiles])
+  }, [vendorProfiles, vendorApps, profiles, allCredentials])
 
   const filtered = merged.filter(({ vendor, profile }) => {
     const haystack = [
