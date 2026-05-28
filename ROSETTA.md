@@ -353,4 +353,5 @@ export function useMyData() {
 - `/auth` now redirects to `/auth/individual` (keeps `?tab=admin` admin sign-in working).
 - New `/vendor/onboarding` page with 3 gated steps: business profile → KYC → vendor membership (looks up `membership_tiers.slug='vendor'`).
 - `ProfessionalsSection` CTA uses `resolveVendorCta(user, profile, vendorProfile)` from `src/lib/vendorCta.ts`: unauth → `/auth/vendor`; individual → upgrade-to-business modal then onboarding; business unverified → onboarding; verified → dashboard.
-- No schema changes; uses existing `profiles.account_type`, `vendor_profiles`, `kyc_cases`, `membership_tiers`.
+- Follow-up auth troubleshooting created the missing `vendor_profiles` table via migration `20260528004845_49542cd9-b5a9-48ab-9e75-f52220d700d3.sql` and fixed `/vendor/onboarding` so individual users see an in-page business upgrade prompt instead of bouncing through `/auth/vendor`.
+- Gotcha: `useProfile` should key its effect on `user.id`, not the full user object, or auth refreshes can trigger repeated profile reads and hold onboarding in a loading state.
