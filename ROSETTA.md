@@ -355,3 +355,7 @@ export function useMyData() {
 - `ProfessionalsSection` CTA uses `resolveVendorCta(user, profile, vendorProfile)` from `src/lib/vendorCta.ts`: unauth → `/auth/vendor`; individual → upgrade-to-business modal then onboarding; business unverified → onboarding; verified → dashboard.
 - Follow-up auth troubleshooting created the missing `vendor_profiles` table via migration `20260528004845_49542cd9-b5a9-48ab-9e75-f52220d700d3.sql` and fixed `/vendor/onboarding` so individual users see an in-page business upgrade prompt instead of bouncing through `/auth/vendor`.
 - Gotcha: `useProfile` should key its effect on `user.id`, not the full user object, or auth refreshes can trigger repeated profile reads and hold onboarding in a loading state.
+
+## 2026-05-28 — Pricing billing selector
+- Replaced the ambiguous Monthly/Annual sliding switch on `/pricing` with a two-button segmented selector so each side sets the exact billing state (`Monthly` -> `annual=false`, `Annual` -> `annual=true`).
+- Gotcha: the old single toggle combined label highlight, knob direction, and pricing state; changing translate classes alone could make the visual state feel inverted without changing the selected billing state.
