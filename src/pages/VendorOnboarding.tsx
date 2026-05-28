@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { Seo } from '@/components/Seo';
 import Navigation from '@/components/Navigation';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CheckCircle2, Circle, Loader2, ShieldCheck, Building2, CreditCard, Award } from 'lucide-react';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useVendorProfile } from '@/hooks/useVendorProfile';
@@ -36,13 +37,28 @@ function StepIcon({ status }: { status: StepStatus }) {
 const VendorOnboarding = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const [upgrading, setUpgrading] = useState(false);
   const { vendorProfile, isLoading: vendorLoading } = useVendorProfile(profile?.id);
   const { status: kycStatus, isLoading: kycLoading } = useKycStatus();
   const { data: myTier } = useMyMembership();
   const { data: tiers } = useMembershipTiers();
 
-  const loading = authLoading || profileLoading || vendorLoading || kycLoading;
+  const isBusiness = profile?.account_type === 'business';
+  const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading));
+
+  async function handleBusinessUpgrade() {
+    setUpgrading(true);
+    const { error } = await updateProfile({ account_type: 'business' });
+    setUpgrading(false);
+
+    if (error) {
+      toast.error(error);
+      return;
+    }
+
+    toast.success('Business account enabled. Continue your vendor setup.');
+  }
 
   // 1. Business profile completeness
   const profileStatus: StepStatus = useMemo(() => {
@@ -75,11 +91,6 @@ const VendorOnboarding = () => {
   // Redirect unauthenticated users to vendor signup
   if (!authLoading && !user) {
     return <Navigate to="/auth/vendor" replace />;
-  }
-
-  // Individual accounts can't onboard as a vendor — kick them to the vendor signup with a hint
-  if (!loading && profile && profile.account_type !== 'business') {
-    return <Navigate to="/auth/vendor" replace state={{ next: '/vendor/onboarding' }} />;
   }
 
   const steps: OnboardingStep[] = [
@@ -167,6 +178,20 @@ const VendorOnboarding = () => {
           <Card>
             <CardContent className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </CardContent>
+          </Card>
+        ) : profile && !isBusiness ? (
+          <Card>
+            <CardContent className="pt-6 text-center space-y-4">
+              <Building2 className="w-12 h-12 text-primary mx-auto" />
+              <h2 className="text-xl font-semibold">Upgrade to a business account</h2>
+              <p className="text-muted-foreground max-w-lg mx-auto">
+                Verified vendor access is available to business accounts. Upgrade your account first, then continue the vendor profile, KYC, and membership steps.
+              </p>
+              <Button onClick={handleBusinessUpgrade} disabled={upgrading}>
+                {upgrading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Upgrade to Business Account
+              </Button>
             </CardContent>
           </Card>
         ) : isVerified ? (
