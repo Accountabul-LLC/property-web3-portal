@@ -135,6 +135,7 @@ export function VendorProfileForm({ profileId, companyName, onSaved }: VendorPro
         vendor_bio: form.vendor_bio.trim() || null,
       })
       toast.success('Vendor profile saved')
+      onSaved?.()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save vendor profile')
     } finally {
