@@ -1,6 +1,6 @@
 import type { CredentialEligibilityResult } from '@/hooks/useCredentialEligibility'
 
-export const VERIFIED_VENDOR_CREDENTIAL_KEY = 'VENDOR_MARKETPLACE_APPROVED'
+export const VERIFIED_VENDOR_CREDENTIAL_KEY = 'vendor'
 
 export type VendorNetworkState =
   | 'not_started'
