@@ -78,12 +78,12 @@ export default function Pricing() {
               aria-label="Toggle annual billing"
               className={cn(
                 'relative w-10 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                annual ? 'bg-primary' : 'bg-muted-foreground/30'
+                annual ? 'bg-muted-foreground/30' : 'bg-primary'
               )}
             >
               <span className={cn(
                 'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
-                annual ? 'translate-x-5' : 'translate-x-0.5'
+                annual ? 'translate-x-0.5' : 'translate-x-5'
               )} />
             </button>
             <span className={cn('text-sm font-medium transition-colors', annual ? 'text-foreground' : 'text-muted-foreground')}>
