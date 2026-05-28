@@ -14,6 +14,7 @@ import { useProfile } from '@/hooks/useProfile';
 import { useVendorProfile } from '@/hooks/useVendorProfile';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { useMyMembership, useMembershipTiers, useSelectMembership } from '@/hooks/useMembershipTiers';
+import { useVendorApplication } from '@/hooks/useVendorApplication';
 import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
 import { cn } from '@/lib/utils';
 
@@ -62,6 +63,14 @@ const VendorOnboarding = () => {
   const { data: tiers, isLoading: tiersLoading } = useMembershipTiers();
   const selectMembership = useSelectMembership();
 
+  const {
+    submitVendorApplication,
+    isPendingReview,
+    isVerified: isCredentialVerified,
+    activeAddress,
+  } = useVendorApplication();
+  const [submitting, setSubmitting] = useState(false);
+
   const isBusiness = profile?.account_type === 'business';
   const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading || membershipLoading || tiersLoading));
 
@@ -107,7 +116,8 @@ const VendorOnboarding = () => {
   const completedCount = [profileStatus, kycStepStatus, paymentStatus].filter((s) => s === 'done').length;
   const progress = (completedCount / 3) * 100;
   const allDone = completedCount === 3;
-  const isVerified = vendorProfile?.verification_status === 'verified';
+  // isVerified: either the profile table marks them verified OR their credential application is active
+  const isVerified = vendorProfile?.verification_status === 'verified' || isCredentialVerified;
 
   // Accordion: track which step is expanded
   type StepKey = 'profile' | 'kyc' | 'payment';
@@ -302,7 +312,7 @@ const VendorOnboarding = () => {
               <p className="text-muted-foreground">
                 Your business is showing the verified badge across the Accountabul marketplace.
               </p>
-              <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+              <Button onClick={() => navigate('/vendor/dashboard')}>Go to Vendor Dashboard</Button>
             </CardContent>
           </Card>
         ) : (
@@ -380,10 +390,44 @@ const VendorOnboarding = () => {
                 <CardContent className="pt-6 text-center space-y-3">
                   <Award className="w-10 h-10 text-primary mx-auto" />
                   <h3 className="font-semibold text-lg">All steps complete!</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Our team will review your submission and issue your verified vendor badge shortly. You'll get a notification when it's live.
-                  </p>
-                  <Button onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+                  {isPendingReview ? (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        Your application has been submitted. Our team will review it and issue your verified vendor badge shortly.
+                      </p>
+                      <Button onClick={() => navigate('/vendor/status')}>View Application Status</Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">
+                        {activeAddress
+                          ? "You're ready to submit. Our team will review your application and issue your verified vendor badge."
+                          : 'Connect your wallet to submit your vendor application for review.'}
+                      </p>
+                      <Button
+                        disabled={!activeAddress || submitting}
+                        onClick={async () => {
+                          if (!activeAddress) {
+                            toast.error('Connect a wallet to submit your application.');
+                            return;
+                          }
+                          setSubmitting(true);
+                          try {
+                            await submitVendorApplication();
+                            toast.success("Application submitted! We'll review it shortly.");
+                            navigate('/vendor/status');
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : 'Submission failed. Please try again.');
+                          } finally {
+                            setSubmitting(false);
+                          }
+                        }}
+                      >
+                        {submitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                        {activeAddress ? 'Submit Application' : 'Connect Wallet to Submit'}
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             )}
