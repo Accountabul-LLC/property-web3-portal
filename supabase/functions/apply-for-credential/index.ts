@@ -185,7 +185,7 @@ function buildCors(req: Request): Record<string, string> {
       })
     }
 
-    if (credential_key === 'vendor') {
+    if (credential_key === 'VENDOR_MARKETPLACE_APPROVED') {
       const { error: vendorError } = await serviceClient
         .from('vendor_profiles')
         .upsert({

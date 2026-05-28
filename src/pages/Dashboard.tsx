@@ -22,7 +22,7 @@ import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { VendorNetworkCard } from '@/components/vendor/VendorNetworkCard';
 import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
-import { getVendorCredential } from '@/lib/vendorNetwork';
+import { getVendorCredential, VERIFIED_VENDOR_CREDENTIAL_KEY } from '@/lib/vendorNetwork';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -589,9 +589,9 @@ const Dashboard = () => {
             setVendorActionLoading(true)
             try {
               if (vendorCredential?.ui_section === 'auto_issuable') {
-                await triggerAutoIssue('vendor')
+                await triggerAutoIssue(VERIFIED_VENDOR_CREDENTIAL_KEY)
               } else {
-                await applyForCredential('vendor')
+                await applyForCredential(VERIFIED_VENDOR_CREDENTIAL_KEY)
               }
               toast.success('Verified vendor request submitted')
             } catch (err) {
