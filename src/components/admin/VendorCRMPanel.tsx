@@ -7,8 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle } from 'lucide-react'
+import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle, FileCheck2, Briefcase } from 'lucide-react'
 import { toast } from 'sonner'
+import { CREDENTIAL_CATALOG, INDUSTRIES } from '@/lib/vendorCredentialCatalog'
 
 type VendorProfile = {
   id: string
