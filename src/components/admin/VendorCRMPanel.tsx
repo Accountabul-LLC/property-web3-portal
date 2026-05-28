@@ -422,9 +422,67 @@ export default function VendorCRMPanel() {
                   {app.notes}
                 </div>
               )}
+
+              {/* Industry + Tax IDs */}
+              <div className="grid gap-3 md:grid-cols-3 text-sm">
+                <div className="flex items-start gap-2">
+                  <Briefcase className="w-4 h-4 text-muted-foreground mt-0.5" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Industry</p>
+                    <p className="font-medium">{industryLabel ?? '—'}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Full EIN</p>
+                  <p className="font-medium font-mono">{vendor.ein_full ?? (vendor.ein_last4 ? `•••-••-${vendor.ein_last4}` : '—')}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Tax-Exempt EIN</p>
+                  <p className="font-medium font-mono">{vendor.tax_exempt ? (vendor.tax_exempt_ein ?? '—') : 'Not tax-exempt'}</p>
+                </div>
+              </div>
+
+              {/* Credentials */}
+              {credentials.length > 0 && (
+                <div className="rounded-md border border-border/60 bg-muted/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <ShieldCheck className="w-4 h-4 text-primary" />
+                    Professional Credentials ({credentials.length})
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {credentials.map((c) => {
+                      const def = CREDENTIAL_CATALOG[c.credential_type]
+                      return (
+                        <div key={c.id} className="rounded border border-border/60 bg-background p-2 text-xs space-y-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-medium">{def?.label ?? c.credential_type}</span>
+                            <Badge variant={c.verification_status === 'verified' ? 'default' : 'outline'} className="text-[10px]">
+                              {c.verification_status}
+                            </Badge>
+                          </div>
+                          <div className="font-mono">{c.credential_number}{c.issuing_state ? ` · ${c.issuing_state}` : ''}</div>
+                          {c.expires_on && <div className="text-muted-foreground">Expires {c.expires_on}</div>}
+                          {c.issuing_authority && <div className="text-muted-foreground">Issued by {c.issuing_authority}</div>}
+                          {c.document_path && (
+                            <button
+                              type="button"
+                              onClick={() => openDoc(c.document_path!)}
+                              className="text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              <FileCheck2 className="w-3 h-3" />
+                              {c.document_name ?? 'View document'}
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
