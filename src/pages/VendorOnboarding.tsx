@@ -139,7 +139,7 @@ const VendorOnboarding = () => {
       description: 'Tell us about your company. We use this for your vendor badge and CRM record.',
       icon: Building2,
       status: profileStatus,
-      body: <VendorProfileForm profileId={profile?.id} companyName={profile?.company_name} />,
+      body: <VendorProfileForm profileId={profile?.id} companyName={profile?.company_name} onSaved={advanceAfterProfileSave} />,
     },
     {
       key: 'kyc',
