@@ -179,6 +179,10 @@ export default function VendorCRMPanel() {
     ads: merged.filter((row) => row.vendor.advertising_opt_in).length,
   }
 
+  // TODO: The review-credential-application edge function updates credential_applications.status
+  // but does NOT currently update vendor_profiles.verification_status. For full consistency,
+  // the edge function should sync vendor_profiles.verification_status when action = 'approve' or 'issue'.
+  // This is a separate edge-function task — do not rewrite the edge function here.
   async function runAction(applicationId: string, action: 'start_review' | 'approve' | 'reject' | 'issue', extra?: Record<string, unknown>) {
     setActioning(applicationId + action)
     try {
