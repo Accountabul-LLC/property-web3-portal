@@ -57,7 +57,7 @@ const VendorOnboarding = () => {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [upgrading, setUpgrading] = useState(false);
   const { vendorProfile, isLoading: vendorLoading } = useVendorProfile(profile?.id);
-  const { status: kycStatus, isLoading: kycLoading } = useKycStatus();
+  const { status: kycStatus, rejectionReason, isLoading: kycLoading } = useKycStatus();
   const { data: myTier } = useMyMembership();
   const { data: tiers } = useMembershipTiers();
   const selectMembership = useSelectMembership();
@@ -97,9 +97,12 @@ const VendorOnboarding = () => {
       ? 'in_progress'
       : 'todo';
 
-  // 3. Membership status — vendor tier slug = 'vendor' (falls back to any paid tier marked for vendors)
-  const vendorTier = tiers?.find((t) => t.slug === 'vendor') ?? null;
-  const paymentStatus: StepStatus = myTier?.id && myTier.id === vendorTier?.id ? 'done' : 'todo';
+  // 3. Membership status — prefer a dedicated vendor tier, then use the Professional plan as the current vendor-network path.
+  const vendorTier = useMemo(
+    () => tiers?.find((t) => t.slug === 'vendor') ?? tiers?.find((t) => t.slug === 'professional') ?? null,
+    [tiers],
+  );
+  const paymentStatus: StepStatus = vendorTier && myTier?.id === vendorTier.id ? 'done' : 'todo';
 
   const completedCount = [profileStatus, kycStepStatus, paymentStatus].filter((s) => s === 'done').length;
   const progress = (completedCount / 3) * 100;
@@ -142,6 +145,21 @@ const VendorOnboarding = () => {
       setTimeout(() => {
         cardRefs.current[next]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 100);
+    }
+  }
+
+  async function handleSelectVendorPlan() {
+    if (!vendorTier) {
+      toast.error('Vendor membership is not available yet.');
+      return;
+    }
+
+    try {
+      await selectMembership.mutateAsync(vendorTier.id);
+      toast.success(`${vendorTier.name} membership activated.`);
+      setExpandedStep(kycStepStatus !== 'done' ? 'kyc' : null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to activate vendor membership');
     }
   }
 
