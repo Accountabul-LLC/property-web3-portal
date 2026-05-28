@@ -13,8 +13,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useVendorProfile } from '@/hooks/useVendorProfile';
 import { useKycStatus } from '@/hooks/useKycStatus';
-import { useMyMembership, useMembershipTiers } from '@/hooks/useMembershipTiers';
+import { useMyMembership, useMembershipTiers, useSelectMembership } from '@/hooks/useMembershipTiers';
 import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
+import { cn } from '@/lib/utils';
 
 type StepStatus = 'todo' | 'in_progress' | 'done';
 
@@ -29,9 +30,25 @@ interface OnboardingStep {
 }
 
 function StepIcon({ status }: { status: StepStatus }) {
-  if (status === 'done') return <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />;
+  if (status === 'done') return <CheckCircle2 className="w-6 h-6 text-success" />;
   if (status === 'in_progress') return <Loader2 className="w-6 h-6 text-primary animate-spin" />;
   return <Circle className="w-6 h-6 text-muted-foreground" />;
+}
+
+function StatusBadge({ status }: { status: StepStatus }) {
+  const label = status === 'done' ? 'Complete' : status === 'in_progress' ? 'In progress' : 'To do';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'hidden w-24 justify-center whitespace-nowrap sm:inline-flex',
+        status === 'done' && 'border-success/40 text-success',
+        status === 'in_progress' && 'border-primary/40 text-primary',
+      )}
+    >
+      {label}
+    </Badge>
+  );
 }
 
 const VendorOnboarding = () => {
@@ -40,12 +57,13 @@ const VendorOnboarding = () => {
   const { profile, loading: profileLoading, updateProfile } = useProfile();
   const [upgrading, setUpgrading] = useState(false);
   const { vendorProfile, isLoading: vendorLoading } = useVendorProfile(profile?.id);
-  const { status: kycStatus, isLoading: kycLoading } = useKycStatus();
-  const { data: myTier } = useMyMembership();
-  const { data: tiers } = useMembershipTiers();
+  const { status: kycStatus, rejectionReason, isLoading: kycLoading } = useKycStatus();
+  const { data: myTier, isLoading: membershipLoading } = useMyMembership();
+  const { data: tiers, isLoading: tiersLoading } = useMembershipTiers();
+  const selectMembership = useSelectMembership();
 
   const isBusiness = profile?.account_type === 'business';
-  const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading));
+  const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading || membershipLoading || tiersLoading));
 
   async function handleBusinessUpgrade() {
     setUpgrading(true);
@@ -79,9 +97,12 @@ const VendorOnboarding = () => {
       ? 'in_progress'
       : 'todo';
 
-  // 3. Membership status — vendor tier slug = 'vendor' (falls back to any paid tier marked for vendors)
-  const vendorTier = tiers?.find((t) => t.slug === 'vendor') ?? null;
-  const paymentStatus: StepStatus = myTier?.id && myTier.id === vendorTier?.id ? 'done' : 'todo';
+  // 3. Membership status — prefer a dedicated vendor tier, then use the Professional plan as the current vendor-network path.
+  const vendorTier = useMemo(
+    () => tiers?.find((t) => t.slug === 'vendor') ?? tiers?.find((t) => t.slug === 'professional') ?? null,
+    [tiers],
+  );
+  const paymentStatus: StepStatus = vendorTier && myTier?.id === vendorTier.id ? 'done' : 'todo';
 
   const completedCount = [profileStatus, kycStepStatus, paymentStatus].filter((s) => s === 'done').length;
   const progress = (completedCount / 3) * 100;
@@ -127,6 +148,21 @@ const VendorOnboarding = () => {
     }
   }
 
+  async function handleSelectVendorPlan() {
+    if (!vendorTier) {
+      toast.error('Vendor membership is not available yet.');
+      return;
+    }
+
+    try {
+      await selectMembership.mutateAsync(vendorTier.id);
+      toast.success(`${vendorTier.name} membership activated.`);
+      setExpandedStep(kycStepStatus !== 'done' ? 'kyc' : null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to activate vendor membership');
+    }
+  }
+
   // Redirect unauthenticated users to vendor signup
   if (!authLoading && !user) {
     return <Navigate to="/auth/vendor" replace />;
@@ -150,19 +186,27 @@ const VendorOnboarding = () => {
           : 'Verify the principal owner with our identity check. Required for vendor approval.',
       icon: ShieldCheck,
       status: kycStepStatus,
-      cta:
-        kycStepStatus === 'done'
-          ? undefined
-          : {
-              label:
-                kycStatus === 'submitted' || kycStatus === 'under_review'
-                  ? 'View KYC Status'
-                  : 'Start Identity Verification',
-              onClick: () =>
-                navigate(
-                  kycStatus === 'submitted' || kycStatus === 'under_review' ? '/kyc/status' : '/kyc',
-                ),
-            },
+      body: (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <p className="text-sm font-medium">Current status: {kycStatus.replace(/_/g, ' ')}</p>
+            {rejectionReason && <p className="mt-1 text-sm text-muted-foreground">{rejectionReason}</p>}
+            <p className="mt-1 text-sm text-muted-foreground">
+              Complete identity verification when you're ready. You can return here and continue to vendor membership at any time.
+            </p>
+          </div>
+          {kycStepStatus !== 'done' && (
+            <div className="flex justify-end">
+              <Button
+                onClick={() => navigate(kycStatus === 'submitted' || kycStatus === 'under_review' ? '/kyc/status' : '/kyc')}
+                variant={kycStepStatus === 'in_progress' ? 'default' : 'outline'}
+              >
+                {kycStatus === 'submitted' || kycStatus === 'under_review' ? 'View KYC Status' : 'Start Identity Verification'}
+              </Button>
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       key: 'payment',
@@ -172,13 +216,30 @@ const VendorOnboarding = () => {
         : 'The vendor membership tier is being finalized. Check back soon or contact support.',
       icon: CreditCard,
       status: paymentStatus,
-      cta:
-        paymentStatus === 'done' || !vendorTier
-          ? undefined
-          : {
-              label: 'Choose Vendor Plan',
-              onClick: () => navigate('/pricing'),
-            },
+      body: (
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-muted/30 p-4">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm font-medium">{vendorTier ? vendorTier.name : 'Vendor membership'}</p>
+              {vendorTier && <span className="text-sm text-muted-foreground">${Number(vendorTier.price_monthly).toFixed(0)}/month</span>}
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {paymentStatus === 'done'
+                ? 'Your vendor membership is active for this onboarding flow.'
+                : 'Activate the vendor membership manually here, or review all available plans first.'}
+            </p>
+          </div>
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={() => navigate('/pricing')}>Review Plans</Button>
+            {paymentStatus !== 'done' && vendorTier && (
+              <Button onClick={handleSelectVendorPlan} disabled={selectMembership.isPending}>
+                {selectMembership.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Activate Vendor Membership
+              </Button>
+            )}
+          </div>
+        </div>
+      ),
     },
   ];
 
@@ -234,9 +295,9 @@ const VendorOnboarding = () => {
             </CardContent>
           </Card>
         ) : isVerified ? (
-          <Card className="border-green-500/30 bg-green-500/5">
+          <Card className="border-success/30 bg-success/5">
             <CardContent className="pt-6 text-center space-y-4">
-              <Award className="w-12 h-12 text-green-600 dark:text-green-400 mx-auto" />
+              <Award className="w-12 h-12 text-success mx-auto" />
               <h2 className="text-xl font-semibold">You're a verified vendor</h2>
               <p className="text-muted-foreground">
                 Your business is showing the verified badge across the Accountabul marketplace.
@@ -255,16 +316,17 @@ const VendorOnboarding = () => {
                 <Card
                   key={step.key}
                   ref={(el) => { cardRefs.current[step.key] = el; }}
-                  className={
+                  className={cn(
+                    'overflow-hidden',
                     step.status === 'done'
-                      ? 'border-green-500/30'
+                      ? 'border-success/30 bg-success/5'
                       : step.status === 'in_progress'
                       ? 'border-primary/40'
-                      : ''
-                  }
+                      : '',
+                  )}
                 >
                   <CardHeader
-                    className="cursor-pointer select-none hover:bg-muted/30 transition-colors rounded-t-lg"
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/30"
                     onClick={() => toggleStep(stepKey)}
                     role="button"
                     tabIndex={0}
@@ -276,27 +338,25 @@ const VendorOnboarding = () => {
                     }}
                     aria-expanded={isExpanded}
                   >
-                    <div className="flex items-start gap-4">
-                      <StepIcon status={step.status} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-4">
+                      <div className="pt-0.5">
+                        <StepIcon status={step.status} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2 mb-1">
                           <StepHeaderIcon className="w-4 h-4 text-muted-foreground" />
-                          <CardTitle className="text-base">
+                          <CardTitle className="text-base leading-snug">
                             Step {idx + 1}: {step.title}
                           </CardTitle>
-                          {step.status === 'done' && (
-                            <Badge variant="outline" className="ml-auto text-green-700 dark:text-green-400 border-green-500/40">
-                              Complete
-                            </Badge>
-                          )}
                         </div>
                         <CardDescription>{step.description}</CardDescription>
                       </div>
-                      {hasContent && (
-                        <div className="ml-2 text-muted-foreground shrink-0">
-                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </div>
-                      )}
+                      <div className="flex items-center justify-end gap-3 text-muted-foreground">
+                        <StatusBadge status={step.status} />
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background">
+                          {hasContent && (isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
+                        </span>
+                      </div>
                     </div>
                   </CardHeader>
                   {hasContent && isExpanded && (

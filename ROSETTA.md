@@ -359,3 +359,8 @@ export function useMyData() {
 ## 2026-05-28 — Pricing billing selector
 - Replaced the ambiguous Monthly/Annual sliding switch on `/pricing` with a two-button segmented selector so each side sets the exact billing state (`Monthly` -> `annual=false`, `Annual` -> `annual=true`).
 - Gotcha: the old single toggle combined label highlight, knob direction, and pricing state; changing translate classes alone could make the visual state feel inverted without changing the selected billing state.
+
+## 2026-05-28 — Vendor onboarding action panels
+- Updated `/vendor/onboarding` so Identity Verification and Vendor Membership always expand into actionable panels instead of only relying on the automatic sequence.
+- Added direct vendor membership activation in step 3, falling back to the Professional tier when no dedicated `vendor` tier exists.
+- Aligned onboarding step headers with a fixed right-side status badge and chevron control to keep the cards symmetrical.
