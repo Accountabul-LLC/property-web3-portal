@@ -20,6 +20,10 @@ const lazyPage = <T extends Record<string, unknown>>(loader: () => Promise<{ def
 const Index = lazyPage(() => import("./pages/Index"));
 const Marketplace = lazyPage(() => import("./pages/Marketplace"));
 const Auth = lazyPage(() => import("./pages/Auth"));
+const AuthIndividual = lazyPage(() => import("./pages/AuthIndividual"));
+const AuthBusiness = lazyPage(() => import("./pages/AuthBusiness"));
+const AuthVendor = lazyPage(() => import("./pages/AuthVendor"));
+const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
 const Dashboard = lazyPage(() => import("./pages/Dashboard"));
 const Professionals = lazyPage(() => import("./pages/Professionals"));
@@ -82,6 +86,10 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/individual" element={<AuthIndividual />} />
+                <Route path="/auth/business" element={<AuthBusiness />} />
+                <Route path="/auth/vendor" element={<AuthVendor />} />
+                <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />

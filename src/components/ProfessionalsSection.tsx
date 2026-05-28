@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,13 +7,71 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Star, MapPin, Clock, Shield, Search, Filter, Award, Users, Scale, Calculator, Loader2 } from 'lucide-react';
 import { useProfessionals } from '@/hooks/useProfessionals';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
+import { useVendorProfile } from '@/hooks/useVendorProfile';
+import { resolveVendorCta } from '@/lib/vendorCta';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const MarketplaceSection = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { vendorProfile } = useVendorProfile(profile?.id);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedService, setSelectedService] = React.useState('all');
   const [selectedLocation, setSelectedLocation] = React.useState('all');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
 
   const { data: professionals = [], isLoading } = useProfessionals();
+
+  const vendorCta = resolveVendorCta(user, profile, vendorProfile);
+
+  const handleVendorCtaClick = () => {
+    switch (vendorCta.action.kind) {
+      case 'navigate':
+        navigate(vendorCta.action.to);
+        break;
+      case 'already-verified':
+        toast.success("You're already a verified vendor.");
+        navigate(vendorCta.action.to);
+        break;
+      case 'upgrade-modal':
+        setUpgradeOpen(true);
+        break;
+    }
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles' as never)
+        .update({ account_type: 'business', updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, user.id);
+      if (error) throw error;
+      toast.success('Account upgraded to Business.');
+      setUpgradeOpen(false);
+      navigate('/vendor/onboarding');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to upgrade account');
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   const serviceTypes = [
     { value: 'all', label: 'All Services' },
@@ -252,10 +310,27 @@ const MarketplaceSection = () => {
         <p className="text-lg mb-6 opacity-90">
           Business profiles can join as vendors first, then request the verified star badge for trusted marketplace visibility.
         </p>
-        <Button variant="secondary" size="lg" asChild>
-          <Link to="/auth?mode=signup&intent=vendor">Request Verified Vendor Status</Link>
+        <Button variant="secondary" size="lg" onClick={handleVendorCtaClick}>
+          {vendorCta.label}
         </Button>
       </Card>
+
+      <AlertDialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Upgrade to a Business Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Verified vendor status is only available for business accounts. We'll switch your profile to a Business account and take you to vendor onboarding. You can update your company details on the next step.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={upgrading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpgrade} disabled={upgrading}>
+              {upgrading ? 'Upgrading...' : 'Upgrade and Continue'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
