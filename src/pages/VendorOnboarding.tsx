@@ -248,9 +248,13 @@ const VendorOnboarding = () => {
           <div className="space-y-4">
             {steps.map((step, idx) => {
               const StepHeaderIcon = step.icon;
+              const stepKey = step.key as StepKey;
+              const isExpanded = expandedStep === stepKey;
+              const hasContent = !!(step.body || step.cta);
               return (
                 <Card
                   key={step.key}
+                  ref={(el) => { cardRefs.current[step.key] = el; }}
                   className={
                     step.status === 'done'
                       ? 'border-green-500/30'
@@ -259,7 +263,19 @@ const VendorOnboarding = () => {
                       : ''
                   }
                 >
-                  <CardHeader>
+                  <CardHeader
+                    className="cursor-pointer select-none hover:bg-muted/30 transition-colors rounded-t-lg"
+                    onClick={() => toggleStep(stepKey)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        toggleStep(stepKey);
+                      }
+                    }}
+                    aria-expanded={isExpanded}
+                  >
                     <div className="flex items-start gap-4">
                       <StepIcon status={step.status} />
                       <div className="flex-1 min-w-0">
@@ -276,9 +292,14 @@ const VendorOnboarding = () => {
                         </div>
                         <CardDescription>{step.description}</CardDescription>
                       </div>
+                      {hasContent && (
+                        <div className="ml-2 text-muted-foreground shrink-0">
+                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                        </div>
+                      )}
                     </div>
                   </CardHeader>
-                  {(step.body || step.cta) && (
+                  {hasContent && isExpanded && (
                     <CardContent>
                       {step.body}
                       {step.cta && (
