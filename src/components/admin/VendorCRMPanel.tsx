@@ -21,6 +21,10 @@ type VendorProfile = {
   place_of_business: string | null
   employee_count: number | null
   ein_last4: string | null
+  ein_full: string | null
+  industry: string | null
+  tax_exempt: boolean
+  tax_exempt_ein: string | null
   advertising_opt_in: boolean
   vendor_bio: string | null
   verification_status: 'not_requested' | 'requested' | 'under_review' | 'verified' | 'rejected' | 'revoked'
@@ -28,6 +32,20 @@ type VendorProfile = {
   requested_at: string | null
   reviewed_at: string | null
   notes: string | null
+}
+
+type VendorCredentialRow = {
+  id: string
+  vendor_profile_id: string
+  user_id: string
+  credential_type: string
+  credential_number: string
+  issuing_state: string | null
+  issuing_authority: string | null
+  expires_on: string | null
+  document_path: string | null
+  document_name: string | null
+  verification_status: string
 }
 
 type VendorApplication = {
