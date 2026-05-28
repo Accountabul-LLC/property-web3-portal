@@ -22,7 +22,7 @@ import { useKycStatus } from '@/hooks/useKycStatus';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { VendorNetworkCard } from '@/components/vendor/VendorNetworkCard';
 import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
-import { getVendorCredential } from '@/lib/vendorNetwork';
+import { getVendorCredential, VERIFIED_VENDOR_CREDENTIAL_KEY } from '@/lib/vendorNetwork';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
