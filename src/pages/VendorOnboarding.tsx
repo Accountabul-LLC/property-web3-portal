@@ -13,8 +13,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useProfile } from '@/hooks/useProfile';
 import { useVendorProfile } from '@/hooks/useVendorProfile';
 import { useKycStatus } from '@/hooks/useKycStatus';
-import { useMyMembership, useMembershipTiers } from '@/hooks/useMembershipTiers';
+import { useMyMembership, useMembershipTiers, useSelectMembership } from '@/hooks/useMembershipTiers';
 import { VendorProfileForm } from '@/components/vendor/VendorProfileForm';
+import { cn } from '@/lib/utils';
 
 type StepStatus = 'todo' | 'in_progress' | 'done';
 
@@ -29,9 +30,25 @@ interface OnboardingStep {
 }
 
 function StepIcon({ status }: { status: StepStatus }) {
-  if (status === 'done') return <CheckCircle2 className="w-6 h-6 text-green-600 dark:text-green-400" />;
+  if (status === 'done') return <CheckCircle2 className="w-6 h-6 text-success" />;
   if (status === 'in_progress') return <Loader2 className="w-6 h-6 text-primary animate-spin" />;
   return <Circle className="w-6 h-6 text-muted-foreground" />;
+}
+
+function StatusBadge({ status }: { status: StepStatus }) {
+  const label = status === 'done' ? 'Complete' : status === 'in_progress' ? 'In progress' : 'To do';
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        'hidden w-24 justify-center whitespace-nowrap sm:inline-flex',
+        status === 'done' && 'border-success/40 text-success',
+        status === 'in_progress' && 'border-primary/40 text-primary',
+      )}
+    >
+      {label}
+    </Badge>
+  );
 }
 
 const VendorOnboarding = () => {
@@ -43,6 +60,7 @@ const VendorOnboarding = () => {
   const { status: kycStatus, isLoading: kycLoading } = useKycStatus();
   const { data: myTier } = useMyMembership();
   const { data: tiers } = useMembershipTiers();
+  const selectMembership = useSelectMembership();
 
   const isBusiness = profile?.account_type === 'business';
   const loading = authLoading || profileLoading || (isBusiness && (vendorLoading || kycLoading));
