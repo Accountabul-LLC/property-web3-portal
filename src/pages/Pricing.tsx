@@ -69,27 +69,33 @@ export default function Pricing() {
             ))}
           </div>
 
-          <div className="inline-flex items-center gap-3 bg-muted rounded-full px-4 py-2">
-            <span className={cn('text-sm font-medium transition-colors', !annual ? 'text-foreground' : 'text-muted-foreground')}>
-              Monthly
-            </span>
+          <div
+            className="inline-flex items-center rounded-full bg-muted p-1"
+            role="group"
+            aria-label="Billing frequency"
+          >
             <button
-              onClick={() => setAnnual(v => !v)}
-              aria-label="Toggle annual billing"
+              type="button"
+              onClick={() => setAnnual(false)}
+              aria-pressed={!annual}
               className={cn(
-                'relative w-10 h-5 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                annual ? 'bg-primary' : 'bg-muted-foreground/30'
+                'h-9 rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                !annual ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              <span className={cn(
-                'absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
-                annual ? 'translate-x-5' : 'translate-x-0.5'
-              )} />
+              Monthly
             </button>
-            <span className={cn('text-sm font-medium transition-colors', annual ? 'text-foreground' : 'text-muted-foreground')}>
-              Annual{' '}
-              <span className="text-green-600 dark:text-green-400 font-semibold">Save 16%</span>
-            </span>
+            <button
+              type="button"
+              onClick={() => setAnnual(true)}
+              aria-pressed={annual}
+              className={cn(
+                'h-9 rounded-full px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                annual ? 'bg-primary text-primary-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              Annual <span className="font-semibold">Save 16%</span>
+            </button>
           </div>
         </div>
 
