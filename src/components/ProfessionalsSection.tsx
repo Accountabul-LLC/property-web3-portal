@@ -25,11 +25,53 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const MarketplaceSection = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { profile } = useProfile();
+  const { vendorProfile } = useVendorProfile(profile?.id);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedService, setSelectedService] = React.useState('all');
   const [selectedLocation, setSelectedLocation] = React.useState('all');
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
 
   const { data: professionals = [], isLoading } = useProfessionals();
+
+  const vendorCta = resolveVendorCta(user, profile, vendorProfile);
+
+  const handleVendorCtaClick = () => {
+    switch (vendorCta.action.kind) {
+      case 'navigate':
+        navigate(vendorCta.action.to);
+        break;
+      case 'already-verified':
+        toast.success("You're already a verified vendor.");
+        navigate(vendorCta.action.to);
+        break;
+      case 'upgrade-modal':
+        setUpgradeOpen(true);
+        break;
+    }
+  };
+
+  const handleConfirmUpgrade = async () => {
+    if (!user) return;
+    setUpgrading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles' as never)
+        .update({ account_type: 'business', updated_at: new Date().toISOString() } as never)
+        .eq('id' as never, user.id);
+      if (error) throw error;
+      toast.success('Account upgraded to Business.');
+      setUpgradeOpen(false);
+      navigate('/vendor/onboarding');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to upgrade account');
+    } finally {
+      setUpgrading(false);
+    }
+  };
 
   const serviceTypes = [
     { value: 'all', label: 'All Services' },
