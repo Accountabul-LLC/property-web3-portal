@@ -285,7 +285,14 @@ export default function VendorCRMPanel() {
               No vendors found.
             </CardContent>
           </Card>
-        ) : filtered.map(({ vendor, profile, app }) => (
+        ) : filtered.map(({ vendor, profile, app, credentials }) => {
+          const industryLabel = INDUSTRIES.find((i) => i.slug === vendor.industry)?.label ?? null
+          const openDoc = async (path: string) => {
+            const { data: signed } = await supabase.storage.from('vendor-credentials').createSignedUrl(path, 60 * 10)
+            if (signed?.signedUrl) window.open(signed.signedUrl, '_blank', 'noopener')
+            else toast.error('Unable to load document')
+          }
+          return (
           <Card key={vendor.id}>
             <CardContent className="pt-6 space-y-4">
               <div className="flex items-start justify-between gap-4 flex-wrap">
