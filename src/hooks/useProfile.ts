@@ -32,42 +32,48 @@ export type ProfileUpdate = Partial<Pick<Profile,
 
 export function useProfile() {
   const { user } = useAuth();
+  const userId = user?.id ?? null;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!userId) {
       setProfile(null);
       setLoading(false);
       return;
     }
+
+    let cancelled = false;
+    const meta = user?.user_metadata || {};
+    const email = user?.email ?? null;
 
     const fetchProfile = async () => {
       setLoading(true);
       const { data, error } = await supabase
         .from('profiles' as any)
         .select('*')
-        .eq('id', user.id)
+        .eq('id', userId)
         .single();
+
+      if (cancelled) return;
 
       if (error && error.code === 'PGRST116') {
         // Profile row missing — create it from user metadata
-        const meta = user.user_metadata || {};
         const newProfile: any = {
-          id: user.id,
-          email: user.email,
+          id: userId,
+          email,
           full_name: meta.full_name || meta.name || null,
           first_name: meta.given_name || null,
           last_name: meta.family_name || null,
         };
         await supabase.from('profiles' as any).insert(newProfile as any);
+        if (cancelled) return;
         setProfile(newProfile as Profile);
       } else if (!error && data) {
         const profileData = data as any as Profile;
         setProfile(profileData);
 
         // Backfill from Google metadata for existing users
-        const meta = user.user_metadata;
         if (meta && !profileData.first_name && meta.given_name) {
           const backfill: Record<string, string | null> = {
             first_name: meta.given_name || null,
@@ -78,7 +84,8 @@ export function useProfile() {
           await supabase
             .from('profiles' as any)
             .update(backfill as any)
-            .eq('id', user.id);
+            .eq('id', userId);
+          if (cancelled) return;
           setProfile(prev => prev ? { ...prev, ...backfill } as Profile : null);
         }
       }
@@ -86,7 +93,10 @@ export function useProfile() {
     };
 
     fetchProfile();
-  }, [user]);
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   const updateProfile = async (updates: ProfileUpdate) => {
     if (!user) return { error: 'Not authenticated' };
