@@ -310,10 +310,27 @@ const MarketplaceSection = () => {
         <p className="text-lg mb-6 opacity-90">
           Business profiles can join as vendors first, then request the verified star badge for trusted marketplace visibility.
         </p>
-        <Button variant="secondary" size="lg" asChild>
-          <Link to="/auth?mode=signup&intent=vendor">Request Verified Vendor Status</Link>
+        <Button variant="secondary" size="lg" onClick={handleVendorCtaClick}>
+          {vendorCta.label}
         </Button>
       </Card>
+
+      <AlertDialog open={upgradeOpen} onOpenChange={setUpgradeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Upgrade to a Business Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Verified vendor status is only available for business accounts. We'll switch your profile to a Business account and take you to vendor onboarding. You can update your company details on the next step.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={upgrading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmUpgrade} disabled={upgrading}>
+              {upgrading ? 'Upgrading...' : 'Upgrade and Continue'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

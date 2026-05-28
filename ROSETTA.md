@@ -347,3 +347,10 @@ export function useMyData() {
 
 <!-- rosetta:version:1.0 -->
 <!-- rosetta:last-updated:2026-05-25 -->
+
+## 2026-05-28 — Vendor auth + onboarding flow
+- Added dedicated auth routes: `/auth/individual`, `/auth/business`, `/auth/vendor` (shared `AuthForm` in `src/components/auth/AuthForm.tsx`).
+- `/auth` now redirects to `/auth/individual` (keeps `?tab=admin` admin sign-in working).
+- New `/vendor/onboarding` page with 3 gated steps: business profile → KYC → vendor membership (looks up `membership_tiers.slug='vendor'`).
+- `ProfessionalsSection` CTA uses `resolveVendorCta(user, profile, vendorProfile)` from `src/lib/vendorCta.ts`: unauth → `/auth/vendor`; individual → upgrade-to-business modal then onboarding; business unverified → onboarding; verified → dashboard.
+- No schema changes; uses existing `profiles.account_type`, `vendor_profiles`, `kyc_cases`, `membership_tiers`.
