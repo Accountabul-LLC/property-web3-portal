@@ -24,9 +24,10 @@ import { INDUSTRIES, normalizeEin, einLast4 } from '@/lib/vendorCredentialCatalo
 interface VendorProfileFormProps {
   profileId: string | null | undefined
   companyName: string | null | undefined
+  onSaved?: () => void
 }
 
-export function VendorProfileForm({ profileId, companyName }: VendorProfileFormProps) {
+export function VendorProfileForm({ profileId, companyName, onSaved }: VendorProfileFormProps) {
   const { user } = useAuth()
   const { vendorProfile, isLoading, saveVendorProfile } = useVendorProfile(profileId)
   const [saving, setSaving] = useState(false)
