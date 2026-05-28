@@ -316,16 +316,17 @@ const VendorOnboarding = () => {
                 <Card
                   key={step.key}
                   ref={(el) => { cardRefs.current[step.key] = el; }}
-                  className={
+                  className={cn(
+                    'overflow-hidden',
                     step.status === 'done'
-                      ? 'border-green-500/30'
+                      ? 'border-success/30 bg-success/5'
                       : step.status === 'in_progress'
                       ? 'border-primary/40'
-                      : ''
-                  }
+                      : '',
+                  )}
                 >
                   <CardHeader
-                    className="cursor-pointer select-none hover:bg-muted/30 transition-colors rounded-t-lg"
+                    className="cursor-pointer select-none transition-colors hover:bg-muted/30"
                     onClick={() => toggleStep(stepKey)}
                     role="button"
                     tabIndex={0}
@@ -337,27 +338,25 @@ const VendorOnboarding = () => {
                     }}
                     aria-expanded={isExpanded}
                   >
-                    <div className="flex items-start gap-4">
-                      <StepIcon status={step.status} />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                    <div className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-start gap-4">
+                      <div className="pt-0.5">
+                        <StepIcon status={step.status} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex min-w-0 items-center gap-2 mb-1">
                           <StepHeaderIcon className="w-4 h-4 text-muted-foreground" />
-                          <CardTitle className="text-base">
+                          <CardTitle className="text-base leading-snug">
                             Step {idx + 1}: {step.title}
                           </CardTitle>
-                          {step.status === 'done' && (
-                            <Badge variant="outline" className="ml-auto text-green-700 dark:text-green-400 border-green-500/40">
-                              Complete
-                            </Badge>
-                          )}
                         </div>
                         <CardDescription>{step.description}</CardDescription>
                       </div>
-                      {hasContent && (
-                        <div className="ml-2 text-muted-foreground shrink-0">
-                          {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                        </div>
-                      )}
+                      <div className="flex items-center justify-end gap-3 text-muted-foreground">
+                        <StatusBadge status={step.status} />
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background">
+                          {hasContent && (isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />)}
+                        </span>
+                      </div>
                     </div>
                   </CardHeader>
                   {hasContent && isExpanded && (
