@@ -2,7 +2,7 @@ import { Suspense, lazy, type ComponentType } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ActiveWalletProvider } from "@/contexts/ActiveWalletContext";
 import { ThemeProvider } from "next-themes";
 import KycGate from "./components/KycGate";
@@ -62,7 +62,9 @@ const Treasury = lazyPage(() => import("./pages/Treasury"));
 const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const Pricing = lazyPage(() => import("./pages/Pricing"));
-
+const Vendor = lazyPage(() => import("./pages/Vendor"));
+const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
+const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
 
 
 function RouteFallback() {
@@ -129,6 +131,14 @@ const App = () => (
                 <Route path="/causes/my-donations" element={<MyDonations />} />
                 <Route path="/causes/:slug" element={<CauseDetail />} />
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
+                <Route path="/vendor" element={<Vendor />} />
+                <Route path="/vendor/status" element={<VendorStatus />} />
+                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                {/* Legacy vendor route redirects */}
+                <Route path="/vendors" element={<Navigate to="/vendor" replace />} />
+                <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
+                <Route path="/vendors/status" element={<Navigate to="/vendor/status" replace />} />
+                <Route path="/vendors/dashboard" element={<Navigate to="/vendor/dashboard" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
