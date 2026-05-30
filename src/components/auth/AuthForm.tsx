@@ -20,6 +20,13 @@ interface AuthFormProps {
   subtitle: string;
   redirectAfterSignup: string;
   redirectAfterLogin?: string;
+  /**
+   * Optional async resolver invoked after a successful login (or when an
+   * already-authenticated user lands on the form). Returns the path to
+   * redirect to, allowing flows like vendor auth to skip onboarding for
+   * users whose status is already past it.
+   */
+  resolveLoginRedirect?: (userId: string) => Promise<string | null | undefined>;
 }
 
 const VARIANT_ICON: Record<AuthFormVariant, React.ComponentType<{ className?: string }>> = {
@@ -34,11 +41,12 @@ export function AuthForm({
   subtitle,
   redirectAfterSignup,
   redirectAfterLogin,
+  resolveLoginRedirect,
 }: AuthFormProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading: authLoading } = useAuth();
-  const nextPath =
+  const defaultNextPath =
     (location.state as { next?: string } | null)?.next ??
     redirectAfterLogin ??
     redirectAfterSignup;
@@ -53,12 +61,33 @@ export function AuthForm({
   const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const resolveNext = async (userId: string): Promise<string> => {
+    const explicitNext = (location.state as { next?: string } | null)?.next;
+    if (explicitNext) return explicitNext;
+    if (resolveLoginRedirect) {
+      try {
+        const resolved = await resolveLoginRedirect(userId);
+        if (resolved) return resolved;
+      } catch (err) {
+        console.warn('resolveLoginRedirect failed, using default', err);
+      }
+    }
+    return defaultNextPath;
+  };
+
   // Redirect authenticated users away from the auth form
   useEffect(() => {
     if (!authLoading && user) {
-      navigate(nextPath, { replace: true });
+      let cancelled = false;
+      resolveNext(user.id).then((path) => {
+        if (!cancelled) navigate(path, { replace: true });
+      });
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [user, authLoading, navigate, nextPath]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   const HeaderIcon = VARIANT_ICON[variant];
 
