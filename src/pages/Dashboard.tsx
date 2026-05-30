@@ -619,12 +619,28 @@ const Dashboard = () => {
           onOpenCredentials={() => navigate('/credentials')}
         />
 
+        <div className="flex flex-wrap gap-2 mb-8 -mt-4">
+          <Button variant="outline" size="sm" onClick={() => navigate('/vendor/dashboard')}>
+            Vendor Dashboard & Leads
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/vendor/onboarding')}>
+            Vendor Onboarding
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/vendor')}>
+            Vendor Hub
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate('/vendors')}>
+            Browse Vendor Directory
+          </Button>
+        </div>
+
         {profile?.account_type === 'business' && (
           <VendorProfileForm
             profileId={profile?.id}
             companyName={profile?.company_name}
           />
         )}
+
 
         {/* Connected Wallets */}
         <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

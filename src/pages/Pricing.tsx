@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Check, Star, Zap } from 'lucide-react'
+import { Check, Star, Zap, ArrowLeft } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Navigation from '@/components/Navigation'
@@ -49,7 +49,19 @@ export default function Pricing() {
       <Navigation />
 
       <main className="flex-1 w-full overflow-x-hidden">
+        {user && (
+          <div className="max-w-6xl mx-auto px-4 pt-6">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Dashboard
+            </button>
+          </div>
+        )}
         <div className="text-center py-16 px-4">
+
           <Badge variant="secondary" className="mb-4">Membership Plans</Badge>
           <h1 className="text-4xl sm:text-5xl font-bold text-foreground mb-4">
             Membership that grows<br />with your property
