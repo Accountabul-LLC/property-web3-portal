@@ -15,7 +15,7 @@ If the task touches XRPL, minting, or payments: also read `.rosetta/modules/xrpl
 - Always import supabase from `@/integrations/supabase/client`
 - Never call XRPL from the browser — always use edge functions
 - Always pull from GitHub before pushing (Lovable auto-commits)
-- Supabase project: `bmxcjxtjujhwreduwtvz` (Aiagentboard)
+- Supabase project: `gveavwqyrwqvafsnhnqc` (Lovable-provisioned, live project)
 
 ## CEO Agent (Autonomous Orchestrator)
 

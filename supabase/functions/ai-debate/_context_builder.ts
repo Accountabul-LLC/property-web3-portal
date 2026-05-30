@@ -37,7 +37,7 @@ src/contexts/ActiveWalletContext.tsx — global wallet state + inactivity timeou
 src/integrations/supabase/client.ts — Supabase singleton (always import from here)
 src/integrations/supabase/types.ts — auto-generated DB types (never edit)
 
-## DB Tables (project: bmxcjxtjujhwreduwtvz)
+## DB Tables (project: gveavwqyrwqvafsnhnqc)
 auth.users + profiles, user_roles (admin|moderator|user), user_wallets
 wallet_audit_log
 properties, property_documents, property_reviews, saved_properties

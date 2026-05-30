@@ -122,9 +122,9 @@ src/
         └── types.ts    # Auto-generated DB types (DO NOT edit manually)
 
 supabase/
-├── config.toml         # Project ref: bmxcjxtjujhwreduwtvz, all functions verify_jwt=false
+├── config.toml         # Project ref: gveavwqyrwqvafsnhnqc, all functions verify_jwt=false
 ├── functions/          # Deno edge functions (one folder per function)
-└── migrations/         # Ordered SQL migrations (applied to bmxcjxtjujhwreduwtvz)
+└── migrations/         # Ordered SQL migrations (applied to gveavwqyrwqvafsnhnqc)
 
 docs/
 ├── PRD.md              # Wallet/send flow product requirements
@@ -231,7 +231,7 @@ export function useMyData() {
 - **Team access = `admin` role in `user_roles`** — no separate `team` role yet; to grant access: `insert into user_roles (user_id, role) values ('<uuid>', 'admin')`
 - **Lovable auto-commits** — commits pushed to GitHub from Lovable will overwrite local changes unless you pull first
 - **`ai_agents` table is empty** — Marketplace tab on /ai-agents shows no data; seeding needed
-- **New Supabase project:** `bmxcjxtjujhwreduwtvz` (Aiagentboard) — old project was `gveavwqyrwqvafsnhnqc`
+- **New Supabase project:** `gveavwqyrwqvafsnhnqc` (Aiagentboard) — old project was `gveavwqyrwqvafsnhnqc`
 - **MPT metadata:** XLS-89 compressed standard, max 1024 bytes — see `docs/MPT_MINTING.md`
 
 ## Agent Notes
@@ -339,7 +339,7 @@ export function useMyData() {
 
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
-- Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
+- Migrated project to new Supabase instance `gveavwqyrwqvafsnhnqc`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
 - All 18 migrations applied; all 15 edge functions deployed
 - ROSETTA.md and modules created for context efficiency
 

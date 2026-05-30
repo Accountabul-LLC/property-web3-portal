@@ -1,4 +1,4 @@
-project_id = "bmxcjxtjujhwreduwtvz"
+project_id = "gveavwqyrwqvafsnhnqc"
 
 [functions.auto-issue-credential]
 verify_jwt = true

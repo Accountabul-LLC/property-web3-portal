@@ -313,7 +313,7 @@
   "context_notes": [
     "Platform is Accountabul — RWA tokenization + social hub on XRPL",
     "Stack: React + TypeScript + Supabase (PostgreSQL + Edge Functions in Deno)",
-    "Supabase project: bmxcjxtjujhwreduwtvz (Aiagentboard)",
+    "Supabase project: gveavwqyrwqvafsnhnqc (Lovable-provisioned, live project)",
     "All XRPL interactions go through edge functions — no browser XRPL calls",
     "Wallet signing uses Xaman (QR-code) for user-facing ops; edge-function signer seed for admin auto-sign",
     "Team access = admin role in user_roles table",
