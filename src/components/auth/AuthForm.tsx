@@ -104,10 +104,12 @@ export function AuthForm({
         toast.success('Check your email for a password reset link.');
         setMode('login');
       } else if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         toast.success('Welcome back!');
-        navigate(nextPath, { replace: true });
+        const userId = signInData.user?.id;
+        const next = userId ? await resolveNext(userId) : defaultNextPath;
+        navigate(next, { replace: true });
       } else {
         const { data, error } = await supabase.auth.signUp({
           email,
