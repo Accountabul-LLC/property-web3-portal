@@ -1708,39 +1708,45 @@ export type Database = {
       }
       vendor_leads: {
         Row: {
-          contact_email: string
-          contact_name: string
-          contact_phone: string | null
           created_at: string
           id: string
           message: string
-          source_url: string | null
+          property_address: string | null
+          requester_email: string
+          requester_name: string
+          requester_phone: string | null
+          service_needed: string | null
+          source: string
           status: string
           updated_at: string
           vendor_notes: string | null
           vendor_profile_id: string
         }
         Insert: {
-          contact_email: string
-          contact_name: string
-          contact_phone?: string | null
           created_at?: string
           id?: string
           message: string
-          source_url?: string | null
+          property_address?: string | null
+          requester_email: string
+          requester_name: string
+          requester_phone?: string | null
+          service_needed?: string | null
+          source?: string
           status?: string
           updated_at?: string
           vendor_notes?: string | null
           vendor_profile_id: string
         }
         Update: {
-          contact_email?: string
-          contact_name?: string
-          contact_phone?: string | null
           created_at?: string
           id?: string
           message?: string
-          source_url?: string | null
+          property_address?: string | null
+          requester_email?: string
+          requester_name?: string
+          requester_phone?: string | null
+          service_needed?: string | null
+          source?: string
           status?: string
           updated_at?: string
           vendor_notes?: string | null
