@@ -1,9 +1,10 @@
 export const VENDOR_CREDENTIAL_KEY = 'vendor'
 
-export const VENDOR_ENTRY_ROUTE = '/vendor'
+export const VENDOR_ENTRY_ROUTE = '/vendors'
 export const VENDOR_ONBOARDING_ROUTE = '/vendor/onboarding'
-export const VENDOR_STATUS_ROUTE = '/vendor/status'
 export const VENDOR_DASHBOARD_ROUTE = '/vendor/dashboard'
+// Legacy alias kept so callers that referenced a separate status page resolve to the dashboard.
+export const VENDOR_STATUS_ROUTE = VENDOR_DASHBOARD_ROUTE
 
 export type VendorApplicationStatus =
   | 'none'
@@ -26,7 +27,7 @@ export function normalizeVendorStatus(status?: string | null): VendorApplication
     case 'applied':
     case 'under_review':
     case 'approved':
-    case 'issued_pending_acceptance':
+    case 'issued_pending_acceptance'  :
     case 'active':
     case 'rejected':
     case 'expired':
@@ -40,7 +41,6 @@ export function normalizeVendorStatus(status?: string | null): VendorApplication
 export function getVendorNextRoute(status: VendorApplicationStatus): string {
   switch (status) {
     case 'active':
-      return VENDOR_DASHBOARD_ROUTE
     case 'applied':
     case 'under_review':
     case 'approved':
@@ -49,7 +49,7 @@ export function getVendorNextRoute(status: VendorApplicationStatus): string {
     case 'expired':
     case 'revoked':
     case 'draft':
-      return VENDOR_STATUS_ROUTE
+      return VENDOR_DASHBOARD_ROUTE
     default:
       return VENDOR_ONBOARDING_ROUTE
   }

@@ -72,7 +72,7 @@ export default function VendorOnboarding() {
     try {
       await submitVendorApplication()
       toast.success('Vendor application submitted. We will review it within 24 to 48 hours.')
-      navigate('/vendor/status', { replace: true })
+      navigate('/vendor/dashboard', { replace: true })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not submit vendor application.')
     } finally {
@@ -210,7 +210,7 @@ export default function VendorOnboarding() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/vendor/status">Check status</Link>
+                <Link to="/vendor/dashboard">Check status</Link>
               </Button>
             </div>
 
@@ -221,10 +221,10 @@ export default function VendorOnboarding() {
 
           <div className="space-y-6">
             <VendorBenefitsCard
-              primaryHref="/vendor/status"
+              primaryHref="/vendor/dashboard"
               primaryLabel="Check status"
-              secondaryHref="/vendor"
-              secondaryLabel="Back to vendor entry"
+              secondaryHref="/vendors"
+              secondaryLabel="Browse vendor directory"
             />
 
             <Card className="border-border/70 bg-card/90">
@@ -243,7 +243,7 @@ export default function VendorOnboarding() {
                     {isVerified
                       ? 'Vendor dashboard'
                       : isPendingReview
-                        ? 'Vendor status page'
+                        ? 'Vendor dashboard (status view)'
                         : 'Submit application'}
                   </div>
                 </div>

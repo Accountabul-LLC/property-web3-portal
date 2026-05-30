@@ -58,10 +58,8 @@ const Pricing = lazyPage(() => import("./pages/Pricing"));
 const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
-const Vendor = lazyPage(() => import("./pages/Vendor"));
 const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
-const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
 const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
 const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
@@ -129,12 +127,16 @@ const App = () => (
                 <Route path="/causes/my-donations" element={<MyDonations />} />
                 <Route path="/causes/:slug" element={<CauseDetail />} />
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
-                <Route path="/vendor" element={<Vendor />} />
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
-                <Route path="/vendor/status" element={<VendorStatus />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
+                <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
+                {/* Legacy redirects */}
+                <Route path="/vendor" element={<Navigate to="/vendors" replace />} />
+                <Route path="/vendor/status" element={<Navigate to="/vendor/dashboard" replace />} />
+                <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
+                <Route path="/vendors/status" element={<Navigate to="/vendor/dashboard" replace />} />
+                <Route path="/vendors/dashboard" element={<Navigate to="/vendor/dashboard" replace />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

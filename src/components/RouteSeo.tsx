@@ -25,11 +25,6 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
     description:
       'Connect with vetted real estate, legal, and compliance professionals supporting tokenized property transactions.',
   },
-  '/vendor': {
-    title: `Verified Vendors | ${SITE_NAME}`,
-    description:
-      'Apply to become a verified vendor on Accountabul and gain business profile, marketplace placement, and lead access after manual review.',
-  },
   '/vendors': {
     title: `Verified Vendors Directory | ${SITE_NAME}`,
     description:
@@ -69,7 +64,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/admin/kyc': { title: `Admin KYC | ${SITE_NAME}`, description: 'Admin KYC review.', noindex: true },
   '/admin/ai-panel': { title: `Admin AI Panel | ${SITE_NAME}`, description: 'Admin AI panel.', noindex: true },
   '/admin/credentials': { title: `Admin Credentials | ${SITE_NAME}`, description: 'Admin credentials management.', noindex: true },
-  '/admin/vendors': { title: `Admin Vendors | ${SITE_NAME}`, description: 'Admin verified vendor CRM.', noindex: true },
+  
   '/admin/payments': { title: `Admin Payments | ${SITE_NAME}`, description: 'Admin payments ledger.', noindex: true },
   '/admin/payments/console': { title: `Payments Console | ${SITE_NAME}`, description: 'Payments developer console.', noindex: true },
   '/admin/users': { title: `Admin Users | ${SITE_NAME}`, description: 'Admin user management redirect.', noindex: true },
@@ -78,7 +73,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/settings': { title: `Settings | ${SITE_NAME}`, description: 'Account settings and preferences.', noindex: true },
   '/vendor/onboarding': { title: `Apply to Become a Vendor | ${SITE_NAME}`, description: 'Submit your vendor application.', noindex: true },
   '/vendor/dashboard': { title: `Vendor Dashboard | ${SITE_NAME}`, description: 'Vendor dashboard.', noindex: true },
-  '/vendor/status': { title: `Vendor Status | ${SITE_NAME}`, description: 'Vendor status page.', noindex: true },
+  
 };
 
 const matchDynamic = (pathname: string): RouteMeta | null => {

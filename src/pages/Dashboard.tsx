@@ -292,14 +292,13 @@ const Dashboard = () => {
   const displayName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || profile?.full_name || 'Your Profile';
   const vendorStatusLabel = getVendorStatusLabel(vendorStatus);
   const vendorPrimaryRoute =
-    vendorStatus === 'active'
+    vendorStatus === 'active' ||
+    vendorStatus === 'applied' ||
+    vendorStatus === 'under_review' ||
+    vendorStatus === 'approved' ||
+    vendorStatus === 'issued_pending_acceptance'
       ? '/vendor/dashboard'
-      : vendorStatus === 'applied' ||
-          vendorStatus === 'under_review' ||
-          vendorStatus === 'approved' ||
-          vendorStatus === 'issued_pending_acceptance'
-        ? '/vendor/status'
-        : '/vendor/onboarding';
+      : '/vendor/onboarding';
   const vendorActionLabel =
     vendorStatus === 'active'
       ? 'Open vendor dashboard'
@@ -361,7 +360,7 @@ const Dashboard = () => {
                 </Link>
               </Button>
               <Button variant="outline" asChild>
-                <Link to="/vendor">View vendor program</Link>
+                <Link to="/vendors">Browse vendor directory</Link>
               </Button>
             </div>
           </div>
