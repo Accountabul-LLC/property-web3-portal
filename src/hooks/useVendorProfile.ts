@@ -7,6 +7,7 @@ export interface VendorProfileUpdate {
   company_name: string
   slug?: string | null
   logo_url?: string | null
+  profile_headline?: string | null
   business_email?: string | null
   business_phone?: string | null
   website_url?: string | null
@@ -70,6 +71,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
       slug,
       company_name: updates.company_name,
       logo_url: updates.logo_url ?? null,
+      profile_headline: updates.profile_headline ?? null,
       business_email: updates.business_email ?? null,
       business_phone: updates.business_phone ?? null,
       website_url: updates.website_url ?? null,

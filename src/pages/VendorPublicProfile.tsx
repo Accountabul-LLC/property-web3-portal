@@ -22,7 +22,7 @@ export default function VendorPublicProfile() {
     queryKey: ['vendor-public-profile', slug],
     queryFn: async () => {
       if (!slug) return null
-      const { data, error } = await (supabase.from('vendor_public_profiles') as any)
+      const { data, error } = await ((supabase as any).from('vendor_public_profiles') as any)
         .select('*')
         .eq('slug', slug)
         .maybeSingle()
