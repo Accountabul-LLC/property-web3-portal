@@ -7,9 +7,21 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
-import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle, FileCheck2, Briefcase } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select'
+import { Loader2, Star, Search, Building2, Mail, Phone, MapPin, Users, Megaphone, ShieldCheck, RefreshCw, Clock, XCircle, FileCheck2, Briefcase, Globe, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 import { CREDENTIAL_CATALOG, INDUSTRIES } from '@/lib/vendorCredentialCatalog'
+
+const VERIFICATION_TIERS = [
+  { value: 'unverified', label: 'Unverified' },
+  { value: 'business_verified', label: 'Business Verified' },
+  { value: 'credential_verified', label: 'Credential Verified' },
+  { value: 'platform_vouched', label: 'Platform Vouched' },
+] as const
 
 type VendorProfile = {
   id: string
@@ -33,6 +45,13 @@ type VendorProfile = {
   requested_at: string | null
   reviewed_at: string | null
   notes: string | null
+  // v1 public profile fields
+  slug: string | null
+  public_profile_enabled: boolean
+  profile_headline: string | null
+  business_address_city: string | null
+  business_address_state: string | null
+  verification_tier: string
 }
 
 type VendorCredentialRow = {
@@ -211,6 +230,20 @@ export default function VendorCRMPanel() {
       toast.error(err instanceof Error ? err.message : 'Revocation failed')
     } finally {
       setActioning(null)
+    }
+  }
+
+  async function updateVendorField(vendorId: string, updates: Record<string, unknown>) {
+    try {
+      const { error } = await (supabase as any)
+        .from('vendor_profiles')
+        .update(updates)
+        .eq('id', vendorId)
+      if (error) throw error
+      toast.success('Vendor updated')
+      qc.invalidateQueries({ queryKey: ['admin-vendor-crm'] })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Update failed')
     }
   }
 
@@ -443,6 +476,44 @@ export default function VendorCRMPanel() {
                 <div>
                   <p className="text-xs text-muted-foreground">Tax-Exempt EIN</p>
                   <p className="font-medium font-mono">{vendor.tax_exempt ? (vendor.tax_exempt_ein ?? '—') : 'Not tax-exempt'}</p>
+                </div>
+              </div>
+
+              {/* Admin controls: verification tier + public profile toggle */}
+              <Separator />
+              <div className="grid gap-4 md:grid-cols-2 items-center">
+                <div className="space-y-1">
+                  <Label className="text-xs text-muted-foreground">Verification Tier</Label>
+                  <Select
+                    value={vendor.verification_tier ?? 'unverified'}
+                    onValueChange={(val) => updateVendorField(vendor.id, { verification_tier: val })}
+                  >
+                    <SelectTrigger className="h-8 text-sm">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VERIFICATION_TIERS.map((t) => (
+                        <SelectItem key={t.value} value={t.value} className="text-sm">{t.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
+                  <div>
+                    <p className="text-sm font-medium">Public profile live</p>
+                    <p className="text-xs text-muted-foreground">
+                      {vendor.slug
+                        ? <a href={`/vendor/${vendor.slug}`} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline flex items-center gap-1">
+                            /vendor/{vendor.slug} <ExternalLink className="w-3 h-3 inline" />
+                          </a>
+                        : 'No slug yet — vendor must save profile first'}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={vendor.public_profile_enabled ?? false}
+                    disabled={!vendor.slug}
+                    onCheckedChange={(checked) => updateVendorField(vendor.id, { public_profile_enabled: checked })}
+                  />
                 </div>
               </div>
 

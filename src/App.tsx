@@ -65,6 +65,8 @@ const Pricing = lazyPage(() => import("./pages/Pricing"));
 const Vendor = lazyPage(() => import("./pages/Vendor"));
 const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
+const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
+const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
 
 
 function RouteFallback() {
@@ -91,7 +93,6 @@ const App = () => (
                 <Route path="/auth/individual" element={<AuthIndividual />} />
                 <Route path="/auth/business" element={<AuthBusiness />} />
                 <Route path="/auth/vendor" element={<AuthVendor />} />
-                <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
@@ -131,11 +132,15 @@ const App = () => (
                 <Route path="/causes/my-donations" element={<MyDonations />} />
                 <Route path="/causes/:slug" element={<CauseDetail />} />
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
+                {/* Vendor private routes — specific paths must come before /:slug */}
                 <Route path="/vendor" element={<Vendor />} />
+                <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/vendor/status" element={<VendorStatus />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
-                {/* Legacy vendor route redirects */}
-                <Route path="/vendors" element={<Navigate to="/vendor" replace />} />
+                {/* Public vendor network */}
+                <Route path="/vendors" element={<VendorsDirectory />} />
+                <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
+                {/* Legacy redirects */}
                 <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
                 <Route path="/vendors/status" element={<Navigate to="/vendor/status" replace />} />
                 <Route path="/vendors/dashboard" element={<Navigate to="/vendor/dashboard" replace />} />

@@ -364,3 +364,35 @@ export function useMyData() {
 - Updated `/vendor/onboarding` so Identity Verification and Vendor Membership always expand into actionable panels instead of only relying on the automatic sequence.
 - Added direct vendor membership activation in step 3, falling back to the Professional tier when no dedicated `vendor` tier exists.
 - Aligned onboarding step headers with a fixed right-side status badge and chevron control to keep the cards symmetrical.
+
+## 2026-05-29 | claude-sonnet-4-6 — Verified Vendor Network v1
+
+### Problem solved
+Vendors could sign up and get verified but were completely undiscoverable. No public directory, no shareable profile page, no way for a vendor to promote their business on the platform. This session closed that gap entirely.
+
+### Migration — `supabase/migrations/20260529093000_vendor_network_v1.sql`
+- Added columns to `vendor_profiles`: `slug TEXT UNIQUE`, `public_profile_enabled BOOLEAN DEFAULT false`, `profile_headline TEXT`, `website_url TEXT`, `business_address_city/state/zip TEXT`, `years_in_business INT`, `profile_completed_at TIMESTAMPTZ`, `verification_tier TEXT CHECK ('unverified'|'business_verified'|'credential_verified'|'platform_vouched')`
+- Added indexes on slug and (verification_status, public_profile_enabled)
+- Replaced open RLS with combined authenticated policy (own OR verified+public OR admin)
+- Added `public_read_verified_vendor_profiles` for anon: `verification_status='verified' AND public_profile_enabled=true`
+- Created `vendor_leads` table: anon+auth can INSERT, vendor reads/updates own leads, admin has full access
+- **TO DO: apply this migration to Supabase project `gveavwqyrwqvafsnhnqc`**
+
+### New files
+- `src/pages/VendorsDirectory.tsx` — `/vendors` — public directory, client-side filters (text, industry, state, tier), sorted by advertising_opt_in then tier
+- `src/pages/VendorPublicProfile.tsx` — `/vendor/:slug` — public profile page with lead modal, share button, credentials list; queries only public-safe columns (no EIN, no notes)
+- `src/components/vendor/VendorLeadModal.tsx` — contact form dialog; inserts to vendor_leads as anon; source='vendor_directory'
+- `src/hooks/useVendorLeads.ts` — queries leads by vendorProfileId, exposes updateStatus mutation and newCount
+
+### Updated files
+- `src/hooks/useVendorProfile.ts` — extended VendorProfile interface with all v1 fields; added `generateSlug()` with collision detection (appends last-4 of user.id on collision); saveVendorProfile auto-generates slug on first save
+- `src/components/vendor/VendorProfileForm.tsx` — added profile_headline, website_url, address fields (US_STATES dropdown), years_in_business, bio character counter, logo preview, public profile URL banner
+- `src/pages/VendorDashboard.tsx` — complete rewrite with Tabs (Overview + Leads); leads tab shows full lead list with status selector; public profile live/not-live banner with copy button
+- `src/components/admin/VendorCRMPanel.tsx` — added verification_tier Select, public_profile_enabled Switch, link to /vendor/:slug per vendor card
+- `src/App.tsx` — added VendorsDirectory + VendorPublicProfile lazy imports; route order: specific vendor routes declared BEFORE `/vendor/:slug` to prevent collision
+
+### Gotchas
+- React Router v6: `/vendor/dashboard`, `/vendor/onboarding`, `/vendor/status` MUST be declared before `/vendor/:slug` — first-match wins
+- Public RLS policy controls row visibility only, not columns — VendorPublicProfile page explicitly selects safe columns (no EIN, no admin notes)
+- Slug collision resolution: query for `eq('slug', base).neq('user_id', user.id)` then append `user.id.slice(-4)` suffix
+- Pre-existing build error: `@stripe/stripe-js` not installed causes `npm run build` to fail — this predates this session; `npx tsc --noEmit` exits 0 (TypeScript is clean)
