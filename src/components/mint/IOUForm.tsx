@@ -3,6 +3,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Sparkles } from 'lucide-react';
+import {
+  sanitizeCurrencyCodeInput,
+  sanitizeDecimalInput,
+} from '@/lib/formValidation';
 
 export interface IOUParams {
   currency_code: string;
@@ -39,7 +43,7 @@ const IOUForm: React.FC<IOUFormProps> = ({ params, onChange }) => {
           maxLength={20}
           placeholder="e.g. USD, ABC, RLUSD"
           value={params.currency_code}
-          onChange={e => onChange({ ...params, currency_code: e.target.value.toUpperCase() })}
+          onChange={e => onChange({ ...params, currency_code: sanitizeCurrencyCodeInput(e.target.value) })}
           className="mt-1 uppercase font-mono"
         />
         <p className="text-xs text-muted-foreground mt-1">
@@ -50,10 +54,12 @@ const IOUForm: React.FC<IOUFormProps> = ({ params, onChange }) => {
         <Label htmlFor="iou-amount">Amount to Issue</Label>
         <Input
           id="iou-amount"
-          type="number"
+          type="text"
+          inputMode="decimal"
+          maxLength={20}
           placeholder="e.g. 10000"
           value={params.amount}
-          onChange={e => onChange({ ...params, amount: e.target.value })}
+          onChange={e => onChange({ ...params, amount: sanitizeDecimalInput(e.target.value) })}
           className="mt-1"
         />
       </div>
@@ -63,7 +69,8 @@ const IOUForm: React.FC<IOUFormProps> = ({ params, onChange }) => {
           id="iou-dest"
           placeholder="rXXXX... (must have trust line set)"
           value={params.destination}
-          onChange={e => onChange({ ...params, destination: e.target.value })}
+          onChange={e => onChange({ ...params, destination: e.target.value.slice(0, 34) })}
+          maxLength={34}
           className="mt-1"
         />
         <p className="text-xs text-muted-foreground mt-1">

@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
-import { requireEdgeUser } from '../_shared/auth.ts'
+import { parseJsonBody, requireEdgeUser } from '../_shared/auth.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -47,7 +47,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { uuid } = await req.json();
+    const body = await parseJsonBody<{ uuid?: unknown }>(req, corsHeaders);
+    if (body instanceof Response) return body;
+    const { uuid } = body;
     if (typeof uuid !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(uuid)) {
       return new Response(
         JSON.stringify({ success: false, error: 'Valid UUID is required' }),

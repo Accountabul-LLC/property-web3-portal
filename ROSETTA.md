@@ -122,9 +122,9 @@ src/
         └── types.ts    # Auto-generated DB types (DO NOT edit manually)
 
 supabase/
-├── config.toml         # Project ref: gveavwqyrwqvafsnhnqc, all functions verify_jwt=false
+├── config.toml         # Project ref: bmxcjxtjujhwreduwtvz, all functions verify_jwt=false
 ├── functions/          # Deno edge functions (one folder per function)
-└── migrations/         # Ordered SQL migrations (applied to gveavwqyrwqvafsnhnqc)
+└── migrations/         # Ordered SQL migrations (applied to bmxcjxtjujhwreduwtvz)
 
 docs/
 ├── PRD.md              # Wallet/send flow product requirements
@@ -231,7 +231,7 @@ export function useMyData() {
 - **Team access = `admin` role in `user_roles`** — no separate `team` role yet; to grant access: `insert into user_roles (user_id, role) values ('<uuid>', 'admin')`
 - **Lovable auto-commits** — commits pushed to GitHub from Lovable will overwrite local changes unless you pull first
 - **`ai_agents` table is empty** — Marketplace tab on /ai-agents shows no data; seeding needed
-- **New Supabase project:** `gveavwqyrwqvafsnhnqc` (Aiagentboard) — old project was `gveavwqyrwqvafsnhnqc`
+- **New Supabase project:** `bmxcjxtjujhwreduwtvz` (Aiagentboard) — old project was `gveavwqyrwqvafsnhnqc`
 - **MPT metadata:** XLS-89 compressed standard, max 1024 bytes — see `docs/MPT_MINTING.md`
 
 ## Agent Notes
@@ -322,77 +322,27 @@ export function useMyData() {
 - Added the `membership_tiers` migration and `profiles.membership_tier_id` FK so the pricing page has a backing schema.
 - Gotcha: the local `main` branch was behind `origin/main`, so the membership work had to be recreated locally instead of assuming it was already present.
 
+### 2026-05-28 | codex
+- Removed the repo-local duplicate agent workflow files from `.claude/` so the repo no longer shadows the installed Codex/Claude skill system with a parallel command and feature registry layer.
+- Kept `CLAUDE.md` and `ROSETTA.md` as the canonical repo guidance files, with the installed skills system handling the broader agent behavior.
+
+### 2026-05-29 | codex
+- Completed the verified vendor network v1 build: added the `vendor_profiles` public-profile columns, `vendor_leads`, public vendor directory/profile routes, lead capture modal, vendor dashboard lead inbox, and admin tier/public-profile controls.
+- Public vendor visibility now flows through `verification_status = 'verified'` plus `public_profile_enabled = true`, and the public pages read from the safe `vendor_public_profiles` view instead of the full table.
+
 ### 2026-05-26 | lovable
 - Updated the homepage membership modal to render the Starter, Professional, and Portfolio cards immediately using DB tiers with a static fallback, so pricing is visible from the first CTA instead of only on `/pricing`.
 
 ### 2026-05-26 | lovable
 - Split public escrow from smart escrow: `/escrow` now shows the regular escrow hub, navigation points there, and `/smart-escrow` remains admin-only.
 
-### 2026-05-27 | lovable
-- Fixed live-site blank/runtime issues by applying the missing `membership_tiers.price_label` database column and removing the isolated QR vendor chunk that caused a production initialization error.
-- Re-opened `/pricing`, `/payments`, payment detail/history, and `/escrow` as public/user routes instead of showing the generic `AdminOrLocked` product gate.
-- Gotcha: if published UI diverges from preview, check both live browser console chunks and live database schema drift before assuming frontend logic is broken.
-
-### 2026-05-27 | lovable
-- Fixed the published homepage white screen caused by production chunk initialization order (`Cannot access 'ne' before initialization` in `assets/vendor-*.js`) by removing the custom Vite `manualChunks` split and letting Rollup choose safe chunks.
-- Gotcha: if preview works but published is blank, inspect the published browser console before changing app logic; production-only bundle splitting can crash while dev/Vite preview stays healthy.
-
 ### 2026-03-06 | claude-sonnet-4-6
 - Built AI Panel feature: `src/components/ai-panel/`, `src/hooks/useTeamAccess.ts`, `src/hooks/useDebateSession.ts`, `supabase/functions/ai-debate/index.ts`
-- Migrated project to new Supabase instance `gveavwqyrwqvafsnhnqc`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
+- Migrated project to new Supabase instance `bmxcjxtjujhwreduwtvz`; fixed migration conflict in `20260303100331` by adding IF NOT EXISTS to wallet_profiles and xaman_payloads CREATE TABLE statements
 - All 18 migrations applied; all 15 edge functions deployed
 - ROSETTA.md and modules created for context efficiency
 
 ---
 
 <!-- rosetta:version:1.0 -->
-<!-- rosetta:last-updated:2026-05-25 -->
-
-## 2026-05-28 — Vendor auth + onboarding flow
-- Added dedicated auth routes: `/auth/individual`, `/auth/business`, `/auth/vendor` (shared `AuthForm` in `src/components/auth/AuthForm.tsx`).
-- `/auth` now redirects to `/auth/individual` (keeps `?tab=admin` admin sign-in working).
-- New `/vendor/onboarding` page with 3 gated steps: business profile → KYC → vendor membership (looks up `membership_tiers.slug='vendor'`).
-- `ProfessionalsSection` CTA uses `resolveVendorCta(user, profile, vendorProfile)` from `src/lib/vendorCta.ts`: unauth → `/auth/vendor`; individual → upgrade-to-business modal then onboarding; business unverified → onboarding; verified → dashboard.
-- Follow-up auth troubleshooting created the missing `vendor_profiles` table via migration `20260528004845_49542cd9-b5a9-48ab-9e75-f52220d700d3.sql` and fixed `/vendor/onboarding` so individual users see an in-page business upgrade prompt instead of bouncing through `/auth/vendor`.
-- Gotcha: `useProfile` should key its effect on `user.id`, not the full user object, or auth refreshes can trigger repeated profile reads and hold onboarding in a loading state.
-
-## 2026-05-28 — Pricing billing selector
-- Replaced the ambiguous Monthly/Annual sliding switch on `/pricing` with a two-button segmented selector so each side sets the exact billing state (`Monthly` -> `annual=false`, `Annual` -> `annual=true`).
-- Gotcha: the old single toggle combined label highlight, knob direction, and pricing state; changing translate classes alone could make the visual state feel inverted without changing the selected billing state.
-
-## 2026-05-28 — Vendor onboarding action panels
-- Updated `/vendor/onboarding` so Identity Verification and Vendor Membership always expand into actionable panels instead of only relying on the automatic sequence.
-- Added direct vendor membership activation in step 3, falling back to the Professional tier when no dedicated `vendor` tier exists.
-- Aligned onboarding step headers with a fixed right-side status badge and chevron control to keep the cards symmetrical.
-
-## 2026-05-29 | claude-sonnet-4-6 — Verified Vendor Network v1
-
-### Problem solved
-Vendors could sign up and get verified but were completely undiscoverable. No public directory, no shareable profile page, no way for a vendor to promote their business on the platform. This session closed that gap entirely.
-
-### Migration — `supabase/migrations/20260529093000_vendor_network_v1.sql`
-- Added columns to `vendor_profiles`: `slug TEXT UNIQUE`, `public_profile_enabled BOOLEAN DEFAULT false`, `profile_headline TEXT`, `website_url TEXT`, `business_address_city/state/zip TEXT`, `years_in_business INT`, `profile_completed_at TIMESTAMPTZ`, `verification_tier TEXT CHECK ('unverified'|'business_verified'|'credential_verified'|'platform_vouched')`
-- Added indexes on slug and (verification_status, public_profile_enabled)
-- Replaced open RLS with combined authenticated policy (own OR verified+public OR admin)
-- Added `public_read_verified_vendor_profiles` for anon: `verification_status='verified' AND public_profile_enabled=true`
-- Created `vendor_leads` table: anon+auth can INSERT, vendor reads/updates own leads, admin has full access
-- **TO DO: apply this migration to Supabase project `gveavwqyrwqvafsnhnqc`**
-
-### New files
-- `src/pages/VendorsDirectory.tsx` — `/vendors` — public directory, client-side filters (text, industry, state, tier), sorted by advertising_opt_in then tier
-- `src/pages/VendorPublicProfile.tsx` — `/vendor/:slug` — public profile page with lead modal, share button, credentials list; queries only public-safe columns (no EIN, no notes)
-- `src/components/vendor/VendorLeadModal.tsx` — contact form dialog; inserts to vendor_leads as anon; source='vendor_directory'
-- `src/hooks/useVendorLeads.ts` — queries leads by vendorProfileId, exposes updateStatus mutation and newCount
-
-### Updated files
-- `src/hooks/useVendorProfile.ts` — extended VendorProfile interface with all v1 fields; added `generateSlug()` with collision detection (appends last-4 of user.id on collision); saveVendorProfile auto-generates slug on first save
-- `src/components/vendor/VendorProfileForm.tsx` — added profile_headline, website_url, address fields (US_STATES dropdown), years_in_business, bio character counter, logo preview, public profile URL banner
-- `src/pages/VendorDashboard.tsx` — complete rewrite with Tabs (Overview + Leads); leads tab shows full lead list with status selector; public profile live/not-live banner with copy button
-- `src/components/admin/VendorCRMPanel.tsx` — added verification_tier Select, public_profile_enabled Switch, link to /vendor/:slug per vendor card
-- `src/App.tsx` — added VendorsDirectory + VendorPublicProfile lazy imports; route order: specific vendor routes declared BEFORE `/vendor/:slug` to prevent collision
-
-### Gotchas
-- React Router v6: `/vendor/dashboard`, `/vendor/onboarding`, `/vendor/status` MUST be declared before `/vendor/:slug` — first-match wins
-- Public RLS policy controls row visibility only, not columns — VendorPublicProfile page explicitly selects safe columns (no EIN, no admin notes)
-- Slug collision resolution: query for `eq('slug', base).neq('user_id', user.id)` then append `user.id.slice(-4)` suffix
-- Pre-existing build error: `@stripe/stripe-js` not installed causes `npm run build` to fail — this predates this session; `npx tsc --noEmit` exits 0 (TypeScript is clean)
+<!-- rosetta:last-updated:2026-05-29 -->

@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { VendorBenefitsCard } from '@/components/vendors/VendorBenefitsCard'
+import { VendorProfileForm } from '@/components/vendor/VendorProfileForm'
 import { useVendorApplication } from '@/hooks/useVendorApplication'
 import { useKycStatus } from '@/hooks/useKycStatus'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
@@ -122,6 +123,8 @@ export default function VendorOnboarding() {
                 <p>4. Approved vendors receive a verified vendor credential and dashboard access.</p>
               </CardContent>
             </Card>
+
+            <VendorProfileForm profileId={profile?.id ?? null} companyName={profile?.company_name ?? null} />
 
             <Card className="border-border/70 bg-card/90">
               <CardHeader>

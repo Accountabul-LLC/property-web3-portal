@@ -32,6 +32,13 @@ const TokenizeSection = () => {
   const [currentStep, setCurrentStep] = React.useState(1);
   const [uploadedFiles, setUploadedFiles] = React.useState<string[]>([]);
 
+  const parseMoney = (value: string) => {
+    const normalized = value.replace(/,/g, '').trim();
+    if (!normalized || !/^\d+(\.\d+)?$/.test(normalized)) return null;
+    const parsed = Number(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
   const handleFileUpload = (fileType: string) => {
     setUploadedFiles(prev => [...prev, fileType]);
   };
@@ -105,6 +112,7 @@ const TokenizeSection = () => {
                   value={formData.propertyAddress}
                   onChange={(value) => handleInputChange('propertyAddress', value)}
                   onPlaceSelect={handlePlaceSelect}
+                  maxLength={200}
                   placeholder="Start typing an address..."
                 />
               </div>
@@ -117,6 +125,7 @@ const TokenizeSection = () => {
                 value={formData.unit}
                 onChange={(e) => handleInputChange('unit', e.target.value)}
                 placeholder="Apt 4B, Unit 12, Suite 100..."
+                maxLength={50}
                 className="mt-2"
               />
             </div>
@@ -124,43 +133,47 @@ const TokenizeSection = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <Label htmlFor="city">City *</Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => handleInputChange('city', e.target.value)}
-                  placeholder="New York"
-                  className="mt-2"
-                />
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => handleInputChange('city', e.target.value)}
+                    placeholder="New York"
+                    maxLength={100}
+                    className="mt-2"
+                  />
               </div>
               <div>
                 <Label htmlFor="state">State *</Label>
-                <Input
-                  id="state"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange('state', e.target.value)}
-                  placeholder="NY"
-                  className="mt-2"
-                />
+                  <Input
+                    id="state"
+                    value={formData.state}
+                    onChange={(e) => handleInputChange('state', e.target.value)}
+                    placeholder="NY"
+                    maxLength={100}
+                    className="mt-2"
+                  />
               </div>
               <div>
                 <Label htmlFor="zip">ZIP Code *</Label>
-                <Input
-                  id="zip"
-                  value={formData.zip}
-                  onChange={(e) => handleInputChange('zip', e.target.value)}
-                  placeholder="10001"
-                  className="mt-2"
-                />
+                  <Input
+                    id="zip"
+                    value={formData.zip}
+                    onChange={(e) => handleInputChange('zip', e.target.value)}
+                    placeholder="10001"
+                    maxLength={10}
+                    className="mt-2"
+                  />
               </div>
               <div>
                 <Label htmlFor="country">Country</Label>
-                <Input
-                  id="country"
-                  value={formData.country}
-                  onChange={(e) => handleInputChange('country', e.target.value)}
-                  placeholder="US"
-                  className="mt-2"
-                />
+                  <Input
+                    id="country"
+                    value={formData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    placeholder="US"
+                    maxLength={100}
+                    className="mt-2"
+                  />
               </div>
             </div>
             
@@ -188,6 +201,8 @@ const TokenizeSection = () => {
                   value={formData.squareFootage}
                   onChange={(e) => handleInputChange('squareFootage', e.target.value)}
                   placeholder="2,500"
+                  inputMode="decimal"
+                  maxLength={20}
                   className="mt-2"
                 />
               </div>
@@ -196,35 +211,41 @@ const TokenizeSection = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="bedrooms">Bedrooms</Label>
-                <Input
-                  id="bedrooms"
-                  value={formData.bedrooms}
-                  onChange={(e) => handleInputChange('bedrooms', e.target.value)}
-                  placeholder="3"
-                  className="mt-2"
-                />
+                  <Input
+                    id="bedrooms"
+                    value={formData.bedrooms}
+                    onChange={(e) => handleInputChange('bedrooms', e.target.value)}
+                    placeholder="3"
+                    inputMode="decimal"
+                    maxLength={10}
+                    className="mt-2"
+                  />
               </div>
               
               <div>
                 <Label htmlFor="bathrooms">Bathrooms</Label>
-                <Input
-                  id="bathrooms"
-                  value={formData.bathrooms}
-                  onChange={(e) => handleInputChange('bathrooms', e.target.value)}
-                  placeholder="2.5"
-                  className="mt-2"
-                />
+                  <Input
+                    id="bathrooms"
+                    value={formData.bathrooms}
+                    onChange={(e) => handleInputChange('bathrooms', e.target.value)}
+                    placeholder="2.5"
+                    inputMode="decimal"
+                    maxLength={10}
+                    className="mt-2"
+                  />
               </div>
               
               <div>
                 <Label htmlFor="yearBuilt">Year Built</Label>
-                <Input
-                  id="yearBuilt"
-                  value={formData.yearBuilt}
-                  onChange={(e) => handleInputChange('yearBuilt', e.target.value)}
-                  placeholder="2010"
-                  className="mt-2"
-                />
+                  <Input
+                    id="yearBuilt"
+                    value={formData.yearBuilt}
+                    onChange={(e) => handleInputChange('yearBuilt', e.target.value)}
+                    placeholder="2010"
+                    inputMode="numeric"
+                    maxLength={4}
+                    className="mt-2"
+                  />
               </div>
             </div>
 
@@ -235,6 +256,7 @@ const TokenizeSection = () => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Describe the property features, condition, and unique selling points..."
+                maxLength={2000}
                 className="mt-2"
                 rows={4}
               />
@@ -255,6 +277,8 @@ const TokenizeSection = () => {
                     value={formData.appraisalValue}
                     onChange={(e) => handleInputChange('appraisalValue', e.target.value)}
                     placeholder="500,000"
+                    inputMode="decimal"
+                    maxLength={20}
                     className="pl-10"
                   />
                 </div>
@@ -269,6 +293,8 @@ const TokenizeSection = () => {
                     value={formData.monthlyRent}
                     onChange={(e) => handleInputChange('monthlyRent', e.target.value)}
                     placeholder="3,500"
+                    inputMode="decimal"
+                    maxLength={20}
                     className="pl-10"
                   />
                 </div>
@@ -285,6 +311,8 @@ const TokenizeSection = () => {
                     value={formData.propertyTax}
                     onChange={(e) => handleInputChange('propertyTax', e.target.value)}
                     placeholder="12,000"
+                    inputMode="decimal"
+                    maxLength={20}
                     className="pl-10"
                   />
                 </div>
@@ -292,13 +320,14 @@ const TokenizeSection = () => {
               
               <div>
                 <Label htmlFor="zoning">Zoning Classification</Label>
-                <Input
-                  id="zoning"
-                  value={formData.zoning}
-                  onChange={(e) => handleInputChange('zoning', e.target.value)}
-                  placeholder="R-1 Residential"
-                  className="mt-2"
-                />
+                  <Input
+                    id="zoning"
+                    value={formData.zoning}
+                    onChange={(e) => handleInputChange('zoning', e.target.value)}
+                    placeholder="R-1 Residential"
+                    maxLength={80}
+                    className="mt-2"
+                  />
               </div>
             </div>
 
@@ -312,16 +341,21 @@ const TokenizeSection = () => {
                 <div className="flex justify-between">
                   <span>Token Value (per token):</span>
                   <span className="font-medium">
-                    {formData.appraisalValue ? `$${(parseInt(formData.appraisalValue.replace(/,/g, '')) / 100).toLocaleString()}` : '$TBD'}
+                    {(() => {
+                      const appraisalValue = parseMoney(formData.appraisalValue);
+                      return appraisalValue !== null ? `$${(appraisalValue / 100).toLocaleString()}` : '$TBD';
+                    })()}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span>Estimated Annual Yield:</span>
                   <span className="font-medium text-success">
-                    {formData.monthlyRent && formData.appraisalValue ? 
-                      `${((parseInt(formData.monthlyRent.replace(/,/g, '')) * 12) / parseInt(formData.appraisalValue.replace(/,/g, '')) * 100).toFixed(2)}%` : 
-                      'TBD'
-                    }
+                    {(() => {
+                      const monthlyRent = parseMoney(formData.monthlyRent);
+                      const appraisalValue = parseMoney(formData.appraisalValue);
+                      if (monthlyRent === null || appraisalValue === null || appraisalValue <= 0) return 'TBD';
+                      return `${((monthlyRent * 12) / appraisalValue * 100).toFixed(2)}%`;
+                    })()}
                   </span>
                 </div>
               </div>

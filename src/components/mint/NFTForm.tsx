@@ -22,7 +22,8 @@ const NFTForm: React.FC<NFTFormProps> = ({ params, onChange }) => {
           id="nft-uri"
           placeholder="ipfs://Qm... or https://example.com/metadata.json"
           value={params.uri}
-          onChange={e => onChange({ ...params, uri: e.target.value })}
+          onChange={e => onChange({ ...params, uri: e.target.value.slice(0, 512) })}
+          maxLength={512}
           className="mt-1"
         />
         <p className="text-xs text-muted-foreground mt-1">Link to metadata/image for this NFT</p>

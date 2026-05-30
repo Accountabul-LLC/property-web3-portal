@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { z } from "https://esm.sh/zod@3.23.8";
+import { parseJsonBody } from "../_shared/auth.ts";
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -18,6 +19,10 @@ const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet
 const CACHE_TTL_MS = 30_000;
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
+const accountDataRequestSchema = z.object({
+  wallet_address: z.string().trim().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'wallet_address must be a valid XRPL address'),
+  network: z.enum(['testnet', 'mainnet']).optional(),
+});
 
 const responseCache = new Map<string, { data: unknown; expiresAt: number }>();
 
@@ -356,30 +361,18 @@ serve(async (req) => {
   }
 
   try {
-    // Require authentication BEFORE inspecting any request parameters so
-    // unauthenticated callers cannot probe the expected schema.
-    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401, headers: { ...buildCors(req), 'Content-Type': 'application/json' },
-      });
-    }
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
-    const { data: userData, error: authError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (authError || !userData?.user?.id) {
-      return new Response(JSON.stringify({ error: 'Authentication required' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+    const body = await parseJsonBody<unknown>(req, corsHeaders);
+    if (body instanceof Response) return body;
 
-    const { wallet_address, network } = await req.json();
-    if (!wallet_address) {
-      return new Response(JSON.stringify({ error: 'wallet_address required' }), {
+    const parsed = accountDataRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return new Response(JSON.stringify({ error: firstIssue?.message || 'Invalid request body' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    const { wallet_address, network } = parsed.data;
 
     const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 

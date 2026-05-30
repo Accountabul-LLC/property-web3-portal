@@ -57,8 +57,11 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   const [payloadUuid, setPayloadUuid] = useState('')
   const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null)
 
+  const isPartialDecimal = (value: string) => /^\d*\.?\d*$/.test(value)
+  const isPlainDecimal = (value: string) => /^\d+(\.\d+)?$/.test(value)
+
   const amt = parseFloat(amount)
-  const insufficientFunds = asset === 'XRP' && !!amount && !Number.isNaN(amt) && amt > maxDonatable
+  const insufficientFunds = asset === 'XRP' && !!amount && isPlainDecimal(amount) && !Number.isNaN(amt) && amt > maxDonatable
   const balanceReady = !balanceLoading && !!activeWallet
 
   const releaseDate = campaign.release_date
@@ -93,7 +96,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
       toast.error('Connect a wallet to donate')
       return
     }
-    if (!amt || amt < 1) {
+    if (!isPlainDecimal(amount) || !amt || amt < 1) {
       toast.error(`Minimum donation is 1 ${asset}`)
       return
     }
@@ -313,12 +316,16 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               </div>
               <Input
                 id="amount"
-                type="number"
-                min="1"
-                step="0.1"
+                type="text"
+                inputMode="decimal"
+                pattern="^\\d+(\\.\\d+)?$"
                 placeholder="e.g. 100"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                maxLength={20}
+                onChange={(e) => {
+                  const next = e.target.value.trim();
+                  if (isPartialDecimal(next)) setAmount(next);
+                }}
               />
               {insufficientFunds ? (
                 <p className="text-xs text-destructive">

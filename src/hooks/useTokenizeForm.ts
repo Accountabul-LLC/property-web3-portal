@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { toast } from 'sonner';
@@ -42,6 +43,32 @@ const initialFormData: TokenizeFormData = {
   zoning: '',
   propertyTax: '',
 };
+
+const optionalText = (max: number) => z.string().max(max, `Must be at most ${max} characters`).optional().or(z.literal(''));
+const decimalString = (label: string, max = 20) =>
+  z.string()
+    .max(max, `${label} must be at most ${max} characters`)
+    .refine((value) => value === '' || /^\d+(\.\d+)?$/.test(value), `${label} must be a number`);
+
+const tokenizeFormSchema = z.object({
+  propertyAddress: optionalText(200),
+  unit: optionalText(50),
+  city: optionalText(100),
+  state: optionalText(100),
+  zip: optionalText(10),
+  country: optionalText(100),
+  propertyType: optionalText(80),
+  squareFootage: decimalString('Square footage'),
+  bedrooms: decimalString('Bedrooms', 10),
+  bathrooms: decimalString('Bathrooms', 10),
+  lotSize: decimalString('Lot size'),
+  yearBuilt: z.string().max(4, 'Year built must be at most 4 characters').refine((value) => value === '' || /^\d+$/.test(value), 'Year built must be numeric'),
+  appraisalValue: decimalString('Appraised value'),
+  monthlyRent: decimalString('Monthly rent'),
+  description: optionalText(2000),
+  zoning: optionalText(80),
+  propertyTax: decimalString('Property tax'),
+});
 
 export function useTokenizeForm(editId?: string | null) {
   const { user } = useAuth();
@@ -96,6 +123,16 @@ export function useTokenizeForm(editId?: string | null) {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const validateFormData = () => {
+    const parsed = tokenizeFormSchema.safeParse(formData);
+    if (!parsed.success) {
+      const message = parsed.error.issues[0]?.message || 'Please check the property details for invalid values.';
+      toast.error(message);
+      return null;
+    }
+    return parsed.data;
+  };
+
   const parseNum = (val: string) => {
     const n = parseFloat(val.replace(/,/g, ''));
     return isNaN(n) ? null : n;
@@ -127,6 +164,9 @@ export function useTokenizeForm(editId?: string | null) {
     }
     setSaving(true);
     try {
+      if (!validateFormData()) {
+        return null;
+      }
       const row = buildRow('draft');
       if (propertyId) {
         const { error } = await supabase
@@ -163,6 +203,9 @@ export function useTokenizeForm(editId?: string | null) {
     }
     setSaving(true);
     try {
+      if (!validateFormData()) {
+        return false;
+      }
       let id = propertyId;
       if (!id) {
         // Save as draft first, then update to submitted
@@ -194,5 +237,6 @@ export function useTokenizeForm(editId?: string | null) {
     setFormData,
     loadingDraft,
     propertyStatus,
+    validateFormData,
   };
 }

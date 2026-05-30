@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { z } from 'zod';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +9,17 @@ import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrC
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
-import { useApprovedProperties, type ApprovedProperty } from '@/hooks/useApprovedProperties';
+import { useApprovedProperties } from '@/hooks/useApprovedProperties';
 import { toast } from 'sonner';
 import NFTForm, { type NFTParams } from './NFTForm';
-import MPTForm, { type MPTParams } from './MPTForm';
+import MPTForm, { type MPTParams, mptParamsSchema } from './MPTForm';
 import IOUForm, { type IOUParams } from './IOUForm';
 import MintStatus from './MintStatus';
+import {
+  currencyCodeSchema,
+  plainDecimalSchema,
+  xrplAddressSchema,
+} from '@/lib/formValidation';
 
 type TokenType = 'nft' | 'mpt' | 'iou';
 type Network = 'testnet' | 'mainnet';
@@ -28,6 +34,23 @@ const TOKEN_INFO: Record<TokenType, { label: string; desc: string; icon: React.R
 const defaultNFT: NFTParams = { uri: '', flags: { transferable: true, burnable: false, onlyXRP: false } };
 const defaultMPT: MPTParams = { name: '', description: '', max_amount: '', asset_scale: 0, transfer_fee: 0, flags: { can_lock: false, require_auth: false, can_escrow: false, can_trade: false, can_transfer: true, can_clawback: false }, ticker: '', image_url: '', uris: [], property_address: '', city: '', state: '', zip: '', country: 'United States', property_type: '', owner_name: '', owner_email: '', estimated_value: '', bedrooms: '', bathrooms: '', square_feet: '', year_built: '' };
 const defaultIOU: IOUParams = { currency_code: '', amount: '', destination: '' };
+
+const nftSchema = z.object({
+  uri: z.string().trim().min(1, 'NFT URI is required').max(512, 'NFT URI must be 512 characters or fewer'),
+  flags: z.object({
+    transferable: z.boolean(),
+    burnable: z.boolean(),
+    onlyXRP: z.boolean(),
+  }),
+});
+
+const iouSchema = z.object({
+  currency_code: currencyCodeSchema,
+  amount: plainDecimalSchema('Amount', 20).refine((value) => Number(value) > 0, {
+    message: 'Amount must be greater than 0',
+  }),
+  destination: xrplAddressSchema,
+});
 
 const MintWizard: React.FC = () => {
   const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork, getWalletSecret } = useActiveWallet();
@@ -62,9 +85,9 @@ const MintWizard: React.FC = () => {
   }, [iouParams, mptParams, nftParams, tokenType]);
 
   const canProceedToReview = () => {
-    if (tokenType === 'nft') return nftParams.uri.trim().length > 0;
-    if (tokenType === 'mpt') return true; // all optional
-    return iouParams.currency_code.length >= 3 && iouParams.currency_code.length <= 20 && Number(iouParams.amount) > 0 && iouParams.destination.startsWith('r');
+    if (tokenType === 'nft') return nftSchema.safeParse(nftParams).success;
+    if (tokenType === 'mpt') return mptParamsSchema.safeParse(mptParams).success;
+    return iouSchema.safeParse(iouParams).success;
   };
 
   const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';
@@ -100,6 +123,26 @@ const MintWizard: React.FC = () => {
     setMintError(null);
 
     try {
+      if (tokenType === 'nft') {
+        const parsed = nftSchema.safeParse(nftParams);
+        if (!parsed.success) {
+          throw new Error(parsed.error.issues[0]?.message || 'Please fix the NFT form before continuing.');
+        }
+      }
+      if (tokenType === 'mpt') {
+        const parsed = mptParamsSchema.safeParse(mptParams);
+        if (!parsed.success) {
+          const message = parsed.error.issues[0]?.message || 'Please fix the MPT form before continuing.';
+          throw new Error(message);
+        }
+      } else if (tokenType === 'iou') {
+        const parsed = iouSchema.safeParse(iouParams);
+        if (!parsed.success) {
+          const message = parsed.error.issues[0]?.message || 'Please fix the IOU form before continuing.';
+          throw new Error(message);
+        }
+      }
+
       // 1. Build the transaction via edge function
       const { data: buildData, error: buildError } = await supabase.functions.invoke('xrpl-build-mint', {
         body: { token_type: tokenType, network, wallet_address: mintAddress, params: getParams() },

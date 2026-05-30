@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import { useAuth } from '@/hooks/useAuth'
-import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, ReceiptText, Tag } from 'lucide-react'
+import { Loader2, ShieldCheck, Brain, Users, FileSearch, KeyRound, Heart, ReceiptText, Tag, BadgeCheck } from 'lucide-react'
 
 const ADMIN_LINKS = [
   {
@@ -37,6 +37,12 @@ const ADMIN_LINKS = [
     description: 'Manage the verified vendor network, approve wallet registrations, and issue or revoke trading credentials.',
     href: '/admin/credentials',
     icon: KeyRound,
+  },
+  {
+    title: 'Verified Vendors',
+    description: 'Review vendor applications, KYC/KYB context, advertising requests, and marketplace approval status.',
+    href: '/admin/vendors',
+    icon: BadgeCheck,
   },
   {
     title: 'Payments',

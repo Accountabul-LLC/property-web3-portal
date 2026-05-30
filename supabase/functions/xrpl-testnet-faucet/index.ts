@@ -1,3 +1,5 @@
+import { parseJsonBody } from "../_shared/auth.ts";
+
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? '';
@@ -38,11 +40,10 @@ Deno.serve(async (req) => {
 
     // Parse optional destination from body (fund existing account)
     let destination: string | undefined;
-    try {
-      const body = await req.json();
-      destination = body?.destination;
-    } catch {
-      // No body or invalid JSON — create new account
+    if (req.body) {
+      const body = await parseJsonBody<{ destination?: unknown }>(req, corsHeaders);
+      if (body instanceof Response) return body;
+      destination = typeof body.destination === 'string' ? body.destination : undefined;
     }
 
     const faucetBody: Record<string, unknown> = {};

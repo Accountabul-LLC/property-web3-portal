@@ -1,4 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
+import { z } from 'https://esm.sh/zod@3.23.8';
+import { isValidXRPLAddress, parseJsonBody } from '../_shared/auth.ts';
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -34,6 +36,12 @@ const MAX_MPT_FIELD_LENGTHS = {
   destination: 34,
 } as const;
 type UriEntry = { u: string; c: string; t: string };
+const buildMintRequestSchema = z.object({
+  token_type: z.enum(['nft', 'mpt', 'iou']),
+  network: z.enum(['testnet', 'mainnet']),
+  wallet_address: z.string().trim().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'wallet_address must be a valid XRPL address'),
+  params: z.record(z.unknown()).optional().nullable(),
+});
 
 async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
   let lastError: Error | null = null;
@@ -66,10 +74,6 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
     }
   }
   throw lastError || new Error('All XRPL nodes failed');
-}
-
-function isValidXRPLAddress(addr: string): boolean {
-  return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr);
 }
 
 function toHex(str: string): string {
@@ -108,18 +112,18 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { token_type, network, wallet_address, params } = await req.json();
+    const body = await parseJsonBody<unknown>(req, corsHeaders);
+    if (body instanceof Response) return body;
 
-    if (!token_type || !['nft', 'mpt', 'iou'].includes(token_type)) {
-      return new Response(JSON.stringify({ error: 'Invalid token_type. Must be nft, mpt, or iou.' }), {
+    const parsed = buildMintRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return new Response(JSON.stringify({ error: firstIssue?.message || 'Invalid request body' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    if (!network || !['testnet', 'mainnet'].includes(network)) {
-      return new Response(JSON.stringify({ error: 'Invalid network.' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+
+    const { token_type, network, wallet_address, params } = parsed.data;
 
     const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
 
@@ -194,7 +198,7 @@ Deno.serve(async (req) => {
 
     if (accountInfoRes.result?.error === 'actNotFound') {
       return new Response(JSON.stringify({ error: `Account not found on XRPL ${network}. Fund it first.` }), {
-        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -212,7 +216,7 @@ Deno.serve(async (req) => {
     let txJson: Record<string, unknown>;
 
     if (token_type === 'nft') {
-      const { uri, flags } = params || {};
+      const { uri, flags } = (params || {}) as Record<string, any>;
       const uriResult = parseLimitedString(uri, MAX_MPT_FIELD_LENGTHS.uri, 'uri', true);
       if (uriResult.error) {
         return new Response(JSON.stringify({ error: uriResult.error }), {
@@ -237,8 +241,8 @@ Deno.serve(async (req) => {
 
     } else if (token_type === 'mpt') {
       // MPTokenIssuanceCreate
-      const { name, description, max_amount, asset_scale, transfer_fee, flags } = params || {};
-      const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = params || {};
+      const { name, description, max_amount, asset_scale, transfer_fee, flags } = (params || {}) as Record<string, any>;
+      const { ticker, property_address, city, state, zip, country, property_type, bedrooms, bathrooms, square_feet, year_built, estimated_value, owner_name, owner_email, image_url, uris } = (params || {}) as Record<string, any>;
       const limited = {
         name: parseLimitedString(name, MAX_MPT_FIELD_LENGTHS.name, 'name'),
         description: parseLimitedString(description, MAX_MPT_FIELD_LENGTHS.description, 'description'),
@@ -363,7 +367,7 @@ Deno.serve(async (req) => {
 
     } else {
       // IOU — TrustSet or Payment
-      const { currency_code, amount, destination, step } = params || {};
+      const { currency_code, amount, destination, step } = (params || {}) as Record<string, any>;
       const currencyResult = parseLimitedString(currency_code, MAX_MPT_FIELD_LENGTHS.currency_code, 'currency_code', true);
       const destinationResult = parseLimitedString(destination, MAX_MPT_FIELD_LENGTHS.destination, 'destination', true);
 

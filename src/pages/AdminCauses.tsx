@@ -22,6 +22,7 @@ import {
   isCauseReleaseReady,
 } from '@/lib/causesRelease'
 import { loadDraft, saveDraft, clearDraft } from '@/lib/draftStorage'
+import { emailSchema, plainDecimalSchema, requiredTextSchema, xrplAddressSchema } from '@/lib/formValidation'
 import {
   Loader2, ChevronDown, ChevronUp, Check, X, Heart,
   ExternalLink, Lock, Users, Calendar, Send, ArrowLeft, Plus, Sparkles, Wallet, Upload, Pencil, Trash2, RotateCcw, Eye, EyeOff,
@@ -78,6 +79,13 @@ const STATUS_BADGE: Record<CampaignStatus, { label: string; className: string }>
   completed:    { label: 'Completed',    className: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' },
   rejected:     { label: 'Rejected',     className: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
 }
+
+const CAMPAIGN_TITLE_MAX = 120
+const CAMPAIGN_DESCRIPTION_MAX = 5000
+const CAMPAIGN_URL_MAX = 512
+const CAMPAIGN_NOTE_MAX = 2000
+const CAMPAIGN_HIDDEN_REASON_MAX = 500
+const REJECTION_REASON_MAX = 1000
 
 function explorerBase(network?: string | null) {
   return network === 'testnet'
@@ -201,6 +209,10 @@ export default function AdminCauses() {
   async function handleReject(id: string) {
     if (!rejectionReason.trim()) {
       toast.error('Please enter a rejection reason')
+      return
+    }
+    if (rejectionReason.trim().length > REJECTION_REASON_MAX) {
+      toast.error(`Rejection reason must be ${REJECTION_REASON_MAX} characters or fewer`)
       return
     }
     setProcessing(id)
@@ -408,8 +420,24 @@ export default function AdminCauses() {
     if (!editId) return
     setEditing(true)
     try {
-      if (!editForm.title.trim()) throw new Error('Title is required')
-      if (!editForm.description.trim()) throw new Error('Description is required')
+      const parsedTitle = requiredTextSchema('Title', CAMPAIGN_TITLE_MAX).safeParse(editForm.title)
+      if (!parsedTitle.success) throw new Error(parsedTitle.error.issues[0]?.message || 'Title is required')
+      const parsedDescription = requiredTextSchema('Description', CAMPAIGN_DESCRIPTION_MAX).safeParse(editForm.description)
+      if (!parsedDescription.success) throw new Error(parsedDescription.error.issues[0]?.message || 'Description is required')
+      if (editForm.goal_amount) {
+        const parsedGoal = plainDecimalSchema('Goal amount', 40).safeParse(editForm.goal_amount)
+        if (!parsedGoal.success) throw new Error(parsedGoal.error.issues[0]?.message || 'Goal amount is invalid')
+        if (Number(parsedGoal.data) <= 0) throw new Error('Goal amount must be greater than 0')
+      }
+      if (editForm.image_url.trim().length > CAMPAIGN_URL_MAX) {
+        throw new Error(`Image URL must be ${CAMPAIGN_URL_MAX} characters or fewer`)
+      }
+      if (editForm.hidden_reason.trim().length > CAMPAIGN_HIDDEN_REASON_MAX) {
+        throw new Error(`Hidden reason must be ${CAMPAIGN_HIDDEN_REASON_MAX} characters or fewer`)
+      }
+      if (editForm.gallery_urls.some((url) => url.length > CAMPAIGN_URL_MAX)) {
+        throw new Error(`Gallery URLs must be ${CAMPAIGN_URL_MAX} characters or fewer`)
+      }
       const current = campaigns?.find((x) => x.id === editId)
       const { data, error } = await supabase.functions.invoke('campaign-admin', {
         body: {
@@ -464,10 +492,34 @@ export default function AdminCauses() {
     e.preventDefault()
     setCreating(true)
     try {
-      if (!createForm.title.trim()) throw new Error('Title is required')
-      if (!createForm.description.trim()) throw new Error('Description is required')
-      if (!createForm.recipient_wallet_address.trim()) throw new Error('Recipient wallet is required')
+      const parsedTitle = requiredTextSchema('Title', CAMPAIGN_TITLE_MAX).safeParse(createForm.title)
+      if (!parsedTitle.success) throw new Error(parsedTitle.error.issues[0]?.message || 'Title is required')
+      const parsedDescription = requiredTextSchema('Description', CAMPAIGN_DESCRIPTION_MAX).safeParse(createForm.description)
+      if (!parsedDescription.success) throw new Error(parsedDescription.error.issues[0]?.message || 'Description is required')
+      const parsedWallet = xrplAddressSchema.safeParse(createForm.recipient_wallet_address)
+      if (!parsedWallet.success) throw new Error(parsedWallet.error.issues[0]?.message || 'Recipient wallet is required')
       if (createForm.campaign_type === 'escrow' && !createForm.release_date) throw new Error('Release date is required')
+      if (createForm.release_date && Number.isNaN(new Date(createForm.release_date).getTime())) throw new Error('Release date is invalid')
+      if (createForm.goal_amount) {
+        const parsedGoal = plainDecimalSchema('Goal amount', 40).safeParse(createForm.goal_amount)
+        if (!parsedGoal.success) throw new Error(parsedGoal.error.issues[0]?.message || 'Goal amount is invalid')
+        if (Number(parsedGoal.data) <= 0) throw new Error('Goal amount must be greater than 0')
+      }
+      if (createForm.image_url.trim().length > CAMPAIGN_URL_MAX) {
+        throw new Error(`Image URL must be ${CAMPAIGN_URL_MAX} characters or fewer`)
+      }
+      if (createForm.video_url.trim().length > CAMPAIGN_URL_MAX) {
+        throw new Error(`Video URL must be ${CAMPAIGN_URL_MAX} characters or fewer`)
+      }
+      if (createForm.submission_notes.trim().length > CAMPAIGN_NOTE_MAX) {
+        throw new Error(`Submission notes must be ${CAMPAIGN_NOTE_MAX} characters or fewer`)
+      }
+      if (createForm.admin_notes.trim().length > CAMPAIGN_NOTE_MAX) {
+        throw new Error(`Admin notes must be ${CAMPAIGN_NOTE_MAX} characters or fewer`)
+      }
+      const emailCandidate = createForm.submitted_by_email.trim() || user?.email || ''
+      const parsedEmail = emailSchema.safeParse(emailCandidate)
+      if (!parsedEmail.success) throw new Error(parsedEmail.error.issues[0]?.message || 'Submitted by email is required')
 
       const { data, error } = await supabase.functions.invoke('campaign-admin', {
         body: {
@@ -477,12 +529,12 @@ export default function AdminCauses() {
           image_url: createForm.image_url.trim() || null,
           video_url: createForm.video_url.trim() || null,
           goal_amount: createForm.goal_amount ? Number(createForm.goal_amount) : null,
-          recipient_wallet_address: createForm.recipient_wallet_address.trim(),
+          recipient_wallet_address: parsedWallet.data,
           release_date: createForm.campaign_type === 'escrow' ? new Date(createForm.release_date!).toISOString() : null,
           campaign_mode: createForm.campaign_type === 'direct' ? 'evergreen' : 'scheduled',
           status: createForm.status === 'active' ? 'active' : 'under_review',
           network: createForm.network,
-          submitted_by_email: createForm.submitted_by_email.trim() || user?.email || null,
+          submitted_by_email: parsedEmail.data || null,
           submission_notes: createForm.submission_notes.trim() || null,
           admin_notes: createForm.admin_notes.trim() || null,
         },
@@ -606,6 +658,7 @@ export default function AdminCauses() {
                   value={createForm.title}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, title: e.target.value }))}
                   placeholder="Justice for the Northside 7"
+                  maxLength={CAMPAIGN_TITLE_MAX}
                 />
               </div>
 
@@ -617,6 +670,7 @@ export default function AdminCauses() {
                   value={createForm.recipient_wallet_address}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, recipient_wallet_address: e.target.value }))}
                   placeholder="rXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                  maxLength={34}
                 />
                 <p className="text-xs text-muted-foreground">
                   The beneficiary's XRPL address — donations sit in on-chain escrow until the release date, then settle to this wallet. This is not an intermediary or platform wallet.
@@ -656,12 +710,12 @@ export default function AdminCauses() {
                 <Label htmlFor="cause-goal">Goal Amount (XRP)</Label>
                 <Input
                   id="cause-goal"
-                  type="number"
-                  min="0"
-                  step="0.000001"
+                  type="text"
+                  inputMode="decimal"
                   value={createForm.goal_amount}
-                  onChange={(e) => setCreateForm((prev) => ({ ...prev, goal_amount: e.target.value }))}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, goal_amount: e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 40) }))}
                   placeholder="50000"
+                  maxLength={40}
                 />
               </div>
 
@@ -694,13 +748,14 @@ export default function AdminCauses() {
               <div className="space-y-2">
                 <Label htmlFor="cause-image">Cover Image</Label>
                 <div className="flex gap-2">
-                  <Input
-                    id="cause-image"
-                    type="url"
-                    value={createForm.image_url}
-                    onChange={(e) => setCreateForm((prev) => ({ ...prev, image_url: e.target.value }))}
-                    placeholder="https://example.com/image.jpg or upload →"
-                  />
+                <Input
+                  id="cause-image"
+                  type="url"
+                  value={createForm.image_url}
+                  onChange={(e) => setCreateForm((prev) => ({ ...prev, image_url: e.target.value }))}
+                  placeholder="https://example.com/image.jpg or upload →"
+                  maxLength={CAMPAIGN_URL_MAX}
+                />
                   <Button
                     type="button"
                     variant="outline"
@@ -741,6 +796,7 @@ export default function AdminCauses() {
                   value={createForm.video_url}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, video_url: e.target.value }))}
                   placeholder="https://youtube.com/watch?v=..."
+                  maxLength={CAMPAIGN_URL_MAX}
                 />
               </div>
 
@@ -752,6 +808,7 @@ export default function AdminCauses() {
                   value={createForm.description}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe the cause, who it helps, and why it matters."
+                  maxLength={CAMPAIGN_DESCRIPTION_MAX}
                 />
               </div>
 
@@ -763,6 +820,7 @@ export default function AdminCauses() {
                   value={createForm.submission_notes}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, submission_notes: e.target.value }))}
                   placeholder="Optional notes for the review team or public record."
+                  maxLength={CAMPAIGN_NOTE_MAX}
                 />
               </div>
 
@@ -774,6 +832,7 @@ export default function AdminCauses() {
                   value={createForm.admin_notes}
                   onChange={(e) => setCreateForm((prev) => ({ ...prev, admin_notes: e.target.value }))}
                   placeholder="Internal notes not shown publicly."
+                  maxLength={CAMPAIGN_NOTE_MAX}
                 />
               </div>
             </div>
@@ -825,6 +884,7 @@ export default function AdminCauses() {
                   id="edit-title"
                   value={editForm.title}
                   onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                  maxLength={CAMPAIGN_TITLE_MAX}
                 />
               </div>
 
@@ -832,12 +892,12 @@ export default function AdminCauses() {
                 <Label htmlFor="edit-goal">Goal Amount (XRP)</Label>
                 <Input
                   id="edit-goal"
-                  type="number"
-                  min="0"
-                  step="0.000001"
+                  type="text"
+                  inputMode="decimal"
                   value={editForm.goal_amount}
-                  onChange={(e) => setEditForm((p) => ({ ...p, goal_amount: e.target.value }))}
+                  onChange={(e) => setEditForm((p) => ({ ...p, goal_amount: e.target.value.replace(/[^\d.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 40) }))}
                   placeholder="e.g. 1000"
+                  maxLength={40}
                 />
                 <p className="text-xs text-muted-foreground">
                   You can extend or lower the goal at any time. Donations already in escrow are unaffected.
@@ -851,6 +911,7 @@ export default function AdminCauses() {
                   rows={5}
                   value={editForm.description}
                   onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                  maxLength={CAMPAIGN_DESCRIPTION_MAX}
                 />
               </div>
 
@@ -862,6 +923,7 @@ export default function AdminCauses() {
                     value={editForm.image_url}
                     onChange={(e) => setEditForm((p) => ({ ...p, image_url: e.target.value }))}
                     placeholder="https://… or upload →"
+                    maxLength={CAMPAIGN_URL_MAX}
                   />
                   <Button
                     type="button"
@@ -989,14 +1051,15 @@ export default function AdminCauses() {
                 {editForm.visibility === 'hidden' && (
                   <div className="space-y-1.5">
                     <Label htmlFor="edit-hidden-reason" className="text-xs">Reason (optional, admin-only)</Label>
-                    <Textarea
-                      id="edit-hidden-reason"
-                      value={editForm.hidden_reason}
-                      onChange={(e) => setEditForm((p) => ({ ...p, hidden_reason: e.target.value }))}
-                      placeholder="e.g. Pending content review, reported by user, awaiting clarification from organizer…"
-                      rows={2}
-                    />
-                  </div>
+                <Textarea
+                  id="edit-hidden-reason"
+                  value={editForm.hidden_reason}
+                  onChange={(e) => setEditForm((p) => ({ ...p, hidden_reason: e.target.value }))}
+                  placeholder="e.g. Pending content review, reported by user, awaiting clarification from organizer…"
+                  rows={2}
+                  maxLength={CAMPAIGN_HIDDEN_REASON_MAX}
+                />
+              </div>
                 )}
               </div>
 
@@ -1238,6 +1301,7 @@ export default function AdminCauses() {
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={2}
+                          maxLength={REJECTION_REASON_MAX}
                         />
                         <div className="flex gap-2">
                           <Button

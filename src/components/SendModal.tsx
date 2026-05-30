@@ -74,6 +74,8 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     } catch { return hex; }
   };
 
+  const isPartialDecimal = (value: string) => /^\d*\.?\d*$/.test(value);
+
   const filteredTokens = useMemo(() => {
     if (!searchQuery.trim()) return tokenHoldings.filter(t => t.balance > 0);
     const q = searchQuery.toLowerCase();
@@ -372,7 +374,9 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
                 id="to-address"
                 placeholder="rXXXX..."
                 value={toAddress}
-                onChange={(e) => setToAddress(e.target.value)}
+                onChange={(e) => setToAddress(e.target.value.trimStart())}
+                maxLength={34}
+                pattern="^r[1-9A-HJ-NP-Za-km-z]{24,34}$"
                 className="font-mono text-sm"
               />
             </div>
@@ -391,12 +395,15 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
               </div>
               <Input
                 id="amount"
-                type="number"
+                type="text"
                 placeholder="0.00"
-                min="0"
-                step="any"
+                inputMode="decimal"
+                maxLength={20}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const next = e.target.value.trim();
+                  if (isPartialDecimal(next)) setAmount(next);
+                }}
               />
               {selectedAsset.type === 'token' && Number(amount) > selectedAsset.balance && (
                 <p className="text-xs text-destructive">Amount exceeds your balance of {selectedAsset.balance}</p>
@@ -411,9 +418,11 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
             {showTag && (
               <Input
                 placeholder="Tag (integer)"
-                type="number"
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
                 value={destinationTag}
-                onChange={(e) => setDestinationTag(e.target.value)}
+                onChange={(e) => setDestinationTag(e.target.value.replace(/\D/g, ''))}
               />
             )}
 

@@ -64,6 +64,7 @@ const Navigation = () => {
     { path: '/marketplace',  label: 'Marketplace',  shortLabel: 'Market',  icon: Building2 },
     { path: '/tokenize',     label: 'Tokenize',     icon: TrendingUp },
     { path: '/professionals', label: 'Professionals', shortLabel: 'Pros',  icon: Users },
+    { path: '/vendors',      label: 'Vendors',      shortLabel: 'Vendors', icon: ShieldCheck },
     { path: '/ai-agents',   label: 'AI Agents',    shortLabel: 'Agents',  icon: Bot },
     { path: '/swap',         label: 'Swap',          icon: ArrowLeftRight },
     { path: '/pools',        label: 'Liquidity',     shortLabel: 'Pools',  icon: Droplets },

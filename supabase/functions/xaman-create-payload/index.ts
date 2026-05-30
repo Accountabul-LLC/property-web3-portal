@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
-import { requireEdgeUser } from '../_shared/auth.ts'
+import { parseJsonBody, requireEdgeUser } from '../_shared/auth.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -55,7 +55,12 @@ Deno.serve(async (req) => {
     // This prevents an attacker from submitting another user's signed QR response under their own auth token.
     const intendedUserId = user.id;
 
-    const { network } = await req.json().catch(() => ({ network: undefined }));
+    let network: unknown = undefined;
+    if (req.body) {
+      const body = await parseJsonBody<{ network?: unknown }>(req, corsHeaders);
+      if (body instanceof Response) return body;
+      network = body.network;
+    }
     const resolvedNetwork = network || 'mainnet';
 
     const payload = {

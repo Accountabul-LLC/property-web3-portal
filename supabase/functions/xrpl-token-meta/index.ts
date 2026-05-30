@@ -1,3 +1,6 @@
+import { z } from 'https://esm.sh/zod@3.23.8';
+import { parseJsonBody } from '../_shared/auth.ts';
+
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? '';
@@ -10,10 +13,12 @@ function buildCors(req: Request): Record<string, string> {
   };
 }
 
-interface TokenQuery {
-  currency: string;
-  issuer: string;
-}
+const tokenMetaRequestSchema = z.object({
+  tokens: z.array(z.object({
+    currency: z.string().trim().min(1, 'currency is required'),
+    issuer: z.string().trim().min(1, 'issuer is required'),
+  })).max(20, 'tokens array must not exceed 20 entries'),
+});
 
 /** Fetch the current XRP/USD price from CoinGecko (free, no API key) */
 async function getXrpUsdPrice(): Promise<number> {
@@ -41,14 +46,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { tokens } = await req.json() as { tokens: TokenQuery[] };
+    const body = await parseJsonBody<unknown>(req, corsHeaders);
+    if (body instanceof Response) return body;
 
-    if (!tokens || !Array.isArray(tokens)) {
+    const parsed = tokenMetaRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
       return new Response(
-        JSON.stringify({ error: 'tokens array is required' }),
+        JSON.stringify({ error: firstIssue?.message || 'Invalid request body' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { tokens } = parsed.data;
 
     // Handle empty tokens array — still return XRP/USD price
     if (tokens.length === 0) {

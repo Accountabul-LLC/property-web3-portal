@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { requireEdgeUser } from '../_shared/auth.ts';
+import { parseJsonBody } from '../_shared/auth.ts';
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -35,7 +36,9 @@ Deno.serve(async (req) => {
     if (auth instanceof Response) return auth;
     const { user } = auth;
 
-    const { tx_json } = await req.json();
+    const body = await parseJsonBody<{ tx_json?: Record<string, unknown> }>(req, corsHeaders);
+    if (body instanceof Response) return body;
+    const { tx_json } = body;
 
     if (!tx_json || !tx_json.TransactionType) {
       throw new Error('Invalid transaction JSON');

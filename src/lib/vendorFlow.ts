@@ -4,10 +4,6 @@ export const VENDOR_ENTRY_ROUTE = '/vendor'
 export const VENDOR_ONBOARDING_ROUTE = '/vendor/onboarding'
 export const VENDOR_STATUS_ROUTE = '/vendor/status'
 export const VENDOR_DASHBOARD_ROUTE = '/vendor/dashboard'
-export const VENDOR_LEGACY_ENTRY_ROUTE = '/vendors'
-export const VENDOR_LEGACY_ONBOARDING_ROUTE = '/vendors/apply'
-export const VENDOR_LEGACY_STATUS_ROUTE = '/vendors/status'
-export const VENDOR_LEGACY_DASHBOARD_ROUTE = '/vendors/dashboard'
 
 export type VendorApplicationStatus =
   | 'none'

@@ -30,6 +30,11 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
     description:
       'Apply to become a verified vendor on Accountabul and gain business profile, marketplace placement, and lead access after manual review.',
   },
+  '/vendors': {
+    title: `Verified Vendors Directory | ${SITE_NAME}`,
+    description:
+      'Browse verified Accountabul vendors by industry, state, and verification tier. Contact approved businesses directly from their public profile.',
+  },
   '/credentials': {
     title: `Credentials Catalog | ${SITE_NAME}`,
     description:
@@ -45,7 +50,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
     description:
       'Sign in or create an Accountabul account to manage tokenized real estate, wallets, and credentials.',
   },
-  // Private / app surfaces — noindex
+  // Private / app surfaces - noindex
   '/dashboard': { title: `Dashboard | ${SITE_NAME}`, description: 'Manage your Accountabul account, wallets, and profile.', noindex: true },
   '/portfolio': { title: `Portfolio | ${SITE_NAME}`, description: 'Track your tokenized real estate holdings and balances.', noindex: true },
   '/treasury': { title: `Treasury | ${SITE_NAME}`, description: 'Treasury operations dashboard for Accountabul.', noindex: true },
@@ -60,6 +65,7 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/escrow': { title: `Smart Escrow | ${SITE_NAME}`, description: 'XRPL escrow hub for campaign donations and escrow-capable tokens.' },
   '/action-items': { title: `Action Items | ${SITE_NAME}`, description: 'Pending action items.', noindex: true },
   '/admin': { title: `Admin | ${SITE_NAME}`, description: 'Admin console.', noindex: true },
+  '/admin/vendors': { title: `Admin Verified Vendors | ${SITE_NAME}`, description: 'Vendor approval queue and CRM tools.', noindex: true },
   '/admin/kyc': { title: `Admin KYC | ${SITE_NAME}`, description: 'Admin KYC review.', noindex: true },
   '/admin/ai-panel': { title: `Admin AI Panel | ${SITE_NAME}`, description: 'Admin AI panel.', noindex: true },
   '/admin/credentials': { title: `Admin Credentials | ${SITE_NAME}`, description: 'Admin credentials management.', noindex: true },
@@ -71,6 +77,8 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/payments/history': { title: `Payment History | ${SITE_NAME}`, description: 'Payment history.', noindex: true },
   '/settings': { title: `Settings | ${SITE_NAME}`, description: 'Account settings and preferences.', noindex: true },
   '/vendor/onboarding': { title: `Apply to Become a Vendor | ${SITE_NAME}`, description: 'Submit your vendor application.', noindex: true },
+  '/vendor/dashboard': { title: `Vendor Dashboard | ${SITE_NAME}`, description: 'Vendor dashboard.', noindex: true },
+  '/vendor/status': { title: `Vendor Status | ${SITE_NAME}`, description: 'Vendor status page.', noindex: true },
 };
 
 const matchDynamic = (pathname: string): RouteMeta | null => {
@@ -78,6 +86,12 @@ const matchDynamic = (pathname: string): RouteMeta | null => {
     return {
       title: `Property Details | ${SITE_NAME}`,
       description: 'View tokenized property details, financials, documents, and on-chain ownership on Accountabul.',
+    };
+  }
+  if (pathname.startsWith('/vendor/')) {
+    return {
+      title: `Vendor Profile | ${SITE_NAME}`,
+      description: 'Public verified vendor profile on Accountabul.',
     };
   }
   return null;

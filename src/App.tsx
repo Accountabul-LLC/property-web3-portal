@@ -36,6 +36,7 @@ const Kyc = lazyPage(() => import("./pages/Kyc"));
 const KycStatus = lazyPage(() => import("./pages/KycStatus"));
 const AdminKyc = lazyPage(() => import("./pages/AdminKyc"));
 const Admin = lazyPage(() => import("./pages/Admin"));
+const AdminVendors = lazyPage(() => import("./pages/AdminVendors"));
 const AdminAIPanel = lazyPage(() => import("./pages/AdminAIPanel"));
 const AdminCredentials = lazyPage(() => import("./pages/AdminCredentials"));
 const AdminPayments = lazyPage(() => import("./pages/AdminPayments"));
@@ -59,6 +60,10 @@ const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
 const Vendor = lazyPage(() => import("./pages/Vendor"));
 const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
+const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
+const VendorStatus = lazyPage(() => import("./pages/VendorStatus"));
+const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
+const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 
 function RouteFallback() {
@@ -106,6 +111,7 @@ const App = () => (
                 <Route path="/kyc" element={<Kyc />} />
                 <Route path="/kyc/status" element={<KycStatus />} />
                 <Route path="/admin" element={<Admin />} />
+                <Route path="/admin/vendors" element={<AdminVendors />} />
                 <Route path="/admin/kyc" element={<AdminKyc />} />
                 <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
                 <Route path="/admin/credentials" element={<AdminCredentials />} />
@@ -125,10 +131,10 @@ const App = () => (
                 <Route path="/protection/deed-fraud" element={<DeedProtection />} />
                 <Route path="/vendor" element={<Vendor />} />
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
-                <Route path="/vendors" element={<Navigate to="/vendor" replace />} />
-                <Route path="/vendors/apply" element={<Navigate to="/auth/vendor" replace />} />
-                <Route path="/vendors/status" element={<Navigate to="/dashboard" replace />} />
-                <Route path="/vendors/dashboard" element={<Navigate to="/dashboard" replace />} />
+                <Route path="/vendor/status" element={<VendorStatus />} />
+                <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+                <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
+                <Route path="/vendors" element={<VendorsDirectory />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

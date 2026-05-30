@@ -5,6 +5,8 @@ import { Send, Square, Settings2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { DebateMode, DebateParams } from '@/hooks/useDebateSession';
 
+const MAX_CHAT_CHARS = 1000;
+
 interface Props {
   params: DebateParams;
   onChange: (p: DebateParams) => void;
@@ -48,11 +50,12 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
   const handleSend = () => {
     const msg = inputValue.trim();
     if (!msg || running) return;
+    if (msg.length > MAX_CHAT_CHARS) return;
     onSend(msg);
     if (sessionActive) setChatInput('');
   };
 
-  const canSend = inputValue.trim().length > 0 && !running;
+  const canSend = inputValue.trim().length > 0 && inputValue.trim().length <= MAX_CHAT_CHARS && !running;
   const placeholder = sessionActive
     ? awaitingInput || isDone
       ? 'Send a follow-up message… (Enter to send)'
@@ -116,6 +119,7 @@ const ChatInputBar = ({ params, onChange, running, sessionActive, awaitingInput,
               placeholder={placeholder}
               disabled={running && !awaitingInput && !isDone}
               rows={1}
+              maxLength={MAX_CHAT_CHARS}
               className="w-full resize-none rounded-xl border-2 border-input bg-background px-4 py-3 pr-12 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 scrollbar-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none]"
               style={{ minHeight: '44px', maxHeight: '160px' }}
             />

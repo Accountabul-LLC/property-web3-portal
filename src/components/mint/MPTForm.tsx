@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { z } from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -49,6 +50,42 @@ export interface MPTParams {
   square_feet: string;
   year_built: string;
 }
+
+export const mptParamsSchema = z.object({
+  name: z.string().max(80, 'Token name must be at most 80 characters'),
+  description: z.string().max(280, 'Description must be at most 280 characters'),
+  max_amount: z.string().max(40, 'Total supply is too long'),
+  asset_scale: z.number().int().min(0).max(15),
+  transfer_fee: z.number().int().min(0).max(50000),
+  flags: z.object({
+    can_lock: z.boolean(),
+    require_auth: z.boolean(),
+    can_escrow: z.boolean(),
+    can_trade: z.boolean(),
+    can_transfer: z.boolean(),
+    can_clawback: z.boolean(),
+  }),
+  ticker: z.string().max(10, 'Ticker must be at most 10 characters'),
+  image_url: z.string().max(512, 'Image URL must be at most 512 characters'),
+  uris: z.array(z.object({
+    u: z.string().max(512, 'URI must be at most 512 characters'),
+    c: z.enum(['website', 'social', 'docs', 'other']),
+    t: z.string().max(100, 'URI title must be at most 100 characters'),
+  })).max(5),
+  property_address: z.string().max(200, 'Property address must be at most 200 characters'),
+  city: z.string().max(100, 'City must be at most 100 characters'),
+  state: z.string().max(100, 'State must be at most 100 characters'),
+  zip: z.string().max(10, 'ZIP must be at most 10 characters'),
+  country: z.string().max(100, 'Country must be at most 100 characters'),
+  property_type: z.string().max(80, 'Property type must be at most 80 characters'),
+  owner_name: z.string().max(120, 'Owner name must be at most 120 characters'),
+  owner_email: z.string().email('Enter a valid contact email'),
+  estimated_value: z.string().max(40, 'Estimated value is too long'),
+  bedrooms: z.string().max(10, 'Bedrooms must be at most 10 characters'),
+  bathrooms: z.string().max(10, 'Bathrooms must be at most 10 characters'),
+  square_feet: z.string().max(20, 'Square footage must be at most 20 characters'),
+  year_built: z.string().max(4, 'Year built must be at most 4 characters'),
+});
 
 interface MPTFormProps {
   params: MPTParams;
@@ -167,7 +204,7 @@ const TokenImageUpload = ({ value, onChange }: { value: string; onChange: (url: 
         </div>
       ) : (
         <div className="flex items-center gap-2">
-          <Input placeholder="https://… or ipfs://…" value={value} onChange={(e) => onChange(e.target.value)} className="flex-1" />
+          <Input placeholder="https://… or ipfs://…" value={value} onChange={(e) => onChange(e.target.value)} maxLength={512} className="flex-1" />
           {previewUrl && <img src={previewUrl} alt="preview" className="w-9 h-9 rounded object-cover border border-border flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
         </div>
       )}
@@ -296,6 +333,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
             placeholder="e.g. 123 Oak Street Token"
             value={params.name}
             onChange={e => set('name', e.target.value)}
+            maxLength={80}
             className="mt-1"
           />
           <p className="text-xs text-muted-foreground mt-1">The name investors will see for this asset</p>
@@ -308,6 +346,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
             placeholder="Describe the property — location highlights, condition, investment thesis..."
             value={params.description}
             onChange={e => set('description', e.target.value)}
+            maxLength={280}
             className="mt-1"
             rows={3}
           />
@@ -392,6 +431,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
             placeholder="123 Main Street, Apt 4B"
             value={params.property_address}
             onChange={e => set('property_address', e.target.value)}
+            maxLength={200}
             className="mt-1"
           />
         </div>
@@ -399,7 +439,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="sm:col-span-2">
             <Label htmlFor="mpt-city">City</Label>
-            <Input id="mpt-city" placeholder="Miami" value={params.city} onChange={e => set('city', e.target.value)} className="mt-1" />
+            <Input id="mpt-city" placeholder="Miami" value={params.city} onChange={e => set('city', e.target.value)} maxLength={100} className="mt-1" />
           </div>
           <div>
             <Label htmlFor="mpt-state">State</Label>
@@ -422,7 +462,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
 
         <div>
           <Label htmlFor="mpt-country">Country</Label>
-          <Input id="mpt-country" value={params.country} onChange={e => set('country', e.target.value)} className="mt-1" />
+          <Input id="mpt-country" value={params.country} onChange={e => set('country', e.target.value)} maxLength={100} className="mt-1" />
         </div>
       </Card>
 
@@ -433,12 +473,13 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <Label htmlFor="mpt-owner">Issuer Name *</Label>
-            <Input id="mpt-owner" placeholder="Jane Doe or Acme Holdings" value={params.owner_name} onChange={e => set('owner_name', e.target.value)} className="mt-1" />
+            <Input id="mpt-owner" placeholder="Jane Doe or Acme Holdings" value={params.owner_name} onChange={e => set('owner_name', e.target.value)} maxLength={120} className="mt-1" />
             <p className="text-xs text-muted-foreground mt-1">Required by XLS-89 — the entity issuing this token</p>
           </div>
           <div>
-            <Label htmlFor="mpt-email">Contact Email</Label>
-            <Input id="mpt-email" type="email" placeholder="jane@example.com" value={params.owner_email} onChange={e => set('owner_email', e.target.value)} className="mt-1" />
+            <Label htmlFor="mpt-email">Contact Email *</Label>
+            <Input id="mpt-email" type="email" placeholder="jane@example.com" value={params.owner_email} onChange={e => set('owner_email', e.target.value)} maxLength={254} className="mt-1" />
+            <p className="text-xs text-muted-foreground mt-1">Used for issuer contact and required before minting.</p>
           </div>
         </div>
       </Card>
@@ -456,6 +497,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
               <Input
                 placeholder="example.com/property"
                 value={uri.u}
+                maxLength={512}
                 onChange={e => {
                   const newUris = [...params.uris];
                   newUris[idx] = { ...newUris[idx], u: e.target.value };
@@ -481,6 +523,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
               <Input
                 placeholder="Title (e.g. Property Page)"
                 value={uri.t}
+                maxLength={100}
                 onChange={e => {
                   const newUris = [...params.uris];
                   newUris[idx] = { ...newUris[idx], t: e.target.value };
@@ -528,24 +571,26 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <Label htmlFor="mpt-max">Total Supply</Label>
-            <Input
-              id="mpt-max"
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 100"
-              value={params.max_amount ? Number(params.max_amount).toLocaleString('en-US') : ''}
-              onChange={e => set('max_amount', e.target.value.replace(/[^0-9]/g, ''))}
-              className="mt-1"
-            />
+              <Input
+                id="mpt-max"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 100"
+                maxLength={40}
+                value={params.max_amount ? Number(params.max_amount).toLocaleString('en-US') : ''}
+                onChange={e => set('max_amount', e.target.value.replace(/[^0-9]/g, ''))}
+                className="mt-1"
+              />
             <p className="text-xs text-muted-foreground mt-1">How many tokens represent this property</p>
           </div>
           <div>
             <Label htmlFor="mpt-scale">Decimal Places</Label>
-            <Input
-              id="mpt-scale"
-              type="text"
-              inputMode="numeric"
-              value={params.asset_scale.toString()}
+              <Input
+                id="mpt-scale"
+                type="text"
+                inputMode="numeric"
+                maxLength={2}
+                value={params.asset_scale.toString()}
               onChange={e => {
                 const raw = e.target.value.replace(/[^0-9]/g, '');
                 const num = raw === '' ? 0 : Math.min(15, parseInt(raw, 10));

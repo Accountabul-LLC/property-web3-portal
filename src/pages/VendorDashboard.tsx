@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, BadgeCheck, Building2, Loader2, ShieldCheck, Users2 } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Building2, Loader2, ShieldCheck, Users2, MessageCircle, Clock3, CheckCircle2 } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Seo } from '@/components/Seo'
@@ -9,11 +9,17 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { VendorBenefitsCard } from '@/components/vendors/VendorBenefitsCard'
 import { useVendorApplication } from '@/hooks/useVendorApplication'
+import { useProfile } from '@/hooks/useProfile'
+import { useVendorProfile } from '@/hooks/useVendorProfile'
+import { useVendorLeads } from '@/hooks/useVendorLeads'
 import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
 
 export default function VendorDashboard() {
   const navigate = useNavigate()
   const { vendorApplication, isLoading, user } = useVendorApplication()
+  const { profile } = useProfile()
+  const { vendorProfile } = useVendorProfile(profile?.id ?? null)
+  const { leads, isLoading: leadsLoading, updateLeadStatus } = useVendorLeads(vendorProfile?.id ?? null)
 
   useEffect(() => {
     if (isLoading) return
@@ -40,6 +46,7 @@ export default function VendorDashboard() {
   }
 
   const normalized = normalizeVendorStatus(vendorApplication?.status)
+  const unreadLeads = leads.filter((lead) => lead.status === 'new').length
 
   return (
     <div className="min-h-screen bg-background">
@@ -59,12 +66,19 @@ export default function VendorDashboard() {
                 <BadgeCheck className="mr-2 h-3.5 w-3.5" />
                 Verified vendor
               </Badge>
-              <CardTitle className="text-3xl">Vendor dashboard</CardTitle>
+              <div className="flex flex-wrap items-center gap-3">
+                <CardTitle className="text-3xl">Vendor dashboard</CardTitle>
+                {unreadLeads > 0 ? <Badge variant="secondary">{unreadLeads} new lead{unreadLeads === 1 ? '' : 's'}</Badge> : null}
+              </div>
               <CardDescription>
                 This is the operational home for approved businesses on Accountabul.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="rounded-xl bg-muted/40 p-4">
+                <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Lead inbox</div>
+                <div className="mt-1 font-medium">{leads.length} total leads{unreadLeads ? `, ${unreadLeads} new` : ''}</div>
+              </div>
               <div className="rounded-xl bg-muted/40 p-4">
                 <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Status</div>
                 <div className="mt-1 font-medium capitalize">{normalized.replace('_', ' ')}</div>
@@ -97,31 +111,48 @@ export default function VendorDashboard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-xl">
                   <Building2 className="h-5 w-5 text-primary" />
-                  Vendor tools
+                  Lead inbox
                 </CardTitle>
-                <CardDescription>Use this area as the business-facing control center.</CardDescription>
+                <CardDescription>Track new inquiries, mark them contacted, and close them out once handled.</CardDescription>
               </CardHeader>
-              <CardContent className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <Users2 className="mb-2 h-5 w-5 text-primary" />
-                  <p className="font-medium">Customer leads</p>
-                  <p className="text-sm text-muted-foreground">Track interest and inbound requests from members.</p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <ShieldCheck className="mb-2 h-5 w-5 text-primary" />
-                  <p className="font-medium">Trust badge</p>
-                  <p className="text-sm text-muted-foreground">Your verified vendor status is visible to members.</p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <BadgeCheck className="mb-2 h-5 w-5 text-primary" />
-                  <p className="font-medium">Marketplace placement</p>
-                  <p className="text-sm text-muted-foreground">Promotions and listing priority live here.</p>
-                </div>
-                <div className="rounded-xl border border-border/70 bg-muted/20 p-4">
-                  <Building2 className="mb-2 h-5 w-5 text-primary" />
-                  <p className="font-medium">Business profile</p>
-                  <p className="text-sm text-muted-foreground">Keep your public company page current.</p>
-                </div>
+              <CardContent className="space-y-3">
+                {leadsLoading ? (
+                  <div className="rounded-xl border border-border/70 bg-muted/20 p-4 text-sm text-muted-foreground">Loading leads...</div>
+                ) : leads.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border/70 bg-muted/10 p-6 text-center">
+                    <MessageCircle className="mx-auto mb-2 h-5 w-5 text-muted-foreground" />
+                    <p className="font-medium">No leads yet</p>
+                    <p className="text-sm text-muted-foreground">When someone contacts your profile, the request will appear here.</p>
+                  </div>
+                ) : (
+                  leads.map((lead) => (
+                    <div key={lead.id} className="rounded-xl border border-border/70 bg-muted/20 p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-medium">{lead.requester_name}</p>
+                          <p className="text-sm text-muted-foreground">{lead.requester_email}</p>
+                        </div>
+                        <Badge variant={lead.status === 'new' ? 'secondary' : lead.status === 'contacted' ? 'default' : 'outline'}>
+                          {lead.status === 'new' ? 'New' : lead.status === 'contacted' ? 'Contacted' : 'Closed'}
+                        </Badge>
+                      </div>
+                      <div className="text-sm">
+                        <p className="font-medium">{lead.service_needed}</p>
+                        <p className="text-muted-foreground line-clamp-2">{lead.message}</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button size="sm" variant="outline" onClick={() => updateLeadStatus(lead.id, 'contacted')} disabled={lead.status === 'contacted' || lead.status === 'closed'}>
+                          <Clock3 className="mr-2 h-4 w-4" />
+                          Mark contacted
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => updateLeadStatus(lead.id, 'closed')} disabled={lead.status === 'closed'}>
+                          <CheckCircle2 className="mr-2 h-4 w-4" />
+                          Close
+                        </Button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
 

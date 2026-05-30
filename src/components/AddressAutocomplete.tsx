@@ -15,6 +15,7 @@ interface AddressAutocompleteProps {
   placeholder?: string;
   className?: string;
   id?: string;
+  maxLength?: number;
 }
 
 const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
@@ -24,6 +25,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   placeholder = "Start typing an address...",
   className,
   id,
+  maxLength,
 }) => {
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -107,6 +109,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={() => predictions.length > 0 && setIsOpen(true)}
           placeholder={placeholder}
+          maxLength={maxLength}
           className={`pl-10 ${className || ''}`}
           autoComplete="off"
         />

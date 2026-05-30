@@ -64,8 +64,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
   };
 
   const handleSaveRename = (address: string) => {
-    if (editLabel.trim()) {
-      renameWallet(address, editLabel.trim());
+    const nextLabel = editLabel.trim().slice(0, 64);
+    if (nextLabel) {
+      renameWallet(address, nextLabel);
     }
     setEditingAddress(null);
   };
@@ -124,6 +125,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
                     onKeyDown={(e) => e.key === 'Enter' && handleSaveRename(w.address)}
                     className="h-7 text-xs flex-1"
                     autoFocus
+                    maxLength={64}
                   />
                   <Button
                     variant="ghost"

@@ -1,4 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { z } from "https://esm.sh/zod@3.23.8";
+import { isValidXRPLAddress, parseJsonBody } from "../_shared/auth.ts";
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -16,6 +18,15 @@ const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:512
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
+
+const paymentRequestSchema = z.object({
+  from_address: z.string().trim().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Invalid sender address'),
+  to_address: z.string().trim().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'Invalid destination address'),
+  amount_xrp: z.union([z.string(), z.number()]),
+  destination_tag: z.union([z.string(), z.number(), z.null()]).optional(),
+  memo: z.string().max(300, 'Memo too long (max 300 characters)').optional().nullable(),
+  network: z.enum(['testnet', 'mainnet']).optional(),
+});
 
 async function xrplRequest(nodes: string[], method: string, params: Record<string, unknown>[]) {
   let lastError: Error | null = null;
@@ -50,83 +61,71 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
   throw lastError || new Error('All XRPL nodes failed');
 }
 
-function isValidXRPLAddress(addr: string): boolean {
-  return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(addr);
-}
-
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const jsonError = (message: string, status: number) =>
-    new Response(JSON.stringify({ error: message }), {
-      status,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-
   try {
-    // Parse body first — explicit 400 on malformed JSON
-    let body: Record<string, unknown>;
-    try {
-      body = await req.json();
-    } catch {
-      return jsonError('Invalid request body', 400);
-    }
-    const { from_address, to_address, amount_xrp, destination_tag, memo, network } = body;
+    const body = await parseJsonBody<unknown>(req, corsHeaders);
+    if (body instanceof Response) return body;
 
-    // --- Auth first, before exposing any validation signals ---
+    const parsed = paymentRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      return new Response(JSON.stringify({ error: firstIssue?.message || 'Invalid request body' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { from_address, to_address, amount_xrp, destination_tag, memo, network } = parsed.data;
+
+    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const warnings: string[] = [];
+
+    if (!from_address || !isValidXRPLAddress(from_address)) {
+      return new Response(JSON.stringify({ error: 'Invalid sender address' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!to_address || !isValidXRPLAddress(to_address)) {
+      return new Response(JSON.stringify({ error: 'Invalid destination address' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (from_address === to_address) {
+      return new Response(JSON.stringify({ error: 'Cannot send to yourself' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // --- Auth + Wallet ownership verification ---
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const authHeader = req.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) return jsonError('Authentication required', 401);
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
     const { data: { user }, error: userError } = await userClient.auth.getUser();
-    if (userError || !user) return jsonError('Invalid authentication', 401);
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid authentication' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
     const userId = user.id;
 
-    // --- Input validation (all → 400, in correct order) ---
-    const allowedNetworks = ['mainnet', 'testnet'];
-    if (network !== undefined && !allowedNetworks.includes(network as string)) {
-      return jsonError('network must be mainnet or testnet', 400);
-    }
-    const nodes = (network as string) === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
-    const warnings: string[] = [];
-
-    const amount = Number(amount_xrp);
-    if (!amount_xrp || isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
-      return jsonError('Invalid amount', 400);
-    }
-
-    if (!from_address || !isValidXRPLAddress(from_address as string)) {
-      return jsonError('Invalid sender address', 400);
-    }
-
-    if (!to_address || !isValidXRPLAddress(to_address as string)) {
-      return jsonError('Invalid destination address', 400);
-    }
-
-    if (destination_tag !== undefined && destination_tag !== null && destination_tag !== '') {
-      const tag = Number(destination_tag);
-      if (!Number.isInteger(tag) || tag < 0 || tag > 4294967295) {
-        return jsonError('Invalid destination tag (must be integer 0-4294967295)', 400);
-      }
-    }
-
-    if (memo && typeof memo === 'string' && memo.length > 300) {
-      return jsonError('Memo too long (max 300 characters)', 400);
-    }
-
-    if (from_address === to_address) return jsonError('Cannot send to yourself', 400);
-
-    // --- Wallet ownership ---
     const { data: walletLink } = await supabase
       .from('user_wallets')
       .select('id')
@@ -135,7 +134,33 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .single();
 
-    if (!walletLink) return jsonError('Wallet not linked to your account. Please connect it first.', 403);
+    if (!walletLink) {
+      return new Response(JSON.stringify({ error: 'Wallet not linked to your account. Please connect it first.' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const amount = Number(amount_xrp);
+    if (!amount_xrp || isNaN(amount) || amount <= 0 || amount > 100_000_000_000) {
+      return new Response(JSON.stringify({ error: 'Invalid amount' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (destination_tag !== undefined && destination_tag !== null && destination_tag !== '') {
+      const tag = Number(destination_tag);
+      if (!Number.isInteger(tag) || tag < 0 || tag > 4294967295) {
+        return new Response(JSON.stringify({ error: 'Invalid destination tag (must be integer 0-4294967295)' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    if (memo && typeof memo === 'string' && memo.length > 300) {
+      return new Response(JSON.stringify({ error: 'Memo too long (max 300 characters)' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // Fetch account info and server state in parallel (with failover nodes)
     const [accountInfoRes, serverInfoRes] = await Promise.all([
@@ -144,11 +169,17 @@ Deno.serve(async (req) => {
     ]);
 
     if (accountInfoRes.result?.error === 'actNotFound') {
-      return jsonError('Sender account not found on XRPL', 400);
+      return new Response(JSON.stringify({ error: 'Sender account not found on XRPL' }), {
+        status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const accountData = accountInfoRes.result?.account_data;
-    if (!accountData) return jsonError('Could not fetch account data', 500);
+    if (!accountData) {
+      return new Response(JSON.stringify({ error: 'Could not fetch account data' }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     const balanceXrp = Number(accountData.Balance) / 1_000_000;
     const ownerCount = accountData.OwnerCount || 0;
@@ -160,10 +191,11 @@ Deno.serve(async (req) => {
     const spendable = balanceXrp - totalReserve;
 
     if (amount > spendable) {
-      return jsonError(
-        `Insufficient spendable balance. You have ${spendable.toFixed(6)} XRP available (${totalReserve} XRP reserved).`,
-        400,
-      );
+      return new Response(JSON.stringify({
+        error: `Insufficient spendable balance. You have ${spendable.toFixed(6)} XRP available (${totalReserve} XRP reserved).`
+      }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Get current ledger index for LastLedgerSequence

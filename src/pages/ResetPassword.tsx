@@ -10,6 +10,8 @@ import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Lock, ArrowRight } from 'lucide-react';
 
+const PASSWORD_MAX = 128;
+
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
@@ -41,6 +43,10 @@ const ResetPassword = () => {
     }
     if (password.length < 6) {
       toast.error('Password must be at least 6 characters');
+      return;
+    }
+    if (password.length > PASSWORD_MAX) {
+      toast.error(`Password must be ${PASSWORD_MAX} characters or fewer`);
       return;
     }
 
@@ -103,6 +109,7 @@ const ResetPassword = () => {
                   className="pl-10"
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX}
                 />
               </div>
             </div>
@@ -120,6 +127,7 @@ const ResetPassword = () => {
                   className="pl-10"
                   required
                   minLength={6}
+                  maxLength={PASSWORD_MAX}
                 />
               </div>
             </div>

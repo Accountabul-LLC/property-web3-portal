@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
+import { parseJsonBody } from '../_shared/auth.ts';
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -99,33 +100,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    let parsedBody: Record<string, unknown>;
-    try {
-      parsedBody = await req.json();
-    } catch {
-      return new Response(JSON.stringify({ success: false, error: 'Invalid request body' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-    const { tx_json, wallet_address, network } = parsedBody;
+    const body = await parseJsonBody<{ tx_json?: unknown; wallet_address?: unknown; network?: unknown }>(req, corsHeaders);
+    if (body instanceof Response) return body;
+    const { tx_json, wallet_address, network } = body;
 
     if (network !== 'testnet') {
-      return new Response(JSON.stringify({ success: false, error: 'Server-side signing is only supported on testnet' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('Server-side signing is only supported on testnet');
     }
 
     if (!tx_json || !wallet_address) {
-      return new Response(JSON.stringify({ success: false, error: 'Missing tx_json or wallet_address' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const txJsonStr = JSON.stringify(tx_json);
-    if (txJsonStr.length > 65_536) {
-      return new Response(JSON.stringify({ success: false, error: 'tx_json too large' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      throw new Error('Missing tx_json or wallet_address');
     }
 
     const nodes = TESTNET_NODES;

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Mail, Twitter, Github, Linkedin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { emailSchema } from '@/lib/formValidation';
 
 const NewsletterSection = () => {
   const [email, setEmail] = useState('');
@@ -11,11 +12,16 @@ const NewsletterSection = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const parsedEmail = emailSchema.safeParse(email);
+    if (!parsedEmail.success) {
+      toast.error(parsedEmail.error.issues[0]?.message || 'Please enter a valid email');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from('newsletter_subscribers' as any)
-        .insert({ email } as any);
+        .insert({ email: parsedEmail.data } as any);
       if (error) {
         if (error.code === '23505') {
           toast.info('You\'re already subscribed!');
@@ -61,6 +67,8 @@ const NewsletterSection = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              maxLength={254}
+              autoComplete="email"
               className="flex-1"
             />
             <Button type="submit" variant="hero" size="lg" disabled={isSubmitting}>

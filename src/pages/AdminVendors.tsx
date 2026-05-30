@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { useAuth } from '@/hooks/useAuth'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
-import { Loader2, ShieldCheck } from 'lucide-react'
 import VendorCRMPanel from '@/components/admin/VendorCRMPanel'
 
 export default function AdminVendors() {
@@ -18,7 +18,9 @@ export default function AdminVendors() {
       navigate('/auth')
       return
     }
-    if (!hasAccess) navigate('/dashboard')
+    if (!hasAccess) {
+      navigate('/dashboard')
+    }
   }, [user, authLoading, hasAccess, accessLoading, navigate])
 
   if (authLoading || accessLoading) {
@@ -41,7 +43,7 @@ export default function AdminVendors() {
           </div>
           <div>
             <h1 className="text-2xl font-bold">Verified Vendors</h1>
-            <p className="text-sm text-muted-foreground">Review vendor requests and manage the business CRM network.</p>
+            <p className="text-sm text-muted-foreground">Review applications, KYC/KYB context, ads, and marketplace approval status.</p>
           </div>
         </div>
 
@@ -51,3 +53,4 @@ export default function AdminVendors() {
     </div>
   )
 }
+

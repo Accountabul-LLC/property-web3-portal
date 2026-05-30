@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
+import { parseJsonBody } from "../_shared/auth.ts";
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -91,17 +92,18 @@ async function xrplRequest(nodes: string[], method: string, params: Record<strin
   throw lastError ?? new Error("All XRPL nodes failed");
 }
 
+function jsonError(message: string, status = 400) {
+  return new Response(JSON.stringify({ success: false, error: message }), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
-
-  const jsonError = (message: string, status = 400) =>
-    new Response(JSON.stringify({ success: false, error: message }), {
-      status,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -122,19 +124,22 @@ Deno.serve(async (req) => {
       return jsonError("Invalid authentication", 401);
     }
 
-    let parsedBody: Record<string, unknown>;
-    try {
-      parsedBody = await req.json();
-    } catch {
-      return jsonError("Invalid request body", 400);
-    }
+    const body = await parseJsonBody<{
+      wallet_address?: unknown;
+      source_asset?: unknown;
+      destination_asset?: unknown;
+      source_amount?: unknown;
+      network?: unknown;
+    }>(req, corsHeaders);
+    if (body instanceof Response) return body;
+
     const {
       wallet_address,
       source_asset,
       destination_asset,
       source_amount,
       network,
-    } = parsedBody;
+    } = body;
 
     const nodes = network === "testnet" ? TESTNET_NODES : MAINNET_NODES;
 
