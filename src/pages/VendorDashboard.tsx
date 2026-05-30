@@ -30,10 +30,6 @@ export default function VendorDashboard() {
     const normalized = normalizeVendorStatus(vendorApplication?.status)
     if (normalized === 'none') {
       navigate('/vendor/onboarding', { replace: true })
-      return
-    }
-    if (normalized !== 'active') {
-      navigate(getVendorNextRoute(normalized), { replace: true })
     }
   }, [isLoading, navigate, user, vendorApplication?.status])
 
@@ -100,7 +96,7 @@ export default function VendorDashboard() {
                   </Link>
                 </Button>
                 <Button asChild variant="outline">
-                  <Link to="/vendor/status">Application status</Link>
+                  <Link to="/vendor/onboarding">Edit application</Link>
                 </Button>
               </div>
             </CardContent>
@@ -157,8 +153,8 @@ export default function VendorDashboard() {
             </Card>
 
             <VendorBenefitsCard
-              primaryHref="/vendor/status"
-              primaryLabel="Review status"
+              primaryHref="/vendor/onboarding"
+              primaryLabel="Edit application"
               secondaryHref="/professionals"
               secondaryLabel="Open marketplace"
             />
