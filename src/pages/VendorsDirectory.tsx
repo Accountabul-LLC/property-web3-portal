@@ -25,7 +25,7 @@ export default function VendorsDirectory() {
   const { data, isLoading } = useQuery({
     queryKey: ['vendors-directory'],
     queryFn: async () => {
-      const { data, error } = await (supabase.from('vendor_public_profiles') as any)
+      const { data, error } = await ((supabase as any).from('vendor_public_profiles') as any)
         .select('*')
         .order('company_name', { ascending: true })
       if (error) throw error
