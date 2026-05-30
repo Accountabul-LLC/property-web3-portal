@@ -1,4 +1,4 @@
-export const VENDOR_CREDENTIAL_KEY = 'vendor'
+export const VENDOR_CREDENTIAL_KEY = 'VENDOR_MARKETPLACE_APPROVED'
 
 export const VENDOR_ENTRY_ROUTE = '/vendor'
 export const VENDOR_ONBOARDING_ROUTE = '/vendor/onboarding'
