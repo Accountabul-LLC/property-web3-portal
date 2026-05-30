@@ -1706,9 +1706,62 @@ export type Database = {
           },
         ]
       }
+      vendor_leads: {
+        Row: {
+          contact_email: string
+          contact_name: string
+          contact_phone: string | null
+          created_at: string
+          id: string
+          message: string
+          source_url: string | null
+          status: string
+          updated_at: string
+          vendor_notes: string | null
+          vendor_profile_id: string
+        }
+        Insert: {
+          contact_email: string
+          contact_name: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          vendor_notes?: string | null
+          vendor_profile_id: string
+        }
+        Update: {
+          contact_email?: string
+          contact_name?: string
+          contact_phone?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          source_url?: string | null
+          status?: string
+          updated_at?: string
+          vendor_notes?: string | null
+          vendor_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_leads_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_profiles: {
         Row: {
           advertising_opt_in: boolean
+          business_address_city: string | null
+          business_address_state: string | null
+          business_address_zip: string | null
           business_email: string | null
           business_phone: string | null
           company_name: string
@@ -1721,20 +1774,30 @@ export type Database = {
           logo_url: string | null
           notes: string | null
           place_of_business: string | null
+          profile_completed_at: string | null
+          profile_headline: string | null
           profile_id: string
+          public_profile_enabled: boolean
           requested_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          slug: string | null
           tax_exempt: boolean
           tax_exempt_ein: string | null
           updated_at: string
           user_id: string
           vendor_bio: string | null
           verification_status: string
+          verification_tier: string | null
           verified_at: string | null
+          website_url: string | null
+          years_in_business: number | null
         }
         Insert: {
           advertising_opt_in?: boolean
+          business_address_city?: string | null
+          business_address_state?: string | null
+          business_address_zip?: string | null
           business_email?: string | null
           business_phone?: string | null
           company_name: string
@@ -1747,20 +1810,30 @@ export type Database = {
           logo_url?: string | null
           notes?: string | null
           place_of_business?: string | null
+          profile_completed_at?: string | null
+          profile_headline?: string | null
           profile_id: string
+          public_profile_enabled?: boolean
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          slug?: string | null
           tax_exempt?: boolean
           tax_exempt_ein?: string | null
           updated_at?: string
           user_id: string
           vendor_bio?: string | null
           verification_status?: string
+          verification_tier?: string | null
           verified_at?: string | null
+          website_url?: string | null
+          years_in_business?: number | null
         }
         Update: {
           advertising_opt_in?: boolean
+          business_address_city?: string | null
+          business_address_state?: string | null
+          business_address_zip?: string | null
           business_email?: string | null
           business_phone?: string | null
           company_name?: string
@@ -1773,17 +1846,24 @@ export type Database = {
           logo_url?: string | null
           notes?: string | null
           place_of_business?: string | null
+          profile_completed_at?: string | null
+          profile_headline?: string | null
           profile_id?: string
+          public_profile_enabled?: boolean
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          slug?: string | null
           tax_exempt?: boolean
           tax_exempt_ein?: string | null
           updated_at?: string
           user_id?: string
           vendor_bio?: string | null
           verification_status?: string
+          verification_tier?: string | null
           verified_at?: string | null
+          website_url?: string | null
+          years_in_business?: number | null
         }
         Relationships: [
           {
