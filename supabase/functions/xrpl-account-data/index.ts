@@ -356,6 +356,24 @@ serve(async (req) => {
   }
 
   try {
+    // Require authentication BEFORE inspecting any request parameters so
+    // unauthenticated callers cannot probe the expected schema.
+    const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...buildCors(req), 'Content-Type': 'application/json' },
+      });
+    }
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: userData, error: authError } = await anonClient.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !userData?.user?.id) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
     const { wallet_address, network } = await req.json();
     if (!wallet_address) {
       return new Response(JSON.stringify({ error: 'wallet_address required' }), {
