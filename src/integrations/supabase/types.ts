@@ -1282,19 +1282,22 @@ export type Database = {
           created_at: string
           id: string
           property_id: string
-          wallet_address: string
+          user_id: string
+          wallet_address: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           property_id: string
-          wallet_address: string
+          user_id: string
+          wallet_address?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           property_id?: string
-          wallet_address?: string
+          user_id?: string
+          wallet_address?: string | null
         }
         Relationships: [
           {
@@ -2323,6 +2326,17 @@ export type Database = {
           escrow_status: string
           id: string
           is_anonymous: boolean
+        }[]
+      }
+      get_saved_properties_for_user: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          properties: Json
+          property_id: string
+          user_id: string
+          wallet_address: string
         }[]
       }
       has_role: {
