@@ -1,39 +1,38 @@
-## Current vendor routes (6)
+## Problem
 
-| Route | File | Purpose | Verdict |
-|---|---|---|---|
-| `/vendor` | Vendor.tsx (102) | Marketing landing for vendor program | **Remove** — duplicates `/vendors` directory hero + `/auth/vendor` CTA |
-| `/vendor/onboarding` | VendorOnboarding.tsx (443) | Application form / profile completion | **Keep** |
-| `/vendor/status` | VendorStatus.tsx (159) | Pending-review status screen | **Remove** — fold into VendorDashboard as a status banner |
-| `/vendor/dashboard` | VendorDashboard.tsx (358) | Active vendor CRM (leads, profile) | **Keep** (becomes status-aware) |
-| `/vendors` | VendorsDirectory.tsx (349) | Public verified vendor directory | **Keep** |
-| `/vendor/:slug` | VendorPublicProfile.tsx (423) | Public vendor profile + lead form | **Keep** |
+At signup we collect **Full Name** (e.g. "Jane Doe") and save it to `profiles.full_name`. The Dashboard profile, however, drives "profile complete" off `profiles.first_name` and `profiles.last_name` — which are empty after signup. So the user sees a "complete your profile" prompt asking for First Name and Last Name again, even though they just typed their name 30 seconds ago. Same story for vendors landing on `/vendor/onboarding` → Dashboard.
 
-## Why remove these two
+## Fix (minimal, low‑risk)
 
-**`/vendor`** is a thin marketing page. The same audience hits `/vendors` (public directory) or `/auth/vendor` (signup). It adds a hop without unique content. The Dashboard quick-links button to "Vendor Hub" can point to `/vendors` instead.
+Split the name at the **signup** step and write all three fields so downstream screens see a complete profile.
 
-**`/vendor/status`** mirrors what `/vendor/dashboard` should show when the vendor isn't yet verified. Today VendorDashboard already redirects unverified users to `/vendor/onboarding`; we'll switch it to render a status panel inline (pending / rejected / expired states) so there's one home for vendors regardless of stage.
+### 1. `src/components/auth/AuthForm.tsx`
 
-## Plan
+In the signup branch, before the `profiles.update(...)` call, split `fullName`:
 
-1. **Delete pages**: `src/pages/Vendor.tsx`, `src/pages/VendorStatus.tsx`.
-2. **App.tsx**: remove the two `Route`s and the two lazy imports. Add legacy redirects:
-   - `/vendor` → `/vendors`
-   - `/vendor/status` → `/vendor/dashboard`
-   (Keep existing `/vendors/status` → `/vendor/dashboard` redirect; update target.)
-3. **VendorDashboard.tsx**: instead of redirecting unverified users away, render a status card at the top (uses `useVendorApplication`) covering pending / under review / rejected / expired. Verified users see the existing CRM UI unchanged.
-4. **Update internal links** away from removed routes:
-   - `Dashboard.tsx` quick-links: drop the `/vendor` button; keep onboarding, dashboard, directory.
-   - `VendorOnboarding.tsx`: replace `navigate('/vendor/status')` with `navigate('/vendor/dashboard')` (2 spots).
-   - `VendorStatus.tsx` is gone, so its links disappear with it.
-   - `vendorFlow.ts`: point `VENDOR_STATUS_ROUTE` consumers at `/vendor/dashboard` (or remove the constant if unused after refactor).
-5. **No DB / RLS / edge-function changes.** Pure frontend route consolidation.
+```
+const trimmed = fullName.trim().replace(/\s+/g, ' ')
+const [first, ...rest] = trimmed.split(' ')
+const firstName = first ?? ''
+const lastName = rest.join(' ')   // may be empty for mononyms — that's fine
+```
+
+Then include them in the update payload alongside `full_name`, `account_type`, `company_name`.
+
+### 2. `src/pages/Dashboard.tsx` — backfill safety net
+
+For users who already signed up before this change (only `full_name` populated), auto‑hydrate the edit form and the "profile complete" check from `full_name` when `first_name` / `last_name` are missing:
+
+- In the effect that seeds `formData` (around line 137), if `profile.first_name` is empty but `profile.full_name` is set, derive first/last from `full_name`.
+- In the "incomplete profile" banner condition (line 370), treat a present `full_name` as satisfying the name requirement.
+
+No schema change, no migration — `profiles` already has all three columns.
+
+### 3. Out of scope (calling out, not changing)
+
+- The user also mentioned phone — Dashboard requires `phone` for "complete profile" but signup doesn't ask for it. Leaving that alone unless you want it removed from the completeness check.
+- KYC (`/kyc`) hands off directly to Stripe Identity and does **not** re‑ask for name in our UI, so nothing to change there.
 
 ## Result
 
-4 vendor routes, each with a single clear job:
-- `/vendors` — public directory
-- `/vendor/:slug` — public profile
-- `/vendor/onboarding` — apply / edit profile
-- `/vendor/dashboard` — vendor home (status when pending, CRM when verified)
+A new user signs up with "Jane Doe" → lands on Dashboard → First Name "Jane", Last Name "Doe" already filled, no "complete your profile" nag, no second name prompt. Existing users see the same thing on next visit thanks to the backfill in step 2.
