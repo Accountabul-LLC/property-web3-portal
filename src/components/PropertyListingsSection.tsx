@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare } from 'lucide-react';
 import { useProperties, Property } from '@/hooks/useProperties';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
 import PropertySaveButton from './property/PropertySaveButton';
 
