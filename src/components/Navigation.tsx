@@ -224,6 +224,18 @@ const Navigation = () => {
           <div className="flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
             {user && isConnected && <NotificationBell />}
+            {user && (
+              <Button
+                variant={currentPath === '/dashboard' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="h-8 px-3 text-xs font-medium"
+                title="Dashboard"
+              >
+                <LayoutDashboard className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </Button>
+            )}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />
