@@ -8,6 +8,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
+const STRIPE_IDENTITY_SETUP_MESSAGE = 'Stripe Identity is not enabled for the connected Stripe account. An account admin needs to activate Identity in Stripe, then try again.';
+
 function buildCors(req: Request): Record<string, string> {
   const origin = req.headers.get('origin') ?? '';
   const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
@@ -17,7 +19,25 @@ function buildCors(req: Request): Record<string, string> {
     'Access-Control-Allow-Headers': ALLOW_HEADERS,
     'Vary': 'Origin',
   };
-}Deno.serve(async (req) => {
+}
+
+function isStripeIdentitySetupError(payload: any): boolean {
+  return payload?.error?.code === 'identity_api_invalid_application'
+    || /not set up to use Identity/i.test(payload?.error?.message ?? '');
+}
+
+function stripeSetupRequiredResponse(corsHeaders: Record<string, string>) {
+  return new Response(JSON.stringify({
+    error: STRIPE_IDENTITY_SETUP_MESSAGE,
+    code: 'identity_api_invalid_application',
+    setup_required: true,
+  }), {
+    status: 409,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+Deno.serve(async (req) => {
   const corsHeaders = buildCors(req);
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -80,6 +100,10 @@ function buildCors(req: Request): Record<string, string> {
           status: existing.status,
         }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
+      if (!existingRes.ok && isStripeIdentitySetupError(existing)) {
+        console.error('Stripe Identity setup required:', existing?.error?.code ?? existing?.error?.message)
+        return stripeSetupRequiredResponse(corsHeaders)
+      }
       // else fall through to create a new one
     }
 
@@ -109,6 +133,9 @@ function buildCors(req: Request): Record<string, string> {
     const session = await createRes.json()
     if (!createRes.ok) {
       console.error('Stripe create error:', session)
+      if (isStripeIdentitySetupError(session)) {
+        return stripeSetupRequiredResponse(corsHeaders)
+      }
       return new Response(JSON.stringify({ error: session?.error?.message ?? 'Stripe error' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
