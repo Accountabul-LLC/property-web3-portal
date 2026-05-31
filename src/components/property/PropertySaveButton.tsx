@@ -57,15 +57,21 @@ const PropertySaveButton: React.FC<PropertySaveButtonProps> = ({
   return (
     <Button
       type="button"
-      variant={isSaved ? 'default' : 'outline'}
+      variant="outline"
       size="sm"
       onClick={handleClick}
       disabled={saveToggle.isPending}
-      className={`gap-2 ${isSaved ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''} ${className}`}
+      className={`gap-2 ${className}`}
       title={isSaved ? 'Remove from saved properties' : 'Save property'}
     >
-      <Heart className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
-      {showLabel ? (isSaved ? 'Saved' : 'Save') : null}
+      <Heart
+        className={`w-4 h-4 ${isSaved ? 'fill-red-500 text-red-500' : 'text-muted-foreground'}`}
+      />
+      {showLabel ? (
+        <span className={isSaved ? 'text-red-500 font-medium' : ''}>
+          {isSaved ? 'Saved' : 'Save'}
+        </span>
+      ) : null}
     </Button>
   );
 };

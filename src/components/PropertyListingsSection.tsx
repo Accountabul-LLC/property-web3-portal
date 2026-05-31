@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare } from 'lucide-react';
 import { useProperties, Property } from '@/hooks/useProperties';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
+
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
 import PropertySaveButton from './property/PropertySaveButton';
 
@@ -147,7 +147,6 @@ const PropertyListingsSection = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
-  const { activeAddress, openConnectModal } = useActiveWallet();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState('all');
   const [selectedStatus, setSelectedStatus] = React.useState('all');
@@ -331,17 +330,15 @@ const PropertyListingsSection = () => {
                 <div className="flex items-start gap-3">
                   <ShieldAlert className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium">Saved homes do not require KYC.</p>
+                    <p className="font-medium">Saved homes do not require KYC or a wallet.</p>
                     <p className="text-sm text-muted-foreground">
-                      Browsing, saving, and comparing are available to signed-in users with a connected wallet.
-                      KYC is reserved for financial actions like minting, buying, and selling.
+                      Browsing, saving, and comparing are available to any signed-in user.
+                      KYC and a connected wallet are only required for financial actions like minting, buying, and selling.
                     </p>
                   </div>
                 </div>
                 {!user ? (
                   <Button onClick={() => navigate('/auth')}>Sign In</Button>
-                ) : !activeAddress ? (
-                  <Button onClick={openConnectModal}>Connect Wallet</Button>
                 ) : null}
               </CardContent>
             </Card>
@@ -355,19 +352,9 @@ const PropertyListingsSection = () => {
                 <CardContent className="py-12 text-center space-y-4">
                   <p className="text-lg font-medium">Sign in to view your saved homes.</p>
                   <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Your saved list is tied to your account and active wallet, not your KYC status.
+                    Your saved list is tied to your account. No wallet or KYC required.
                   </p>
                   <Button onClick={() => navigate('/auth')}>Go to Sign In</Button>
-                </CardContent>
-              </Card>
-            ) : !activeAddress ? (
-              <Card>
-                <CardContent className="py-12 text-center space-y-4">
-                  <p className="text-lg font-medium">Connect a wallet to use saved homes.</p>
-                  <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                    Saving properties follows your active wallet. KYC is not required for this feature.
-                  </p>
-                  <Button onClick={openConnectModal}>Connect Wallet</Button>
                 </CardContent>
               </Card>
             ) : filteredSavedProperties.length === 0 ? (

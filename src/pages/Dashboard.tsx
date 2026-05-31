@@ -789,7 +789,7 @@ const Dashboard = () => {
             <div>
               <p className="font-medium">Your saved homes list</p>
               <p className="text-sm text-muted-foreground">
-                Saved properties are available without KYC and stay tied to your account and active wallet.
+                Saved properties stay tied to your account. No KYC or wallet required to browse them.
               </p>
             </div>
             <div className="flex items-center gap-3">
