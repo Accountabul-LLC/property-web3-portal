@@ -3,7 +3,10 @@ import { Loader2, Upload, Building2, Megaphone, BriefcaseBusiness, Globe, MapPin
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useProfile } from '@/hooks/useProfile'
 import { useVendorProfile } from '@/hooks/useVendorProfile'
+import { useProfileVerifications } from '@/hooks/useProfileVerifications'
+import VerifiedBadge from '@/components/profile/VerifiedBadge'
 import {
   getVendorDisplayName,
   getVendorPublicUrl,
@@ -27,6 +30,8 @@ interface VendorProfileFormProps {
 
 export function VendorProfileForm({ profileId, companyName }: VendorProfileFormProps) {
   const { user } = useAuth()
+  const { profile } = useProfile()
+  const verifications = useProfileVerifications()
   const { vendorProfile, isLoading, saveVendorProfile } = useVendorProfile(profileId)
   const [saving, setSaving] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
