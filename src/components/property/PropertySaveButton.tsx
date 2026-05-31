@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { isSaveEligiblePropertyStatus, useSavedPropertyIds, useToggleSavedProperty } from '@/hooks/useSavedProperties';
 
 interface PropertySaveButtonProps {
@@ -22,7 +21,6 @@ const PropertySaveButton: React.FC<PropertySaveButtonProps> = ({
   const autoClearRef = React.useRef(false);
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { activeAddress, openConnectModal } = useActiveWallet();
   const { data: savedIds = [] } = useSavedPropertyIds();
   const saveToggle = useToggleSavedProperty();
 
@@ -46,11 +44,6 @@ const PropertySaveButton: React.FC<PropertySaveButtonProps> = ({
   const handleClick = async () => {
     if (!user) {
       navigate('/auth');
-      return;
-    }
-
-    if (!activeAddress) {
-      openConnectModal();
       return;
     }
 
