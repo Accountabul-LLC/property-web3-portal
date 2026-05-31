@@ -2,13 +2,13 @@ import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { toast } from 'sonner';
 import type { Property } from '@/hooks/useProperties';
 
 export interface SavedPropertyRow {
   id: string;
-  wallet_address: string;
+  user_id: string;
+  wallet_address: string | null;
   property_id: string;
   created_at: string;
 }
@@ -24,35 +24,31 @@ export function isSaveEligiblePropertyStatus(status: string | null | undefined) 
   return !DISALLOWED_SAVE_STATUSES.has(status.toLowerCase());
 }
 
-const savedPropertiesKey = (userId: string | undefined, walletAddress: string | null) => [
+const savedPropertiesKey = (userId: string | undefined) => [
   'saved-properties',
   userId ?? 'guest',
-  walletAddress ?? 'no-wallet',
 ];
 
 export function useSavedProperties() {
   const { user, loading: authLoading } = useAuth();
-  const { activeAddress } = useActiveWallet();
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: savedPropertiesKey(user?.id, activeAddress),
+    queryKey: savedPropertiesKey(user?.id),
     queryFn: async () => {
-      if (!user || !activeAddress) return [];
+      if (!user) return [];
 
-      const { data, error } = await (supabase.rpc as any)('get_saved_properties_for_wallet', {
-        p_wallet_address: activeAddress,
-      });
+      const { data, error } = await (supabase.rpc as any)('get_saved_properties_for_user');
 
       if (error) throw error;
       return (data || []) as unknown as SavedPropertyWithDetails[];
     },
-    enabled: !!user && !!activeAddress && !authLoading,
+    enabled: !!user && !authLoading,
     staleTime: 30_000,
   });
 
   useEffect(() => {
-    if (!user || !activeAddress || !query.data?.length) return;
+    if (!user || !query.data?.length) return;
 
     const staleRows = query.data.filter((row) => !isSaveEligiblePropertyStatus(row.properties?.status));
     if (staleRows.length === 0) return;
@@ -63,19 +59,19 @@ export function useSavedProperties() {
           const { error } = await supabase
             .from('saved_properties' as any)
             .delete()
-            .eq('wallet_address', activeAddress)
+            .eq('user_id', user.id)
             .eq('property_id', row.property_id);
 
           if (error) throw error;
         })
       );
-      await queryClient.invalidateQueries({ queryKey: savedPropertiesKey(user.id, activeAddress) });
+      await queryClient.invalidateQueries({ queryKey: savedPropertiesKey(user.id) });
     };
 
     prune().catch((error) => {
       console.error('Failed to prune stale saved properties:', error);
     });
-  }, [activeAddress, query.data, queryClient, user]);
+  }, [query.data, queryClient, user]);
 
   return query;
 }
@@ -93,21 +89,17 @@ export function useSavedPropertyIds() {
 export function useToggleSavedProperty() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const { activeAddress } = useActiveWallet();
 
   return useMutation({
     mutationFn: async (propertyId: string) => {
       if (!user) {
         throw new Error('Sign in to save properties.');
       }
-      if (!activeAddress) {
-        throw new Error('Connect a wallet to save properties.');
-      }
 
       const { data: existing, error: fetchError } = await supabase
         .from('saved_properties' as any)
         .select('id')
-        .eq('wallet_address', activeAddress)
+        .eq('user_id', user.id)
         .eq('property_id', propertyId)
         .maybeSingle();
 
@@ -117,7 +109,7 @@ export function useToggleSavedProperty() {
         const { error } = await supabase
           .from('saved_properties' as any)
           .delete()
-          .eq('wallet_address', activeAddress)
+          .eq('user_id', user.id)
           .eq('property_id', propertyId);
 
         if (error) throw error;
@@ -127,7 +119,7 @@ export function useToggleSavedProperty() {
       const { error } = await supabase
         .from('saved_properties' as any)
         .insert({
-          wallet_address: activeAddress,
+          user_id: user.id,
           property_id: propertyId,
         });
 
@@ -135,8 +127,8 @@ export function useToggleSavedProperty() {
       return { saved: true };
     },
     onMutate: async (propertyId) => {
-      if (!user || !activeAddress) return;
-      const key = savedPropertiesKey(user.id, activeAddress);
+      if (!user) return;
+      const key = savedPropertiesKey(user.id);
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<SavedPropertyWithDetails[]>(key) ?? [];
       const exists = previous.some((row) => row.property_id === propertyId);
@@ -145,7 +137,8 @@ export function useToggleSavedProperty() {
         : [
             {
               id: `optimistic-${propertyId}`,
-              wallet_address: activeAddress,
+              user_id: user.id,
+              wallet_address: null,
               property_id: propertyId,
               created_at: new Date().toISOString(),
               properties: null,
@@ -165,8 +158,8 @@ export function useToggleSavedProperty() {
       toast.success(result.saved ? 'Property saved.' : 'Removed from saved properties.');
     },
     onSettled: () => {
-      if (user && activeAddress) {
-        queryClient.invalidateQueries({ queryKey: savedPropertiesKey(user.id, activeAddress) });
+      if (user) {
+        queryClient.invalidateQueries({ queryKey: savedPropertiesKey(user.id) });
       }
     },
   });

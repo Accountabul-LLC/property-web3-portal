@@ -1,25 +1,52 @@
 ## Goal
-Replace the current full-width drawer (which spans `left-0 right-0` under the header) with a narrower left-side panel — similar to Lovable's sidebar — so the rest of the page stays visible behind/beside it.
+Decouple "save property" (heart) from wallet connection. A signed-in user should be able to save/unsave any property regardless of whether they have a wallet connected. Only signed-out visitors get an auth prompt.
 
-## Changes (src/components/Navigation.tsx only)
+## Current behavior (why it breaks)
+`saved_properties` is keyed on `wallet_address`, with RLS using `owns_wallet(wallet_address)`. The hook (`useSavedProperties.ts`) and the button (`PropertySaveButton.tsx`) both require an active wallet, so a signed-in user with no wallet sees "Connect your wallet."
 
-1. **Panel sizing & position** (lines ~276-279)
-   - Change container from `fixed left-0 right-0 top-[72px]` to `fixed left-0 top-[72px] bottom-0`.
-   - Width: `w-72` on mobile (≈288px so phones stay usable), scaling to `sm:w-80 md:w-96` on larger viewports, with `max-w-[85vw]` cap. This lands around 25% on a desktop-sized viewport while staying readable on small screens.
-   - Add a right border + subtle shadow (`border-r border-border shadow-lg`) for the slid-in-from-side feel.
+## Plan
 
-2. **Backdrop**
-   - Keep the click-to-close overlay but soften it (`bg-background/40 backdrop-blur-sm`) so the rest of the page is clearly visible behind it instead of fully covered.
+### 1. Schema: tie saves to the user, not the wallet (migration)
+- `ALTER TABLE public.saved_properties ADD COLUMN user_id uuid;`
+- Backfill: `UPDATE saved_properties sp SET user_id = uw.user_id FROM public.user_wallets uw WHERE uw.wallet_address = sp.wallet_address AND uw.status = 'active' AND sp.user_id IS NULL;`
+- Drop orphan rows where backfill fails (no matching active wallet) so we can `SET NOT NULL` cleanly.
+- `ALTER COLUMN user_id SET NOT NULL`.
+- `wallet_address` becomes nullable (kept for historical context, not used in policies).
+- Add `UNIQUE (user_id, property_id)` so a user can't double-save.
+- Replace RLS policies:
+  - `SELECT`: `user_id = auth.uid()`
+  - `INSERT`: `WITH CHECK (user_id = auth.uid())`
+  - `DELETE`: `user_id = auth.uid()`
+  - (No UPDATE needed.)
+- Replace `public.get_saved_properties_for_wallet(text)` with `public.get_saved_properties_for_user()` that reads `auth.uid()` directly. Re-grant EXECUTE to `authenticated` + `service_role`, revoke from PUBLIC. (Drop the old function.)
+- Keep the existing GRANTs on the table for `authenticated` + `service_role`.
 
-3. **Slide-in animation**
-   - Add `animate-in slide-in-from-left duration-200` to the panel and `animate-in fade-in duration-200` to the overlay so it visually slides in from the side like a sidebar.
+### 2. Hook: `src/hooks/useSavedProperties.ts`
+- Drop `useActiveWallet` dependency.
+- Query key becomes `['saved-properties', user.id]`; `enabled: !!user`.
+- `useSavedProperties` calls the new `get_saved_properties_for_user` RPC.
+- `useToggleSavedProperty`:
+  - Only require `user`. Remove the wallet-connected error path.
+  - Filter existing/insert/delete by `user_id = user.id` (and `property_id`). Insert sets `user_id`.
+- Optimistic update keyed on user id.
+- Toast wording: drop the "Connect a wallet…" branch.
 
-4. **Internal scroll area**
-   - Keep `max-h-[calc(100vh-72px)] overflow-y-auto` so long nav lists still scroll inside the panel.
+### 3. Button: `src/components/property/PropertySaveButton.tsx`
+- Remove the `if (!activeAddress) openConnectModal()` branch.
+- Behavior:
+  - Not signed in → `navigate('/auth')` (unchanged).
+  - Signed in → call `saveToggle.mutateAsync(propertyId)` directly.
+- Drop the `useActiveWallet` import.
+
+### 4. Type drift
+`src/integrations/supabase/types.ts` is auto-regenerated after the migration, so the new `user_id` column and the new RPC name will appear on their own. The hook uses `as any` casts already, so it keeps compiling in the interim.
 
 ## Out of scope
-- No changes to the header itself, nav items, or button placement (Dashboard button and Connect-wallet removal stay as-is).
-- Not switching to the shadcn `Sidebar` component — that would be a larger refactor; this matches the requested behavior with the existing drawer code.
+- No changes to the wallet connect flow or any other wallet-gated feature (trading, donating, minting) — those still require a wallet for valid blockchain reasons.
+- No UI changes to where the heart button is displayed.
+- No migration of historical saves whose owning user can't be inferred (those rows get dropped during backfill; this is a soft-state feature, acceptable loss).
 
 ## Result
-At desktop widths the menu opens as a ~288–384px panel pinned to the left under the header, with ~75%+ of the page still visible to the right behind a light translucent overlay. Clicking outside or pressing Escape closes it (existing behavior preserved).
+- Signed-in users can heart any property whether or not they have a wallet connected.
+- Anonymous visitors are still routed to `/auth` when they click the heart.
+- Saved-properties list on the dashboard works for any signed-in user, wallet or not.
