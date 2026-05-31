@@ -21,6 +21,8 @@ import { useKycStatus } from '@/hooks/useKycStatus';
 import { useVendorApplication } from '@/hooks/useVendorApplication';
 import { getVendorStatusLabel } from '@/lib/vendorFlow';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useProfileVerifications } from '@/hooks/useProfileVerifications';
+import VerifiedBadge from '@/components/profile/VerifiedBadge';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
