@@ -21,6 +21,8 @@ import { useKycStatus } from '@/hooks/useKycStatus';
 import { useVendorApplication } from '@/hooks/useVendorApplication';
 import { getVendorStatusLabel } from '@/lib/vendorFlow';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useProfileVerifications } from '@/hooks/useProfileVerifications';
+import VerifiedBadge from '@/components/profile/VerifiedBadge';
 
 // Phone formatting helper
 function formatPhone(value: string): string {
@@ -62,6 +64,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading, updateProfile } = useProfile();
+  const verifications = useProfileVerifications();
   const { wallets, walletsLoading, openConnectModal, removeWallet, renameWallet, activeWallet } = useActiveWallet();
   const { data: savedPropertyIds = [] } = useSavedPropertyIds();
   const { status: kycStatus, isApproved: kycApproved } = useKycStatus();
@@ -609,11 +612,19 @@ const Dashboard = () => {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">First Name</p>
+                <p className="text-muted-foreground flex items-center gap-1">First Name
+                  {verifications.isVerified('first_name', profile?.first_name) && (
+                    <VerifiedBadge source={verifications.getVerification('first_name')!.source} verifiedAt={verifications.getVerification('first_name')!.verified_at} />
+                  )}
+                </p>
                 <p className="font-medium">{profile?.first_name || '—'}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Last Name</p>
+                <p className="text-muted-foreground flex items-center gap-1">Last Name
+                  {verifications.isVerified('last_name', profile?.last_name) && (
+                    <VerifiedBadge source={verifications.getVerification('last_name')!.source} verifiedAt={verifications.getVerification('last_name')!.verified_at} />
+                  )}
+                </p>
                 <p className="font-medium">{profile?.last_name || '—'}</p>
               </div>
               <div>
@@ -621,7 +632,11 @@ const Dashboard = () => {
                 <p className="font-medium">{profile?.phone ? formatPhone(profile.phone) : '—'}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Date of Birth</p>
+                <p className="text-muted-foreground flex items-center gap-1">Date of Birth
+                  {verifications.isVerified('date_of_birth', profile?.date_of_birth) && (
+                    <VerifiedBadge source={verifications.getVerification('date_of_birth')!.source} verifiedAt={verifications.getVerification('date_of_birth')!.verified_at} />
+                  )}
+                </p>
                 <p className="font-medium">{profile?.date_of_birth ? new Date(profile.date_of_birth + 'T00:00:00').toLocaleDateString() : '—'}</p>
               </div>
               <div>
@@ -646,7 +661,15 @@ const Dashboard = () => {
               </div>
               {(profile?.address_line1 || profile?.city) && (
                 <div className="col-span-2">
-                  <p className="text-muted-foreground">Address</p>
+                  <p className="text-muted-foreground flex items-center gap-1">Address
+                    {(verifications.isVerified('address_line1', profile?.address_line1) ||
+                      verifications.isVerified('city', profile?.city)) && (
+                      <VerifiedBadge
+                        source={(verifications.getVerification('address_line1') ?? verifications.getVerification('city'))!.source}
+                        verifiedAt={(verifications.getVerification('address_line1') ?? verifications.getVerification('city'))!.verified_at}
+                      />
+                    )}
+                  </p>
                   <p className="font-medium">
                     {[profile?.address_line1, profile?.address_line2].filter(Boolean).join(', ')}
                     {profile?.city && <><br />{[profile?.city, profile?.state, profile?.zip].filter(Boolean).join(', ')}</>}

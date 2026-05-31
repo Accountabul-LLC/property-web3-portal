@@ -3,7 +3,10 @@ import { Loader2, Upload, Building2, Megaphone, BriefcaseBusiness, Globe, MapPin
 import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { useProfile } from '@/hooks/useProfile'
 import { useVendorProfile } from '@/hooks/useVendorProfile'
+import { useProfileVerifications } from '@/hooks/useProfileVerifications'
+import VerifiedBadge from '@/components/profile/VerifiedBadge'
 import {
   getVendorDisplayName,
   getVendorPublicUrl,
@@ -27,6 +30,8 @@ interface VendorProfileFormProps {
 
 export function VendorProfileForm({ profileId, companyName }: VendorProfileFormProps) {
   const { user } = useAuth()
+  const { profile } = useProfile()
+  const verifications = useProfileVerifications()
   const { vendorProfile, isLoading, saveVendorProfile } = useVendorProfile(profileId)
   const [saving, setSaving] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
@@ -54,30 +59,37 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
   })
 
   useEffect(() => {
-    const profile = vendorProfile as VendorProfileRecord | null
+    const vp = vendorProfile as VendorProfileRecord | null
+    // Prefill empty business contact/address fields from the user's personal profile.
+    const pEmail = profile?.email ?? ''
+    const pPhone = profile?.phone ?? ''
+    const pCity = profile?.city ?? ''
+    const pState = profile?.state ?? ''
+    const pZip = profile?.zip ?? ''
+    const placeFromProfile = [pCity, pState].filter(Boolean).join(', ')
     setForm({
-      company_name: profile?.company_name ?? companyName ?? '',
-      logo_url: profile?.logo_url ?? '',
-      profile_headline: profile?.profile_headline ?? '',
-      business_email: profile?.business_email ?? '',
-      business_phone: profile?.business_phone ?? '',
-      website_url: profile?.website_url ?? '',
-      industry_category: profile?.industry_category ?? '',
-      business_description: profile?.business_description ?? '',
-      service_areas: profile?.service_areas ?? '',
-      place_of_business: profile?.place_of_business ?? '',
-      business_address_city: profile?.business_address_city ?? '',
-      business_address_state: profile?.business_address_state ?? '',
-      business_address_zip: profile?.business_address_zip ?? '',
-      years_in_business: profile?.years_in_business?.toString() ?? '',
-      employee_count: profile?.employee_count?.toString() ?? '',
-      ein_last4: profile?.ein_last4 ?? '',
-      tax_exempt_number: profile?.tax_exempt_number ?? '',
-      applicant_title: profile?.applicant_title ?? '',
-      advertising_opt_in: profile?.advertising_opt_in ?? false,
-      public_profile_visible: profile?.public_profile_visible ?? false,
+      company_name: vp?.company_name ?? companyName ?? '',
+      logo_url: vp?.logo_url ?? '',
+      profile_headline: vp?.profile_headline ?? '',
+      business_email: vp?.business_email ?? pEmail ?? '',
+      business_phone: vp?.business_phone ?? pPhone ?? '',
+      website_url: vp?.website_url ?? '',
+      industry_category: vp?.industry_category ?? '',
+      business_description: vp?.business_description ?? '',
+      service_areas: vp?.service_areas ?? '',
+      place_of_business: vp?.place_of_business ?? placeFromProfile,
+      business_address_city: vp?.business_address_city ?? pCity,
+      business_address_state: vp?.business_address_state ?? pState,
+      business_address_zip: vp?.business_address_zip ?? pZip,
+      years_in_business: vp?.years_in_business?.toString() ?? '',
+      employee_count: vp?.employee_count?.toString() ?? '',
+      ein_last4: vp?.ein_last4 ?? '',
+      tax_exempt_number: vp?.tax_exempt_number ?? '',
+      applicant_title: vp?.applicant_title ?? '',
+      advertising_opt_in: vp?.advertising_opt_in ?? false,
+      public_profile_visible: vp?.public_profile_visible ?? false,
     })
-  }, [vendorProfile, companyName])
+  }, [vendorProfile, companyName, profile])
 
   async function handleLogoUpload(file: File) {
     if (!user) return
@@ -263,7 +275,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business City</Label>
+            <Label className="flex items-center gap-1">Business City
+              {verifications.isVerified('city', form.business_address_city) && (
+                <VerifiedBadge source={verifications.getVerification('city')!.source} verifiedAt={verifications.getVerification('city')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_city}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_city: e.target.value }))}
@@ -272,7 +288,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business State</Label>
+            <Label className="flex items-center gap-1">Business State
+              {verifications.isVerified('state', form.business_address_state) && (
+                <VerifiedBadge source={verifications.getVerification('state')!.source} verifiedAt={verifications.getVerification('state')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_state}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_state: e.target.value.toUpperCase().slice(0, 2) }))}
@@ -282,7 +302,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business ZIP</Label>
+            <Label className="flex items-center gap-1">Business ZIP
+              {verifications.isVerified('zip', form.business_address_zip) && (
+                <VerifiedBadge source={verifications.getVerification('zip')!.source} verifiedAt={verifications.getVerification('zip')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_zip}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
