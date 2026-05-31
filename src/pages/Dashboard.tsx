@@ -133,9 +133,17 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (profile) {
+      // Backfill first/last from full_name for legacy users that only have full_name set
+      let derivedFirst = profile.first_name || '';
+      let derivedLast = profile.last_name || '';
+      if (!derivedFirst && !derivedLast && profile.full_name) {
+        const parts = profile.full_name.trim().replace(/\s+/g, ' ').split(' ');
+        derivedFirst = parts[0] ?? '';
+        derivedLast = parts.slice(1).join(' ');
+      }
       setFormData({
-        first_name: profile.first_name || '',
-        last_name: profile.last_name || '',
+        first_name: derivedFirst,
+        last_name: derivedLast,
         account_type: profile.account_type || 'individual',
         company_name: profile.company_name || '',
         phone: profile.phone ? formatPhone(profile.phone) : '',
@@ -150,6 +158,7 @@ const Dashboard = () => {
       });
     }
   }, [profile]);
+
 
   useEffect(() => {
     if (!user) return;
@@ -367,7 +376,7 @@ const Dashboard = () => {
         </Card>
 
         {/* Complete Profile Banner */}
-        {profile && (!profile.first_name || !profile.phone) && !editing && (
+        {profile && (!(profile.first_name || profile.full_name) || !profile.phone) && !editing && (
           <Card className="p-4 mb-4 border-primary/30 bg-primary/5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">

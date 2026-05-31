@@ -87,15 +87,22 @@ export function AuthForm({
         if (error) throw error;
 
         if (data.user) {
+          const trimmed = fullName.trim().replace(/\s+/g, ' ');
+          const parts = trimmed.split(' ');
+          const firstName = parts[0] ?? '';
+          const lastName = parts.slice(1).join(' ');
           await supabase
             .from('profiles' as never)
             .update({
-              full_name: fullName,
+              full_name: trimmed,
+              first_name: firstName,
+              last_name: lastName,
               account_type: forcedAccountType,
               company_name: requiresCompany ? companyName : null,
             } as never)
             .eq('id' as never, data.user.id);
         }
+
 
         if (data.session) {
           toast.success('Account created! Welcome.');
