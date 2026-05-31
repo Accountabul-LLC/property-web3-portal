@@ -275,7 +275,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business City</Label>
+            <Label className="flex items-center gap-1">Business City
+              {verifications.isVerified('city', form.business_address_city) && (
+                <VerifiedBadge source={verifications.getVerification('city')!.source} verifiedAt={verifications.getVerification('city')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_city}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_city: e.target.value }))}
@@ -284,7 +288,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business State</Label>
+            <Label className="flex items-center gap-1">Business State
+              {verifications.isVerified('state', form.business_address_state) && (
+                <VerifiedBadge source={verifications.getVerification('state')!.source} verifiedAt={verifications.getVerification('state')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_state}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_state: e.target.value.toUpperCase().slice(0, 2) }))}
@@ -294,7 +302,11 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
             />
           </div>
           <div>
-            <Label>Business ZIP</Label>
+            <Label className="flex items-center gap-1">Business ZIP
+              {verifications.isVerified('zip', form.business_address_zip) && (
+                <VerifiedBadge source={verifications.getVerification('zip')!.source} verifiedAt={verifications.getVerification('zip')!.verified_at} />
+              )}
+            </Label>
             <Input
               value={form.business_address_zip}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
