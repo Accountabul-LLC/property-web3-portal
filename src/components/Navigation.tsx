@@ -332,16 +332,6 @@ const Navigation = () => {
                 </button>
               )}
               <div className="pt-2 border-t border-border space-y-2">
-                {user && !isConnected && (
-                  <Button
-                    variant="outline"
-                    onClick={openConnectModal}
-                    className="w-full h-10 border-primary/20 text-primary hover:bg-primary hover:text-primary-foreground font-medium"
-                  >
-                    <Wallet className="w-4 h-4 mr-2" />
-                    Connect Wallet
-                  </Button>
-                )}
                 {user ? (
                   <Button
                     variant="ghost"
