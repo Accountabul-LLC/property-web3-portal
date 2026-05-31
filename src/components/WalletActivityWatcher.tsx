@@ -12,6 +12,7 @@ import {
   listNotifications,
 } from '@/lib/walletNotifications';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 type Network = 'mainnet' | 'testnet';
 
