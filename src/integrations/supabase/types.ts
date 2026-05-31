@@ -1017,6 +1017,36 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_field_verifications: {
+        Row: {
+          field_name: string
+          id: string
+          metadata: Json
+          source: string
+          user_id: string
+          verified_at: string
+          verified_value: string
+        }
+        Insert: {
+          field_name: string
+          id?: string
+          metadata?: Json
+          source: string
+          user_id: string
+          verified_at?: string
+          verified_value: string
+        }
+        Update: {
+          field_name?: string
+          id?: string
+          metadata?: Json
+          source?: string
+          user_id?: string
+          verified_at?: string
+          verified_value?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           account_type: string
@@ -2313,6 +2343,16 @@ export type Database = {
         }
       }
       get_kyc_status: { Args: { p_user_id: string }; Returns: string }
+      get_profile_verifications: {
+        Args: never
+        Returns: {
+          field_name: string
+          metadata: Json
+          source: string
+          verified_at: string
+          verified_value: string
+        }[]
+      }
       get_public_campaign_donations: {
         Args: { p_campaign_id: string }
         Returns: {
