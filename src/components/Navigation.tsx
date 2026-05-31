@@ -343,23 +343,14 @@ const Navigation = () => {
                   </Button>
                 )}
                 {user ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() => { navigate('/dashboard'); setIsMobileMenuOpen(false); }}
-                      className="w-full h-10 font-medium"
-                    >
-                      <LayoutDashboard className="w-4 h-4 mr-2" />
-                      Dashboard
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={signOut}
-                      className="w-full h-10 font-medium text-muted-foreground"
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={signOut}
+                    className="w-full h-10 font-medium text-muted-foreground"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Sign Out
+                  </Button>
                   </>
                 ) : (
                   <Button
