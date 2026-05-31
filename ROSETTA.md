@@ -330,6 +330,9 @@ export function useMyData() {
 - Completed the verified vendor network v1 build: added the `vendor_profiles` public-profile columns, `vendor_leads`, public vendor directory/profile routes, lead capture modal, vendor dashboard lead inbox, and admin tier/public-profile controls.
 - Public vendor visibility now flows through `verification_status = 'verified'` plus `public_profile_enabled = true`, and the public pages read from the safe `vendor_public_profiles` view instead of the full table.
 
+### 2026-05-31 | lovable
+- Hardened `stripe-identity-create-session` so Stripe's `identity_api_invalid_application` setup error returns a handled 409 with `setup_required` instead of a generic 502, and `/kyc` now shows an inline setup notice instead of only a toast.
+
 ### 2026-05-26 | lovable
 - Updated the homepage membership modal to render the Starter, Professional, and Portfolio cards immediately using DB tiers with a static fallback, so pricing is visible from the first CTA instead of only on `/pricing`.
 
