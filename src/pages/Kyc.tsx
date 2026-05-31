@@ -9,11 +9,15 @@ import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import { ShieldCheck, Loader2, Camera, FileText, UserCheck, ArrowRight } from 'lucide-react'
 
+const STRIPE_IDENTITY_SETUP_COPY =
+  'Identity verification is not ready yet because Stripe Identity still needs to be enabled on the connected Stripe account. Please try again after setup is complete.'
+
 const Kyc = () => {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
   const [starting, setStarting] = useState(false)
   const [checkingStatus, setCheckingStatus] = useState(true)
+  const [setupError, setSetupError] = useState<string | null>(null)
 
   useEffect(() => {
     if (authLoading) return
@@ -37,6 +41,7 @@ const Kyc = () => {
 
   const startVerification = async () => {
     setStarting(true)
+    setSetupError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
       const res = await fetch(
@@ -50,7 +55,13 @@ const Kyc = () => {
         },
       )
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Failed to start verification')
+      if (!res.ok) {
+        if (res.status === 409 && data.setup_required) {
+          setSetupError(STRIPE_IDENTITY_SETUP_COPY)
+          throw new Error(STRIPE_IDENTITY_SETUP_COPY)
+        }
+        throw new Error(data.error || 'Failed to start verification')
+      }
       if (!data.url) throw new Error('No verification URL returned')
       // Redirect to Stripe-hosted verification flow
       window.location.href = data.url
@@ -121,6 +132,12 @@ const Kyc = () => {
           <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground">
             Your ID and selfie are handled directly by Stripe under their security and privacy controls. We only receive the verification outcome.
           </div>
+
+          {setupError && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+              {setupError}
+            </div>
+          )}
 
           <Button className="w-full" size="lg" onClick={startVerification} disabled={starting}>
             {starting ? (
