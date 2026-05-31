@@ -1,52 +1,53 @@
 ## Goal
-Decouple "save property" (heart) from wallet connection. A signed-in user should be able to save/unsave any property regardless of whether they have a wallet connected. Only signed-out visitors get an auth prompt.
 
-## Current behavior (why it breaks)
-`saved_properties` is keyed on `wallet_address`, with RLS using `owns_wallet(wallet_address)`. The hook (`useSavedProperties.ts`) and the button (`PropertySaveButton.tsx`) both require an active wallet, so a signed-in user with no wallet sees "Connect your wallet."
+Stop asking users for data we already have. Pull values from KYC and vendor intake into the profile, prefill the vendor intake from existing data, and show a verified badge on any field whose value matches what was confirmed by a trusted source (Stripe Identity, KYC review, OAuth). Pull the specific users profile info from any intake form for that user to fill in info that already availible to use. Users should not be able to use any other irgs info, individual info thats not associated with what they put into the fields
 
-## Plan
+## Phased plan
 
-### 1. Schema: tie saves to the user, not the wallet (migration)
-- `ALTER TABLE public.saved_properties ADD COLUMN user_id uuid;`
-- Backfill: `UPDATE saved_properties sp SET user_id = uw.user_id FROM public.user_wallets uw WHERE uw.wallet_address = sp.wallet_address AND uw.status = 'active' AND sp.user_id IS NULL;`
-- Drop orphan rows where backfill fails (no matching active wallet) so we can `SET NOT NULL` cleanly.
-- `ALTER COLUMN user_id SET NOT NULL`.
-- `wallet_address` becomes nullable (kept for historical context, not used in policies).
-- Add `UNIQUE (user_id, property_id)` so a user can't double-save.
-- Replace RLS policies:
-  - `SELECT`: `user_id = auth.uid()`
-  - `INSERT`: `WITH CHECK (user_id = auth.uid())`
-  - `DELETE`: `user_id = auth.uid()`
-  - (No UPDATE needed.)
-- Replace `public.get_saved_properties_for_wallet(text)` with `public.get_saved_properties_for_user()` that reads `auth.uid()` directly. Re-grant EXECUTE to `authenticated` + `service_role`, revoke from PUBLIC. (Drop the old function.)
-- Keep the existing GRANTs on the table for `authenticated` + `service_role`.
+### Phase 1 — Verification storage + Stripe Identity auto-fill (backend)
 
-### 2. Hook: `src/hooks/useSavedProperties.ts`
-- Drop `useActiveWallet` dependency.
-- Query key becomes `['saved-properties', user.id]`; `enabled: !!user`.
-- `useSavedProperties` calls the new `get_saved_properties_for_user` RPC.
-- `useToggleSavedProperty`:
-  - Only require `user`. Remove the wallet-connected error path.
-  - Filter existing/insert/delete by `user_id = user.id` (and `property_id`). Insert sets `user_id`.
-- Optimistic update keyed on user id.
-- Toast wording: drop the "Connect a wallet…" branch.
+- **New table** `public.profile_field_verifications`
+  - `id uuid pk`, `user_id uuid not null`, `field_name text not null`, `source text not null` (`stripe_identity` | `kyc_review` | `oauth_google` | `vendor_intake`), `verified_value text not null`, `verified_at timestamptz default now()`, `metadata jsonb default '{}'`
+  - `unique (user_id, field_name)` (latest verification per field wins; updates upsert)
+  - GRANTs: `select` to `authenticated`, `all` to `service_role`. No anon.
+  - RLS: user reads own (`user_id = auth.uid()`), admins read all, writes are service_role-only (no policy for `authenticated` insert/update).
+- **Helper RPC** `get_profile_verifications()` returns the caller's rows.
+- **Wire Stripe Identity webhook / KYC approval path**: when a `kyc_case` flips to `approved`, read its latest `kyc_form_data` and upsert one row per tracked field (`first_name`, `last_name`, `date_of_birth`, `address_line1`, `address_line2`, `city`, `state`, `zip`, `country`) with `source='stripe_identity'` (or `'kyc_review'` for manual approvals). `verified_value` stores the canonical normalized form (lowercased/trimmed) we compare against.
+- **Optional auto-fill into profile**: if a `profiles` field is null/empty, copy the verified value in. Never overwrite an existing user-entered value silently.
 
-### 3. Button: `src/components/property/PropertySaveButton.tsx`
-- Remove the `if (!activeAddress) openConnectModal()` branch.
-- Behavior:
-  - Not signed in → `navigate('/auth')` (unchanged).
-  - Signed in → call `saveToggle.mutateAsync(propertyId)` directly.
-- Drop the `useActiveWallet` import.
+### Phase 2 — Verified badges in the profile UI
 
-### 4. Type drift
-`src/integrations/supabase/types.ts` is auto-regenerated after the migration, so the new `user_id` column and the new RPC name will appear on their own. The hook uses `as any` casts already, so it keeps compiling in the interim.
+- New hook `useProfileVerifications()` — single query, cached by user id.
+- New `<VerifiedBadge source="stripe_identity" />` component (shield-check icon, tooltip: "Verified by ID check on {date}"). Variants per source.
+- Comparison helper `isFieldVerified(profileValue, verification)` — normalizes both sides (trim, lowercase, strip punctuation for addresses) before equality check.
+- Render the badge next to each field label in `Dashboard` "Complete your profile" and the read-only profile view. When a field has a verification but the user-entered value differs, show an inline "Use verified value" button that copies the verified value into the input (no silent overwrite).
+- Group display into "Verified by identity check" vs "Self-reported" sections in read-only mode.
+
+### Phase 3 — Vendor intake shares profile data
+
+- Prefill `VendorOnboarding` / `VendorProfileForm` from `profiles` (and `kyc_form_data` when present) so the user doesn't retype name, phone, address, DOB.
+- On submit, upsert the shared fields back into `profiles` so edits in the vendor flow propagate to the profile.
+- Render the same `<VerifiedBadge>` next to shared fields inside the vendor form.
+- Vendor-only fields (services, bio, hourly rate, etc.) stay unique to `vendor_profiles` and never get a badge.
+
+## Tracked fields (initial set)
+
+`first_name`, `last_name`, `date_of_birth`, `phone` (only if KYC ever captures it; otherwise leave un-verifiable for now), `address_line1`, `address_line2`, `city`, `state`, `zip`, `country`. Email gets `source='oauth_google'` when the user signed in via Google.
+
+## Technical notes
+
+- All writes to `profile_field_verifications` go through edge functions running with `SUPABASE_SERVICE_ROLE_KEY` — never from the browser. This is what lets us trust `source`.
+- Updating a verified field in `profiles` does NOT delete the verification row; it just stops matching, so the badge disappears until the user restores the verified value or re-verifies.
+- The Stripe Identity webhook path already exists for the KYC flow; we extend it rather than adding a new function.
 
 ## Out of scope
-- No changes to the wallet connect flow or any other wallet-gated feature (trading, donating, minting) — those still require a wallet for valid blockchain reasons.
-- No UI changes to where the heart button is displayed.
-- No migration of historical saves whose owning user can't be inferred (those rows get dropped during backfill; this is a soft-state feature, acceptable loss).
+
+- Phone verification (Twilio), address verification (USPS/Google Places), email-link re-verification — separate work.
+- A new "business owner" account type — confirmed not needed; vendor flow covers it.
+- Property tokenization intake (`/tokenize`) — not part of this round.
 
 ## Result
-- Signed-in users can heart any property whether or not they have a wallet connected.
-- Anonymous visitors are still routed to `/auth` when they click the heart.
-- Saved-properties list on the dashboard works for any signed-in user, wallet or not.
+
+- Stripe-verified ID data flows into the profile automatically and is visibly marked as verified.
+- Vendors no longer retype data the platform already has.
+- Public profiles can credibly distinguish "verified" data from "self-reported."
