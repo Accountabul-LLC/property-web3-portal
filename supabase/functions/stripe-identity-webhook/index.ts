@@ -10,6 +10,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import Stripe from 'https://esm.sh/stripe@17.4.0?target=deno'
+import { applyKycVerifications } from '../_shared/profile-verifications.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -109,7 +110,7 @@ function buildCors(req: Request): Record<string, string> {
 
     const { data: current } = await svc
       .from('kyc_cases')
-      .select('status')
+      .select('status, user_id')
       .eq('id', kycCaseId)
       .maybeSingle()
 
@@ -124,6 +125,20 @@ function buildCors(req: Request): Record<string, string> {
         reason: `Stripe ${event.type} (${session.status})`,
         metadata: { stripe_event_id: event.id, stripe_session_id: session.id },
       })
+    }
+
+    // When Stripe says verified, persist verified field values on the user.
+    if (session.status === 'verified' && current?.user_id) {
+      try {
+        await applyKycVerifications(svc, {
+          userId: current.user_id,
+          kycCaseId,
+          source: 'stripe_identity',
+          metadata: { stripe_session_id: session.id, stripe_event_id: event.id },
+        })
+      } catch (e) {
+        console.error('applyKycVerifications failed', e)
+      }
     }
 
     return new Response(JSON.stringify({ received: true }), {

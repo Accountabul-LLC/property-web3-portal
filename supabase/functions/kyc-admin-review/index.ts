@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { applyKycVerifications } from '../_shared/profile-verifications.ts'
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 function buildCors(req: Request): Record<string, string> {
@@ -84,7 +85,7 @@ function buildCors(req: Request): Record<string, string> {
     // Fetch the case
     const { data: kycCase, error: caseError } = await serviceClient
       .from('kyc_cases')
-      .select('id, status')
+      .select('id, status, user_id')
       .eq('id', kyc_case_id)
       .maybeSingle()
 
@@ -139,6 +140,20 @@ function buildCors(req: Request): Record<string, string> {
       reason: reason ?? null,
       metadata: { reviewed_at: now },
     })
+
+    // On approval, persist verified field values for this user.
+    if (decision === 'approved' && kycCase.user_id) {
+      try {
+        await applyKycVerifications(serviceClient, {
+          userId: kycCase.user_id,
+          kycCaseId: kyc_case_id,
+          source: 'kyc_review',
+          metadata: { reviewer_id: user.id, reviewed_at: now },
+        })
+      } catch (e) {
+        console.error('applyKycVerifications failed', e)
+      }
+    }
 
     return new Response(JSON.stringify({
       kyc_case_id,
