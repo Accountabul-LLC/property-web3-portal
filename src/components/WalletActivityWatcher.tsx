@@ -186,17 +186,19 @@ function parsedToNotification(t: ParsedTx, address: string, network: Network) {
 
 export function WalletActivityWatcher() {
   const { activeAddress, activeNetwork } = useActiveWallet();
+  const { user } = useAuth();
   const network: Network = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const lastBackfillKey = useRef<string>('');
 
   // Run a backfill whenever the active wallet (or network) changes.
   useEffect(() => {
-    if (!activeAddress) return;
+    if (!activeAddress || !user) return;
     const key = `${network}:${activeAddress}`;
     if (lastBackfillKey.current === key) return;
     lastBackfillKey.current = key;
     backfill(activeAddress, network);
-  }, [activeAddress, network]);
+  }, [activeAddress, network, user]);
+
 
   const handleTx = (evt: XRPLTransactionEvent) => {
     if (!activeAddress) return;
