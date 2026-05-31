@@ -270,11 +270,11 @@ const Navigation = () => {
       {isMobileMenuOpen && createPortal(
         <>
           <div
-            className="fixed inset-0 z-40"
+            className="fixed inset-0 z-40 bg-background/40 backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setIsMobileMenuOpen(false)}
           />
           <div
-            className="fixed left-0 right-0 top-[72px] z-50 border-t border-border bg-card/95 backdrop-blur-md"
+            className="fixed left-0 top-[72px] bottom-0 z-50 w-72 sm:w-80 md:w-96 max-w-[85vw] border-r border-border bg-card/95 backdrop-blur-md shadow-lg animate-in slide-in-from-left duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-2 pt-2 pb-3 space-y-1 max-h-[calc(100vh-72px)] overflow-y-auto overflow-x-hidden">
