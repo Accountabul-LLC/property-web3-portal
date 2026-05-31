@@ -190,13 +190,13 @@ const Navigation = () => {
             {user ? (
               <>
                 <Button
-                  variant="outline"
-                  size="icon"
+                  variant={currentPath === '/dashboard' ? 'default' : 'outline'}
                   onClick={() => navigate('/dashboard')}
-                  className="h-9 w-9 font-medium"
+                  className="h-9 px-2 xl:px-4 font-medium"
                   title="Dashboard"
                 >
-                  <LayoutDashboard className="w-4 h-4" />
+                  <LayoutDashboard className="w-4 h-4 xl:mr-2" />
+                  <span className="hidden xl:inline">Dashboard</span>
                 </Button>
                 <Button
                   variant="ghost"
