@@ -19,6 +19,7 @@ export interface VendorProfileUpdate {
   business_address_state?: string | null
   business_address_zip?: string | null
   years_in_business?: number | null
+  year_founded?: number | null
   employee_count?: number | null
   ein_last4?: string | null
   tax_exempt_number?: string | null
@@ -83,6 +84,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
       business_address_state: updates.business_address_state ?? null,
       business_address_zip: updates.business_address_zip ?? null,
       years_in_business: updates.years_in_business ?? null,
+      year_founded: updates.year_founded ?? null,
       employee_count: updates.employee_count ?? null,
       ein_last4: updates.ein_last4 ?? null,
       tax_exempt_number: updates.tax_exempt_number ?? null,

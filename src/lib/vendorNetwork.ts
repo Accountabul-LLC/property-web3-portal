@@ -38,6 +38,7 @@ export interface VendorProfileRecord {
   business_address_state: string | null
   business_address_zip: string | null
   years_in_business: number | null
+  year_founded: number | null
   employee_count: number | null
   ein_last4: string | null
   tax_exempt_number: string | null

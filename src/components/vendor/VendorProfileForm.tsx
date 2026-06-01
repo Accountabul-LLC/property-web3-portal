@@ -50,6 +50,7 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
     business_address_state: '',
     business_address_zip: '',
     years_in_business: '',
+    year_founded: '',
     employee_count: '',
     ein_last4: '',
     tax_exempt_number: '',
@@ -82,6 +83,7 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
       business_address_state: vp?.business_address_state ?? pState,
       business_address_zip: vp?.business_address_zip ?? pZip,
       years_in_business: vp?.years_in_business?.toString() ?? '',
+      year_founded: (vp as any)?.year_founded?.toString() ?? '',
       employee_count: vp?.employee_count?.toString() ?? '',
       ein_last4: vp?.ein_last4 ?? '',
       tax_exempt_number: vp?.tax_exempt_number ?? '',
@@ -137,6 +139,7 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
         business_address_state: form.business_address_state.trim() || null,
         business_address_zip: form.business_address_zip.trim() || null,
         years_in_business: form.years_in_business ? Number(form.years_in_business) : null,
+        year_founded: form.year_founded ? Number(form.year_founded) : null,
         employee_count: form.employee_count ? Number(form.employee_count) : null,
         ein_last4: form.ein_last4.trim() || null,
         tax_exempt_number: form.tax_exempt_number.trim() || null,
@@ -311,6 +314,18 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
               value={form.business_address_zip}
               onChange={(e) => setForm((prev) => ({ ...prev, business_address_zip: e.target.value.replace(/[^\d-]/g, '').slice(0, 10) }))}
               placeholder="63101"
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <Label>Year Founded</Label>
+            <Input
+              type="number"
+              min="1800"
+              max={new Date().getFullYear()}
+              value={form.year_founded}
+              onChange={(e) => setForm((prev) => ({ ...prev, year_founded: e.target.value }))}
+              placeholder={String(new Date().getFullYear() - 5)}
               className="mt-1"
             />
           </div>
