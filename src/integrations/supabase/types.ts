@@ -1830,6 +1830,7 @@ export type Database = {
           verification_tier: string | null
           verified_at: string | null
           website_url: string | null
+          year_founded: number | null
           years_in_business: number | null
         }
         Insert: {
@@ -1866,6 +1867,7 @@ export type Database = {
           verification_tier?: string | null
           verified_at?: string | null
           website_url?: string | null
+          year_founded?: number | null
           years_in_business?: number | null
         }
         Update: {
@@ -1902,6 +1904,7 @@ export type Database = {
           verification_tier?: string | null
           verified_at?: string | null
           website_url?: string | null
+          year_founded?: number | null
           years_in_business?: number | null
         }
         Relationships: [

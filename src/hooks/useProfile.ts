@@ -73,20 +73,42 @@ export function useProfile() {
         const profileData = data as any as Profile;
         setProfile(profileData);
 
-        // Backfill from Google metadata for existing users
-        if (meta && !profileData.first_name && meta.given_name) {
-          const backfill: Record<string, string | null> = {
-            first_name: meta.given_name || null,
-            last_name: meta.family_name || null,
-            full_name: meta.full_name || null,
-            updated_at: new Date().toISOString(),
-          };
-          await supabase
-            .from('profiles' as any)
-            .update(backfill as any)
-            .eq('id', userId);
-          if (cancelled) return;
-          setProfile(prev => prev ? { ...prev, ...backfill } as Profile : null);
+        // Backfill first/last name when missing.
+        // Source 1: Google OAuth metadata (given_name/family_name).
+        // Source 2: existing full_name string split on whitespace (email signups).
+        if (!profileData.first_name && !profileData.last_name) {
+          let first: string | null = null;
+          let last: string | null = null;
+          let derivedFullName: string | null = profileData.full_name ?? null;
+
+          if (meta?.given_name) {
+            first = meta.given_name || null;
+            last = meta.family_name || null;
+            derivedFullName = meta.full_name || derivedFullName;
+          } else {
+            const source = (profileData.full_name || meta?.full_name || meta?.name || '').trim();
+            if (source) {
+              const parts = source.replace(/\s+/g, ' ').split(' ');
+              first = parts[0] ?? null;
+              last = parts.length > 1 ? parts.slice(1).join(' ') : null;
+              derivedFullName = source;
+            }
+          }
+
+          if (first) {
+            const backfill: Record<string, string | null> = {
+              first_name: first,
+              last_name: last,
+              full_name: derivedFullName,
+              updated_at: new Date().toISOString(),
+            };
+            await supabase
+              .from('profiles' as any)
+              .update(backfill as any)
+              .eq('id', userId);
+            if (cancelled) return;
+            setProfile(prev => prev ? { ...prev, ...backfill } as Profile : null);
+          }
         }
       }
       setLoading(false);
