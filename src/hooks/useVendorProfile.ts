@@ -42,7 +42,14 @@ export function useVendorProfile(profileId: string | null | undefined) {
         .eq('profile_id', profileId)
         .maybeSingle()
       if (error) throw error
-      return (data ?? null) as VendorProfileRecord | null
+      if (!data) return null
+      const row: any = data
+      return {
+        ...row,
+        industry_category: row.industry ?? null,
+        business_description: row.vendor_bio ?? null,
+        public_profile_visible: row.public_profile_enabled ?? false,
+      } as VendorProfileRecord
     },
     enabled: !!user && !!profileId,
     staleTime: 30_000,
