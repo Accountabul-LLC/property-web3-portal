@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, BadgeCheck, Building2, Loader2, ShieldCheck, Users2, MessageCircle, Clock3, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Building2, ExternalLink, Loader2, ShieldCheck, Users2, MessageCircle, Clock3, CheckCircle2 } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Seo } from '@/components/Seo'
