@@ -105,6 +105,14 @@ export default function VendorDashboard() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
+                {vendorProfile?.slug ? (
+                  <Button asChild variant="outline">
+                    <a href={getVendorPublicUrl(vendorProfile.slug)} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Public Profile
+                    </a>
+                  </Button>
+                ) : null}
                 <Button asChild variant="outline">
                   <Link to="/vendor/onboarding">Edit application</Link>
                 </Button>
