@@ -347,6 +347,19 @@ const Navigation = () => {
                   <span>Verify Identity</span>
                 </button>
               )}
+              {user && vendorSlug && (
+                <button
+                  onClick={() => { navigate(`/vendor/${vendorSlug}`); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                    currentPath === `/vendor/${vendorSlug}`
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  <span>My Public Profile</span>
+                </button>
+              )}
               {user && isAdminOrCompliance && (
                 <button
                   onClick={() => { navigate('/admin'); setIsMobileMenuOpen(false); }}
