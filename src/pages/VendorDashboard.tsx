@@ -13,6 +13,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { useVendorProfile } from '@/hooks/useVendorProfile'
 import { useVendorLeads } from '@/hooks/useVendorLeads'
 import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
+import { getVendorPublicUrl } from '@/lib/vendorNetwork'
 
 export default function VendorDashboard() {
   const navigate = useNavigate()
