@@ -392,34 +392,59 @@ export function VendorProfileForm({ profileId, companyName }: VendorProfileFormP
           />
         </div>
 
-        <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <Label>Logo URL</Label>
-            <Input
-              value={form.logo_url}
-              onChange={(e) => setForm((prev) => ({ ...prev, logo_url: e.target.value }))}
-              placeholder="Upload a logo or paste the URL here"
-              className="mt-1"
-            />
+        <div className="space-y-3">
+          <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+            <div>
+              <Label>Logo URL</Label>
+              <Input
+                value={form.logo_url}
+                onChange={(e) => setForm((prev) => ({ ...prev, logo_url: e.target.value }))}
+                placeholder="Upload a logo or paste the URL here"
+                className="mt-1"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" type="button" disabled={uploadingLogo || !user} onClick={() => document.getElementById('vendor-logo-upload')?.click()}>
+                {uploadingLogo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                Upload Logo
+              </Button>
+              <input
+                id="vendor-logo-upload"
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) void handleLogoUpload(file)
+                  e.currentTarget.value = ''
+                }}
+              />
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" type="button" disabled={uploadingLogo || !user} onClick={() => document.getElementById('vendor-logo-upload')?.click()}>
-              {uploadingLogo ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-              Upload Logo
-            </Button>
-            <input
-              id="vendor-logo-upload"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/svg+xml"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) void handleLogoUpload(file)
-                e.currentTarget.value = ''
-              }}
-            />
-          </div>
+          {form.logo_url && (
+            <div className="flex items-center gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
+              <img
+                src={form.logo_url}
+                alt="Vendor logo preview"
+                className="h-16 w-16 rounded-md object-contain bg-background border border-border/60"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">Logo preview</p>
+                <p className="text-xs text-muted-foreground truncate">{form.logo_url}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, logo_url: '' }))}
+              >
+                Remove
+              </Button>
+            </div>
+          )}
         </div>
+
 
         <div className="flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-muted/30 p-3">
           <div>
