@@ -16,7 +16,7 @@ import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
 
 export default function VendorDashboard() {
   const navigate = useNavigate()
-  const { vendorApplication, isLoading, user } = useVendorApplication()
+  const { vendorApplication, status, isLoading, user } = useVendorApplication()
   const { profile } = useProfile()
   const { vendorProfile } = useVendorProfile(profile?.id ?? null)
   const { leads, isLoading: leadsLoading, updateLeadStatus } = useVendorLeads(vendorProfile?.id ?? null)
@@ -27,11 +27,12 @@ export default function VendorDashboard() {
       navigate('/auth?next=/vendor/dashboard', { replace: true })
       return
     }
-    const normalized = normalizeVendorStatus(vendorApplication?.status)
-    if (normalized === 'none') {
+    // Only bounce to onboarding when there's truly no application AND no vendor profile.
+    if (status === 'none' && !vendorProfile) {
       navigate('/vendor/onboarding', { replace: true })
     }
-  }, [isLoading, navigate, user, vendorApplication?.status])
+  }, [isLoading, navigate, user, status, vendorProfile])
+
 
   if (isLoading) {
     return (

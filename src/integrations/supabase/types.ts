@@ -1798,6 +1798,7 @@ export type Database = {
       vendor_profiles: {
         Row: {
           advertising_opt_in: boolean
+          applicant_title: string | null
           business_address_city: string | null
           business_address_state: string | null
           business_address_zip: string | null
@@ -1820,9 +1821,11 @@ export type Database = {
           requested_at: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          service_areas: string | null
           slug: string | null
           tax_exempt: boolean
           tax_exempt_ein: string | null
+          tax_exempt_number: string | null
           updated_at: string
           user_id: string
           vendor_bio: string | null
@@ -1835,6 +1838,7 @@ export type Database = {
         }
         Insert: {
           advertising_opt_in?: boolean
+          applicant_title?: string | null
           business_address_city?: string | null
           business_address_state?: string | null
           business_address_zip?: string | null
@@ -1857,9 +1861,11 @@ export type Database = {
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          service_areas?: string | null
           slug?: string | null
           tax_exempt?: boolean
           tax_exempt_ein?: string | null
+          tax_exempt_number?: string | null
           updated_at?: string
           user_id: string
           vendor_bio?: string | null
@@ -1872,6 +1878,7 @@ export type Database = {
         }
         Update: {
           advertising_opt_in?: boolean
+          applicant_title?: string | null
           business_address_city?: string | null
           business_address_state?: string | null
           business_address_zip?: string | null
@@ -1894,9 +1901,11 @@ export type Database = {
           requested_at?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          service_areas?: string | null
           slug?: string | null
           tax_exempt?: boolean
           tax_exempt_ein?: string | null
+          tax_exempt_number?: string | null
           updated_at?: string
           user_id?: string
           vendor_bio?: string | null
