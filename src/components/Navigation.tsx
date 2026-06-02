@@ -2,7 +2,7 @@ import React from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets, Heart, ReceiptText, Tag, Lock } from 'lucide-react';
+import { Building2, Wallet, TrendingUp, Users, Menu, X, Bot, LogIn, LogOut, LayoutDashboard, Coins, ShieldAlert, ClipboardList, ShieldCheck, ArrowLeftRight, Landmark, Droplets, Heart, ReceiptText, Tag, Lock, Store } from 'lucide-react';
 import ThemeToggle from '@/components/ThemeToggle';
 
 import { WalletConnectModal } from '@/components/WalletConnectModal';
@@ -37,6 +37,23 @@ const Navigation = () => {
       if (isAdmin) return true;
       const { data: isCompliance } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' });
       return !!isCompliance;
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
+  const { data: vendorSlug } = useQuery({
+    queryKey: ['nav-vendor-slug', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('vendor_profiles')
+        .select('slug, public_profile_enabled, verification_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!data?.slug) return null;
+      if (!data.public_profile_enabled) return null;
+      return data.slug as string;
     },
     enabled: !!user,
     staleTime: 60_000,
@@ -236,6 +253,18 @@ const Navigation = () => {
                 <span className="hidden sm:inline">Dashboard</span>
               </Button>
             )}
+            {user && vendorSlug && (
+              <Button
+                variant={currentPath === `/vendor/${vendorSlug}` ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => navigate(`/vendor/${vendorSlug}`)}
+                className="h-8 px-3 text-xs font-medium"
+                title="My public vendor profile"
+              >
+                <Store className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">My Profile</span>
+              </Button>
+            )}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />
@@ -316,6 +345,19 @@ const Navigation = () => {
                 >
                   <ShieldAlert className="w-4 h-4" />
                   <span>Verify Identity</span>
+                </button>
+              )}
+              {user && vendorSlug && (
+                <button
+                  onClick={() => { navigate(`/vendor/${vendorSlug}`); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
+                    currentPath === `/vendor/${vendorSlug}`
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  <Store className="w-4 h-4" />
+                  <span>My Public Profile</span>
                 </button>
               )}
               {user && isAdminOrCompliance && (
