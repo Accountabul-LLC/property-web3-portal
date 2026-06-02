@@ -42,6 +42,23 @@ const Navigation = () => {
     staleTime: 60_000,
   });
 
+  const { data: vendorSlug } = useQuery({
+    queryKey: ['nav-vendor-slug', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('vendor_profiles')
+        .select('slug, public_profile_enabled, verification_status')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (!data?.slug) return null;
+      if (!data.public_profile_enabled) return null;
+      return data.slug as string;
+    },
+    enabled: !!user,
+    staleTime: 60_000,
+  });
+
   React.useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
