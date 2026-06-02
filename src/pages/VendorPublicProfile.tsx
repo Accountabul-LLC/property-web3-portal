@@ -7,21 +7,21 @@ import {
   MapPin,
   MessageCircle,
   Share2,
-  ShieldCheck,
   BadgeCheck,
   Phone,
   Mail,
   Building2,
-  Store,
+  Package,
 } from 'lucide-react'
-import Navigation from '@/components/Navigation'
-import Footer from '@/components/Footer'
 import { Seo } from '@/components/Seo'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { supabase } from '@/integrations/supabase/client'
 import { VendorLeadModal } from '@/components/vendor/VendorLeadModal'
+import VendorPublicSidebar from '@/components/vendor/VendorPublicSidebar'
 import { getVendorPublicUrl, type VendorPublicProfileRecord } from '@/lib/vendorNetwork'
+import { useVendorProducts, formatProductPrice } from '@/hooks/useVendorProducts'
 import NotFound from './NotFound'
 
 export default function VendorPublicProfile() {
@@ -44,13 +44,11 @@ export default function VendorPublicProfile() {
     staleTime: 60_000,
   })
 
+  const { data: products = [] } = useVendorProducts(vendor?.id, { limit: 6 })
+
   const fullAddress = useMemo(() => {
     if (!vendor) return ''
-    return [
-      vendor.business_address_city,
-      vendor.business_address_state,
-      vendor.business_address_zip,
-    ]
+    return [vendor.business_address_city, vendor.business_address_state, vendor.business_address_zip]
       .filter(Boolean)
       .join(', ')
   }, [vendor])
@@ -59,6 +57,15 @@ export default function VendorPublicProfile() {
     if (!fullAddress) return ''
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
   }, [fullAddress])
+
+  const memberSince = useMemo(() => {
+    if (!vendor?.created_at) return null
+    try {
+      return new Date(vendor.created_at).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+    } catch {
+      return null
+    }
+  }, [vendor])
 
   const handleShare = async () => {
     if (!vendor) return
@@ -78,216 +85,247 @@ export default function VendorPublicProfile() {
   }
 
   if (!slug) return <NotFound />
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Navigation />
-        <div className="mx-auto flex max-w-4xl items-center justify-center py-24 text-muted-foreground">Loading profile...</div>
-        <Footer />
-      </div>
-    )
-  }
-
-  if (!vendor) return <NotFound />
-
-  const title = `${vendor.company_name} | Accountabul Verified Vendor`
-  const description = [vendor.profile_headline, vendor.business_address_city, vendor.business_address_state]
-    .filter(Boolean)
-    .join(' - ') || vendor.business_description || 'Verified vendor profile on Accountabul.'
-
-  const isKycVerified = vendor.verification_status === 'verified'
-  const isNetworkPartner = Boolean(vendor.verification_tier) || vendor.verification_status === 'verified'
 
   return (
-    <div className="min-h-screen bg-background">
-      <Seo title={title} description={description} path={`/vendor/${vendor.slug}`} />
-      <Navigation />
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full bg-background">
+        <VendorPublicSidebar />
+        <SidebarInset>
+          {vendor ? (
+            <Seo
+              title={`${vendor.company_name} | Accountabul Verified Vendor`}
+              description={
+                [vendor.profile_headline, vendor.business_address_city, vendor.business_address_state]
+                  .filter(Boolean)
+                  .join(' - ') ||
+                vendor.business_description ||
+                'Verified vendor profile on Accountabul.'
+              }
+              path={`/vendor/${vendor.slug}`}
+            />
+          ) : null}
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-          <Button variant="ghost" asChild>
-            <Link to="/vendors">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to directory
-            </Link>
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={handleShare}>
-              <Share2 className="mr-2 h-4 w-4" />
-              {shareStatus === 'copied' ? 'Copied link' : 'Share'}
-            </Button>
-            <Button onClick={() => setLeadOpen(true)}>
-              <MessageCircle className="mr-2 h-4 w-4" />
-              Contact
-            </Button>
-          </div>
-        </div>
-
-        {/* Hero header */}
-        <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center">
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-muted">
-            {vendor.logo_url ? (
-              <img src={vendor.logo_url} alt={vendor.company_name} className="h-full w-full object-cover" />
-            ) : (
-              <Building2 className="h-8 w-8 text-muted-foreground" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1 space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight">{vendor.company_name}</h1>
-            {vendor.profile_headline || vendor.industry_category ? (
-              <p className="text-base text-muted-foreground">
-                {vendor.profile_headline ?? vendor.industry_category}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              {isKycVerified ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                  <BadgeCheck className="h-4 w-4" />
-                  KYC Verified
-                </span>
-              ) : null}
-              {isNetworkPartner ? (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
-                  <ShieldCheck className="h-4 w-4" />
-                  Verified Network Partner
-                </span>
-              ) : null}
+          {/* Top bar */}
+          <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b bg-background/95 px-4 backdrop-blur sm:px-6">
+            <div className="flex items-center gap-2">
+              <SidebarTrigger />
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/vendors">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to directory
+                </Link>
+              </Button>
             </div>
-          </div>
-        </div>
-
-        {/* Sidebar + main grid */}
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
-          {/* Side column: contact + details */}
-          <aside className="space-y-6">
-            <Card className="border-border/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Contact</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                {fullAddress ? (
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group flex items-start gap-2 text-foreground transition-colors hover:text-primary"
-                  >
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                    <span className="leading-snug group-hover:underline">{fullAddress}</span>
-                  </a>
-                ) : null}
-                {vendor.website_url ? (
-                  <a
-                    href={vendor.website_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="group flex items-start gap-2 text-foreground transition-colors hover:text-primary"
-                  >
-                    <Globe className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                    <span className="leading-snug group-hover:underline">
-                      {vendor.website_url.replace(/^https?:\/\//, '')}
-                    </span>
-                  </a>
-                ) : null}
-                {vendor.business_email ? (
-                  <a
-                    href={`mailto:${vendor.business_email}`}
-                    className="group flex items-start gap-2 text-foreground transition-colors hover:text-primary"
-                  >
-                    <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                    <span className="leading-snug break-all group-hover:underline">{vendor.business_email}</span>
-                  </a>
-                ) : null}
-                {vendor.business_phone ? (
-                  <a
-                    href={`tel:${vendor.business_phone}`}
-                    className="group flex items-start gap-2 text-foreground transition-colors hover:text-primary"
-                  >
-                    <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                    <span className="leading-snug group-hover:underline">{vendor.business_phone}</span>
-                  </a>
-                ) : null}
-                {!fullAddress && !vendor.website_url && !vendor.business_email && !vendor.business_phone ? (
-                  <p className="text-muted-foreground">This vendor has not shared public contact info yet.</p>
-                ) : null}
-                <Button className="w-full" onClick={() => setLeadOpen(true)}>
+            {vendor ? (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={handleShare}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  {shareStatus === 'copied' ? 'Copied' : 'Share'}
+                </Button>
+                <Button size="sm" onClick={() => setLeadOpen(true)}>
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  Contact vendor
+                  Contact
                 </Button>
-              </CardContent>
-            </Card>
+              </div>
+            ) : null}
+          </header>
 
-            <Card className="border-border/70">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">About</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                <p className="text-muted-foreground">
-                  {vendor.business_description ?? 'No business description provided yet.'}
-                </p>
-                <dl className="grid gap-3 pt-2">
-                  {vendor.industry_category ? (
-                    <div>
-                      <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Industry</dt>
-                      <dd className="mt-0.5 font-medium">{vendor.industry_category}</dd>
-                    </div>
-                  ) : null}
-                  {vendor.years_in_business ? (
-                    <div>
-                      <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Years in business</dt>
-                      <dd className="mt-0.5 font-medium">{vendor.years_in_business}</dd>
-                    </div>
-                  ) : null}
-                  {vendor.service_areas ? (
-                    <div>
-                      <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Service areas</dt>
-                      <dd className="mt-0.5 font-medium">{vendor.service_areas}</dd>
-                    </div>
-                  ) : null}
-                </dl>
-              </CardContent>
-            </Card>
-          </aside>
-
-          {/* Main column: shop */}
-          <section>
-            <Card className="min-h-[420px] border-border/70">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <div>
-                  <CardTitle className="text-xl">Shop</CardTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Browse products and services offered by {vendor.company_name}.
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to={`/vendor/${vendor.slug}/shop`}>View all</Link>
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
-                  <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                    <Store className="h-6 w-6 text-muted-foreground" />
+          <main className="flex-1 px-4 py-8 sm:px-8 lg:px-12">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-24 text-muted-foreground">Loading profile...</div>
+            ) : !vendor ? (
+              <NotFound />
+            ) : (
+              <div className="mx-auto max-w-6xl">
+                {/* Hero header */}
+                <div className="mb-8 flex flex-col gap-6 sm:flex-row sm:items-start">
+                  <div className="flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-2xl border bg-muted">
+                    {vendor.logo_url ? (
+                      <img
+                        src={vendor.logo_url}
+                        alt={vendor.company_name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <Building2 className="h-10 w-10 text-muted-foreground" />
+                    )}
                   </div>
-                  <h3 className="text-base font-medium">No products yet</h3>
-                  <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                    This vendor hasn't listed any products. Once they publish their shop, items will appear here.
-                  </p>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{vendor.company_name}</h1>
+                    {vendor.industry_category ? (
+                      <p className="text-base text-muted-foreground">{vendor.industry_category}</p>
+                    ) : null}
+                    <div className="pt-1">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
+                        <BadgeCheck className="h-4 w-4" />
+                        Verified Network Partner
+                      </span>
+                    </div>
+                    {vendor.business_description ? (
+                      <p className="max-w-2xl pt-2 text-sm leading-relaxed text-muted-foreground">
+                        {vendor.business_description}
+                      </p>
+                    ) : null}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-        </div>
-      </main>
 
-      <VendorLeadModal
-        open={leadOpen}
-        onOpenChange={setLeadOpen}
-        vendorProfileId={vendor.id}
-        vendorName={vendor.company_name}
-        source="vendor_profile_page"
-      />
+                {/* Body grid */}
+                <div className="grid gap-6 lg:grid-cols-[320px_1fr]">
+                  {/* Left column */}
+                  <aside className="space-y-6">
+                    <Card className="border-border/70">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Contact Information</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        {fullAddress ? (
+                          <a
+                            href={mapsUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group flex items-start gap-2.5 text-foreground transition-colors hover:text-primary"
+                          >
+                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                            <span className="leading-snug group-hover:underline">{fullAddress}</span>
+                          </a>
+                        ) : null}
+                        {vendor.business_email ? (
+                          <a
+                            href={`mailto:${vendor.business_email}`}
+                            className="group flex items-start gap-2.5 text-foreground transition-colors hover:text-primary"
+                          >
+                            <Mail className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                            <span className="leading-snug break-all group-hover:underline">
+                              {vendor.business_email}
+                            </span>
+                          </a>
+                        ) : null}
+                        {vendor.business_phone ? (
+                          <a
+                            href={`tel:${vendor.business_phone}`}
+                            className="group flex items-start gap-2.5 text-foreground transition-colors hover:text-primary"
+                          >
+                            <Phone className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                            <span className="leading-snug group-hover:underline">{vendor.business_phone}</span>
+                          </a>
+                        ) : null}
+                        {vendor.website_url ? (
+                          <a
+                            href={vendor.website_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group flex items-start gap-2.5 text-foreground transition-colors hover:text-primary"
+                          >
+                            <Globe className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                            <span className="leading-snug group-hover:underline">
+                              {vendor.website_url.replace(/^https?:\/\//, '')}
+                            </span>
+                          </a>
+                        ) : null}
+                        {!fullAddress && !vendor.website_url && !vendor.business_email && !vendor.business_phone ? (
+                          <p className="text-muted-foreground">No public contact info yet.</p>
+                        ) : null}
+                        <Button className="mt-2 w-full" onClick={() => setLeadOpen(true)}>
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                          Send Message
+                        </Button>
+                      </CardContent>
+                    </Card>
 
-      <Footer />
-    </div>
+                    <Card className="border-border/70">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">About This Company</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4 text-sm">
+                        {vendor.industry_category ? (
+                          <div>
+                            <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">Industry</dt>
+                            <dd className="mt-1 font-medium">{vendor.industry_category}</dd>
+                          </div>
+                        ) : null}
+                        {memberSince ? (
+                          <div>
+                            <dt className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
+                              Member Since
+                            </dt>
+                            <dd className="mt-1 font-medium">{memberSince}</dd>
+                          </div>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  </aside>
+
+                  {/* Right column: products */}
+                  <section>
+                    <Card className="min-h-[480px] border-border/70">
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                        <CardTitle className="text-xl">Products & Services</CardTitle>
+                        <Button variant="ghost" size="sm" asChild>
+                          <Link to={`/vendor/${vendor.slug}/shop`}>View all</Link>
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        {products.length === 0 ? (
+                          <div className="flex min-h-[360px] flex-col items-center justify-center rounded-xl border border-dashed bg-muted/20 px-6 py-12 text-center">
+                            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                              <Package className="h-7 w-7 text-muted-foreground" />
+                            </div>
+                            <h3 className="text-base font-medium">No products or services listed yet.</h3>
+                            <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+                              This vendor hasn't published their offerings. Check back soon!
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid gap-4 sm:grid-cols-2">
+                            {products.map((p) => (
+                              <Link
+                                key={p.id}
+                                to={`/vendor/${vendor.slug}/shop/${p.id}`}
+                                className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/50"
+                              >
+                                <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">
+                                  {p.image_url ? (
+                                    <img
+                                      src={p.image_url}
+                                      alt={p.name}
+                                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                    />
+                                  ) : (
+                                    <Package className="h-10 w-10 text-muted-foreground" />
+                                  )}
+                                </div>
+                                <div className="flex flex-1 flex-col gap-1 p-4">
+                                  <h3 className="text-sm font-medium leading-snug group-hover:text-primary">
+                                    {p.name}
+                                  </h3>
+                                  {p.description ? (
+                                    <p className="line-clamp-2 text-xs text-muted-foreground">{p.description}</p>
+                                  ) : null}
+                                  <p className="mt-auto pt-2 text-sm font-semibold">{formatProductPrice(p)}</p>
+                                </div>
+                              </Link>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </section>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {vendor ? (
+            <VendorLeadModal
+              open={leadOpen}
+              onOpenChange={setLeadOpen}
+              vendorProfileId={vendor.id}
+              vendorName={vendor.company_name}
+              source="vendor_profile_page"
+            />
+          ) : null}
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   )
 }
