@@ -142,9 +142,9 @@ export default function VendorsDirectory() {
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                 <Star className="mb-3 h-8 w-8 text-primary" />
-                <h2 className="text-xl font-semibold">Be the first verified vendor</h2>
+                <h2 className="text-xl font-semibold">Become a verified vendor</h2>
                 <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                  No verified vendors match the current filters yet. Apply to join the network and appear here once approved.
+                  No vendors match the current filters. Adjust your search, or apply to join the verified vendor network.
                 </p>
                 <Button asChild className="mt-6">
                   <Link to="/auth/vendor">Apply as a vendor</Link>
