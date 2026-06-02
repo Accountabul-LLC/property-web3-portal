@@ -78,7 +78,7 @@ export default function VendorsDirectory() {
           </div>
           <Button asChild variant="outline">
             <Link to="/auth/vendor">
-              Be the first verified vendor
+              Become a verified vendor
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
