@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Store, MessageSquare, Heart, HelpCircle, LogOut, LogIn } from 'lucide-react'
+import { LayoutDashboard, Store, MessageSquare, Heart, HelpCircle, LogOut, LogIn, Bookmark } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
