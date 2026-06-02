@@ -1809,6 +1809,69 @@ export type Database = {
           },
         ]
       }
+      vendor_products: {
+        Row: {
+          category: string | null
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_published: boolean
+          name: string
+          price_cents: number | null
+          sort_order: number
+          updated_at: string
+          user_id: string
+          vendor_profile_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name: string
+          price_cents?: number | null
+          sort_order?: number
+          updated_at?: string
+          user_id: string
+          vendor_profile_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_published?: boolean
+          name?: string
+          price_cents?: number | null
+          sort_order?: number
+          updated_at?: string
+          user_id?: string
+          vendor_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_products_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_products_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_profiles: {
         Row: {
           advertising_opt_in: boolean
@@ -2333,6 +2396,7 @@ export type Database = {
           business_email: string | null
           business_phone: string | null
           company_name: string | null
+          created_at: string | null
           id: string | null
           industry_category: string | null
           logo_url: string | null
@@ -2353,6 +2417,7 @@ export type Database = {
           business_email?: string | null
           business_phone?: string | null
           company_name?: string | null
+          created_at?: string | null
           id?: string | null
           industry_category?: string | null
           logo_url?: string | null
@@ -2373,6 +2438,7 @@ export type Database = {
           business_email?: string | null
           business_phone?: string | null
           company_name?: string | null
+          created_at?: string | null
           id?: string | null
           industry_category?: string | null
           logo_url?: string | null
