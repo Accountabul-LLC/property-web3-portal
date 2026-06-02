@@ -83,8 +83,8 @@ export function useVendorProfile(profileId: string | null | undefined) {
       business_email: updates.business_email ?? null,
       business_phone: updates.business_phone ?? null,
       website_url: updates.website_url ?? null,
-      industry_category: updates.industry_category ?? null,
-      business_description: updates.business_description ?? null,
+      industry: updates.industry_category ?? null,
+      vendor_bio: updates.business_description ?? null,
       service_areas: updates.service_areas ?? null,
       place_of_business: updates.place_of_business ?? null,
       business_address_city: updates.business_address_city ?? null,
@@ -97,7 +97,7 @@ export function useVendorProfile(profileId: string | null | undefined) {
       tax_exempt_number: updates.tax_exempt_number ?? null,
       applicant_title: updates.applicant_title ?? null,
       advertising_opt_in: updates.advertising_opt_in ?? false,
-      public_profile_visible: updates.public_profile_visible ?? false,
+      public_profile_enabled: updates.public_profile_visible ?? false,
       updated_at: new Date().toISOString(),
     }
 
