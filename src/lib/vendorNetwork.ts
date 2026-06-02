@@ -83,6 +83,7 @@ export interface VendorPublicProfileRecord {
   profile_headline: string | null
   public_profile_enabled: boolean
   verification_status: VendorVerificationStatus
+  created_at: string
 }
 
 export interface VendorProfileRow {
