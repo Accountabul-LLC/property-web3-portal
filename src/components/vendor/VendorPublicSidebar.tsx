@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, Store, MessageSquare, Heart, HelpCircle, LogOut, LogIn } from 'lucide-react'
+import { LayoutDashboard, Store, MessageSquare, Heart, HelpCircle, LogOut, LogIn, Bookmark } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -29,12 +29,11 @@ export function VendorPublicSidebar() {
   const { user } = useAuth()
 
   const items: NavItem[] = [
-    { title: 'Directory', url: '/vendors', icon: Store },
     { title: 'Dashboard', url: '/dashboard', icon: LayoutDashboard },
-    { title: 'Messages', icon: MessageSquare, disabled: true, badge: 'Soon' },
     user
-      ? { title: 'Favorites', url: '/portfolio', icon: Heart }
-      : { title: 'Favorites', icon: Heart, disabled: true, badge: 'Sign in' },
+      ? { title: 'Saved Properties', url: '/marketplace?tab=saved', icon: Bookmark }
+      : { title: 'Saved Properties', url: '/auth?next=/marketplace?tab=saved', icon: Bookmark },
+    { title: 'Messages', icon: MessageSquare, disabled: true, badge: 'Soon' },
   ]
 
   const isActive = (url?: string) => !!url && pathname === url

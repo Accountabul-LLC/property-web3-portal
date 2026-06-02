@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, BadgeCheck, Building2, Loader2, ShieldCheck, Users2, MessageCircle, Clock3, CheckCircle2 } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Building2, ExternalLink, Loader2, ShieldCheck, Users2, MessageCircle, Clock3, CheckCircle2 } from 'lucide-react'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
 import { Seo } from '@/components/Seo'
@@ -13,6 +13,7 @@ import { useProfile } from '@/hooks/useProfile'
 import { useVendorProfile } from '@/hooks/useVendorProfile'
 import { useVendorLeads } from '@/hooks/useVendorLeads'
 import { getVendorNextRoute, normalizeVendorStatus } from '@/lib/vendorFlow'
+import { getVendorPublicUrl } from '@/lib/vendorNetwork'
 
 export default function VendorDashboard() {
   const navigate = useNavigate()
@@ -70,6 +71,14 @@ export default function VendorDashboard() {
               <CardDescription>
                 This is the operational home for approved businesses on Accountabul.
               </CardDescription>
+              {vendorProfile?.slug ? (
+                <Button asChild size="sm" variant="outline" className="mt-2 w-fit">
+                  <a href={getVendorPublicUrl(vendorProfile.slug)} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Public Profile
+                  </a>
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-xl bg-muted/40 p-4">
@@ -96,6 +105,14 @@ export default function VendorDashboard() {
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
+                {vendorProfile?.slug ? (
+                  <Button asChild variant="outline">
+                    <a href={getVendorPublicUrl(vendorProfile.slug)} target="_blank" rel="noreferrer">
+                      <ExternalLink className="mr-2 h-4 w-4" />
+                      View Public Profile
+                    </a>
+                  </Button>
+                ) : null}
                 <Button asChild variant="outline">
                   <Link to="/vendor/onboarding">Edit application</Link>
                 </Button>
