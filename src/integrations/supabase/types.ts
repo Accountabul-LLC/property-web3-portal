@@ -1737,6 +1737,13 @@ export type Database = {
             referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_credentials_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_public_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vendor_leads: {
@@ -1791,6 +1798,13 @@ export type Database = {
             columns: ["vendor_profile_id"]
             isOneToOne: false
             referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_leads_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_public_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -2307,6 +2321,69 @@ export type Database = {
           user_id?: string | null
           wallet_address?: string | null
           xaman_account_name?: string | null
+        }
+        Relationships: []
+      }
+      vendor_public_profiles: {
+        Row: {
+          business_address_city: string | null
+          business_address_state: string | null
+          business_address_zip: string | null
+          business_description: string | null
+          business_email: string | null
+          business_phone: string | null
+          company_name: string | null
+          id: string | null
+          industry_category: string | null
+          logo_url: string | null
+          profile_headline: string | null
+          public_profile_enabled: boolean | null
+          service_areas: string | null
+          slug: string | null
+          verification_status: string | null
+          verification_tier: string | null
+          website_url: string | null
+          years_in_business: number | null
+        }
+        Insert: {
+          business_address_city?: string | null
+          business_address_state?: string | null
+          business_address_zip?: string | null
+          business_description?: string | null
+          business_email?: string | null
+          business_phone?: string | null
+          company_name?: string | null
+          id?: string | null
+          industry_category?: string | null
+          logo_url?: string | null
+          profile_headline?: string | null
+          public_profile_enabled?: boolean | null
+          service_areas?: string | null
+          slug?: string | null
+          verification_status?: string | null
+          verification_tier?: string | null
+          website_url?: string | null
+          years_in_business?: number | null
+        }
+        Update: {
+          business_address_city?: string | null
+          business_address_state?: string | null
+          business_address_zip?: string | null
+          business_description?: string | null
+          business_email?: string | null
+          business_phone?: string | null
+          company_name?: string | null
+          id?: string | null
+          industry_category?: string | null
+          logo_url?: string | null
+          profile_headline?: string | null
+          public_profile_enabled?: boolean | null
+          service_areas?: string | null
+          slug?: string | null
+          verification_status?: string | null
+          verification_tier?: string | null
+          website_url?: string | null
+          years_in_business?: number | null
         }
         Relationships: []
       }
