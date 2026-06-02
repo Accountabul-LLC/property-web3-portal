@@ -253,6 +253,18 @@ const Navigation = () => {
                 <span className="hidden sm:inline">Dashboard</span>
               </Button>
             )}
+            {user && vendorSlug && (
+              <Button
+                variant={currentPath === `/vendor/${vendorSlug}` ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => navigate(`/vendor/${vendorSlug}`)}
+                className="h-8 px-3 text-xs font-medium"
+                title="My public vendor profile"
+              >
+                <Store className="w-3.5 h-3.5 sm:mr-1.5" />
+                <span className="hidden sm:inline">My Profile</span>
+              </Button>
+            )}
             {user ? (
               isConnected ? (
                 <WalletSelector compact />
