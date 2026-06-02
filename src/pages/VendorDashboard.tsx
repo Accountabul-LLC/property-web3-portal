@@ -71,6 +71,14 @@ export default function VendorDashboard() {
               <CardDescription>
                 This is the operational home for approved businesses on Accountabul.
               </CardDescription>
+              {vendorProfile?.slug ? (
+                <Button asChild size="sm" variant="outline" className="mt-2 w-fit">
+                  <a href={getVendorPublicUrl(vendorProfile.slug)} target="_blank" rel="noreferrer">
+                    <ExternalLink className="mr-2 h-4 w-4" />
+                    View Public Profile
+                  </a>
+                </Button>
+              ) : null}
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-xl bg-muted/40 p-4">
