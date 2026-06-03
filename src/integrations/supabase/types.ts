@@ -2534,6 +2534,36 @@ export type Database = {
           wallet_address: string
         }[]
       }
+      get_vendor_public_profile_by_slug: {
+        Args: { p_slug: string }
+        Returns: {
+          business_address_city: string | null
+          business_address_state: string | null
+          business_address_zip: string | null
+          business_description: string | null
+          business_email: string | null
+          business_phone: string | null
+          company_name: string | null
+          created_at: string | null
+          id: string | null
+          industry_category: string | null
+          logo_url: string | null
+          profile_headline: string | null
+          public_profile_enabled: boolean | null
+          service_areas: string | null
+          slug: string | null
+          verification_status: string | null
+          verification_tier: string | null
+          website_url: string | null
+          years_in_business: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "vendor_public_profiles"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

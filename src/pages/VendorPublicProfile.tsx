@@ -33,12 +33,15 @@ export default function VendorPublicProfile() {
     queryKey: ['vendor-public-profile', slug],
     queryFn: async () => {
       if (!slug) return null
-      const { data, error } = await ((supabase as any).from('vendor_public_profiles') as any)
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle()
+      // SECURITY DEFINER RPC: public callers see only verified+published
+      // vendors; the owner (and admins) can preview their own profile
+      // even when verification is still pending.
+      const { data, error } = await (supabase as any).rpc('get_vendor_public_profile_by_slug', {
+        p_slug: slug,
+      })
       if (error) throw error
-      return (data ?? null) as VendorPublicProfileRecord | null
+      const row = Array.isArray(data) ? data[0] : data
+      return (row ?? null) as VendorPublicProfileRecord | null
     },
     enabled: !!slug,
     staleTime: 60_000,
