@@ -147,6 +147,19 @@ All colors MUST be HSL. Professional fintech theme with trust and innovation.
     width: 100%;
   }
 
+  /* Hide scrollbars globally while keeping scroll functionality */
+  html, body, * {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar,
+  *::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none; /* Chrome/Safari */
+  }
+
   body {
     @apply bg-background text-foreground;
   }
