@@ -1,46 +1,76 @@
-## 1. "View Public Profile" access from Vendor Dashboard
 
-**File:** `src/pages/VendorDashboard.tsx`
+# Vendor Features Security & Fuzz Test Plan
 
-- Pull the vendor's slug from `vendorProfile` (already loaded via `useVendorProfile`).
-- In the dashboard header card (next to the "Verified vendor" badge / title block), add a prominent `Button asChild` linking to `/vendor/:slug` (using `getVendorPublicUrl(slug)` from `src/lib/vendorNetwork.ts`). Label: **"View Public Profile"** with an `ExternalLink` icon, `target="_blank"`.
-- Also surface it inside the existing action row (next to "View marketplace" / "Edit application") so it's reachable from both the hero and the CTA cluster.
-- Render only when `vendorProfile?.slug` exists; otherwise show a disabled tooltip "Profile not published yet".
+Scope: the recently added vendor surfaces (`vendor_profiles`, `vendor_products`, `vendor_leads`, `vendor_credentials`, public profile route, "My Public Profile" nav, heart/save retarget). Goal: confirm no PII leaks, RLS holds, edge cases don't crash, and inputs can't be abused.
 
-## 2. Evergreen landing copy on Vendors Directory
+## 1. Read-only DB recon (no mutations)
 
-**File:** `src/pages/VendorsDirectory.tsx`
+Run a `supabase--linter` pass and targeted `supabase--read_query` checks:
 
-- Replace the top-right CTA text `"Be the first verified vendor"` (line 81) with **"Become a verified vendor"**.
-- Replace the empty-state heading `"Be the first verified vendor"` (line 145) with **"Become a verified vendor"** and update the body copy to a static prompt:
-  > "No vendors match the current filters. Adjust your search, or apply to join the verified vendor network."
-- Remove all conditional logic tied to "first vendor" framing (there is none beyond the copy itself — purely a text swap).
+- Confirm RLS is **enabled** on every vendor table (`vendor_profiles`, `vendor_products`, `vendor_leads`, `vendor_credentials`, plus any `vendor_*` table I find).
+- Dump all RLS policies for those tables and verify:
+  - Public `SELECT` is scoped to `verification_status = 'verified' AND public_profile_enabled = true` (or equivalent), never `USING (true)` over the full row.
+  - Sensitive columns (lead emails/phones, internal notes, credential file paths, business_email if private, owner `user_id`) are either filtered by policy or moved behind a public view.
+  - `INSERT/UPDATE/DELETE` policies all scope to `auth.uid() = owner_user_id` (or analogous).
+  - `vendor_leads` is **owner-only read** — public/anon must not be able to list leads.
+  - `vendor_credentials` storage paths in `vendor-credentials` bucket are private (bucket already non-public ✓) and DB rows are owner-only.
+- Confirm GRANTs match policies (no stray `GRANT SELECT ... TO anon` on lead/credential tables).
+- Check for any public view that re-exposes columns the base table hides.
 
-## 3. Directory cleanup & sidebar consistency
+## 2. Anonymous (anon key) fuzz
 
-**File:** `src/components/vendor/VendorPublicSidebar.tsx`
+Using a script with only the anon key + Supabase REST, attempt:
 
-- Remove the **Directory** entry from the sidebar items list. The back-to-directory link already exists in the page top bar of `VendorPublicProfile.tsx`, so the sidebar entry is the redundant one.
-- Keep Dashboard, Messages (Soon), Favorites. Order: Dashboard, Favorites, Messages.
+- `SELECT *` on each vendor table → expect only public-safe rows/columns on `vendor_profiles` + published `vendor_products`; empty/forbidden on `vendor_leads`, `vendor_credentials`, draft/unverified profiles.
+- Insert a lead with random payloads (XSS strings, 10KB blobs, null bytes, SQL-ish strings, unicode, emoji, very long email) into `vendor_leads` for a real verified vendor — verify server-side validation (length caps, email format, required fields) and that it doesn't crash the UI when rendered.
+- Insert vendor_profile / vendor_product as anon → expect denied.
+- Try to read another user's draft profile by slug guessing → expect denied.
 
-**Header "revert":** the global `Navigation` component was not changed in the last vendor work — `VendorPublicProfile` simply doesn't render `<Navigation />` (it uses the sidebar shell instead). No revert needed there. The `VendorsDirectory` page already renders the stable `<Navigation />`. No action required on the global header unless a specific regression is pointed out (flag in chat if user meant something else).
+## 3. Authenticated-but-not-owner fuzz
 
-## 4. Heart / Favorites retargeting
+Sign in as a second test user and attempt against a vendor owned by user A:
 
-**File:** `src/components/vendor/VendorPublicSidebar.tsx`
+- UPDATE/DELETE `vendor_profiles`, `vendor_products`, `vendor_credentials` of user A → expect denied.
+- Read `vendor_leads` of user A → expect denied.
+- Toggle `public_profile_enabled` / `verification_status` on user A's profile → expect denied (verification must be admin/server-only).
+- Insert a `vendor_product` with `vendor_profile_id` belonging to user A → expect denied by WITH CHECK.
 
-- Change the signed-in Favorites destination from `/portfolio` to **`/marketplace?tab=saved`** (this is the canonical saved-properties view used by `Dashboard.tsx` line 797).
-- Keep signed-out behavior (disabled + "Sign in" badge), but make it clickable instead — link to `/auth?next=/marketplace?tab=saved` so users land on saved properties after auth.
-- Rename label from "Favorites" to **"Saved Properties"** for clarity, since the platform's saving lives at the property level.
+## 4. Owner edge cases
 
-## Out of scope
+As the owner:
 
-- No DB/migration changes.
-- No new routes.
-- No edits to global `Navigation.tsx` or shadcn primitives.
+- Create profile with empty/whitespace company name, 5KB bio, malicious `<script>` in headline/bio, javascript: URLs in `website_url`, broken image URL in logo, non-https website → confirm UI sanitizes and DB constraints/length caps hold.
+- Product with `price_cents` = negative, 0, null, `Number.MAX_SAFE_INTEGER`, non-USD currency string ("'; drop"), 50MB image URL.
+- Slug collisions, slug with spaces / unicode / very long.
+- Toggle `is_published` rapidly; soft-delete behavior.
 
-## Files touched
+## 5. Public profile route + nav
 
-- `src/pages/VendorDashboard.tsx` — add "View Public Profile" button.
-- `src/pages/VendorsDirectory.tsx` — swap CTA and empty-state copy.
-- `src/components/vendor/VendorPublicSidebar.tsx` — drop Directory item, retarget Favorites to `/marketplace?tab=saved`, rename to "Saved Properties".
+- `/vendor/:slug` for: unknown slug, draft vendor, unverified vendor, profile with `public_profile_enabled = false`, profile with all-null fields, profile with XSS-laden fields → expect 404 / "not available" and no crash, no script execution.
+- "My Public Profile" nav link: signed-out, signed-in non-vendor, signed-in vendor with no slug, vendor with `public_profile_enabled = false`, vendor pending verification → link should hide or route to onboarding, never to a broken page.
+- Heart/save button on public vendor page: confirms it routes to saved properties dashboard for signed-in user and prompts auth for anon (per the last change).
+
+## 6. Edge functions (if any vendor functions exist)
+
+For each vendor-related edge function found (e.g. lead submission, vendor admin actions):
+
+- Call without JWT, with expired JWT, with another user's JWT → expect 401/403.
+- Send malformed JSON, missing fields, oversized body (>1MB), wrong content-type → expect clean 400, not 500.
+- Check logs via `supabase--edge_function_logs` for stack traces leaking internals.
+
+## 7. Deliverable
+
+A single markdown report at `/mnt/documents/vendor-security-fuzz-report.md` with:
+
+- One row per check: target, method, expected, actual, **PASS / FAIL / WARN**.
+- For each FAIL: severity + recommended fix (RLS policy change, GRANT revoke, server-side validation, view to hide column, etc.).
+- A short "fix queue" section ranked by severity.
+
+No code or schema changes will be made in this pass — findings only. If FAILs are found, I'll propose a follow-up migration/code plan for your approval.
+
+## Technical notes
+
+- Uses `supabase--read_query`, `supabase--linter`, `supabase--edge_function_logs` for inspection.
+- Uses `code--exec` with a Node/Deno script + the public anon key and two test Supabase sessions for the anon and cross-user fuzz.
+- Test data is written only to a dedicated throwaway vendor record; cleanup queries listed at the end of the report.
+- No service-role key used; no destructive SQL run.
