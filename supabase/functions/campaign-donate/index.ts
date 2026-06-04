@@ -174,7 +174,7 @@ Deno.serve(async (req) => {
     // ── Fetch campaign ────────────────────────────────────────
     const { data: campaign, error: campaignErr } = await svc
       .from('campaigns')
-      .select('id, title, slug, status, campaign_type, network, recipient_wallet_address, release_date, currency, accepted_assets')
+      .select('id, title, slug, status, campaign_type:campaign_mode, network, recipient_wallet_address, release_date, currency, accepted_assets')
       .eq('id', campaign_id)
       .maybeSingle()
 
