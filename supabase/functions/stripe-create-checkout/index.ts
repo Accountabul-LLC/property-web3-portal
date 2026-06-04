@@ -100,7 +100,10 @@ Deno.serve(async (req) => {
       }),
     });
 
-    return json(200, { clientSecret: session.client_secret });
+    return json(200, {
+      clientSecret: session.client_secret,
+      publishableKey: Deno.env.get("STRIPE_PUBLISHABLE_KEY") ?? null,
+    });
   } catch (e) {
     console.error("stripe-create-checkout error", e);
     return json(500, { error: e instanceof Error ? e.message : "Unknown error" });
