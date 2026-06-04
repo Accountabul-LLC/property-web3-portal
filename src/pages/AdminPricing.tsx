@@ -49,6 +49,8 @@ function TierEditor({ tier }: { tier: MembershipTier }) {
         is_active: draft.is_active,
         sort_order: draft.sort_order,
         cta_label: draft.cta_label,
+        stripe_price_lookup_monthly: draft.stripe_price_lookup_monthly,
+        stripe_price_lookup_annual: draft.stripe_price_lookup_annual,
       })
       toast.success(`${draft.name} tier saved`)
     } catch {
