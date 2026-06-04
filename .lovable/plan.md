@@ -1,72 +1,52 @@
-# Vendor Shop Page — Technical Handoff Doc for Joseph
-
 ## Goal
+Port the membership / subscription Stripe setup from **Real Estate Explorer** into this project so `/pricing` becomes a working subscription checkout. The other project uses TanStack Start server functions — here we'll re-implement the same behavior with **Supabase Edge Functions** (this is a React + Vite + Supabase stack). All Stripe secrets are already configured (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`).
 
-Produce a single, polished handoff document Joseph can read once and understand:
+## What gets ported (feature parity)
+1. Stripe Embedded Checkout for 3 tiers (Starter / Professional / Portfolio), monthly + annual toggle.
+2. Guest checkout supported (no auth required to pay). If signed in we tag the Stripe Customer/Subscription with `userId`.
+3. Post-purchase `/checkout/return` page that retrieves the session and, for guests, prompts account creation; matching `pending_memberships` row is linked to the new user on signup.
+4. `/account/billing` page: shows current tier, renewal date, Stripe Billing Portal button, custom Cancel-with-prorated-refund flow.
+5. Webhook handler keeps `subscriptions` in sync.
+6. Membership gating reads from `subscriptions.status` (active/trialing) instead of `profiles.membership_tier_id`.
 
-- What our frontend is built on (stack, dependencies, conventions)
-- Our design system (tokens, theming, component library)
-- Where the vendor shop page lives today and what files he'll touch
-- Constraints / "don't do this" rules
-- Freedom: this is a creative brief, not a spec — he designs on top of what exists
+## Database (one migration)
+- New table `subscriptions` — user_id, stripe_subscription_id (unique), stripe_customer_id, product_id, price_id, status, current_period_start, current_period_end, cancel_at_period_end, environment.
+- New table `pending_memberships` — email, stripe_subscription_id (unique), stripe_customer_id, product_id, price_id, status, current_period_*, environment.
+- New table `cancellation_audit` — user_id, stripe_subscription_id, stripe_customer_id, stripe_refund_id, original_amount_cents, refund_amount_cents, currency, cycle_start, cycle_end, days_used, days_remaining.
+- Add columns to `membership_tiers`: `stripe_price_lookup_monthly`, `stripe_price_lookup_annual` (text). Admin sets these in `/admin/pricing`.
+- Extend `handle_new_user` trigger to move any `pending_memberships` row matching the new user's email into `subscriptions`.
+- RLS: users can `SELECT` own `subscriptions` / `cancellation_audit`. `pending_memberships` is service-role only. GRANTs for `authenticated` + `service_role` on each new table.
 
-No design comps. No required layout. Just enough context to be creative without breaking the system.
+## Edge functions (new, under `supabase/functions/`)
+- `stripe-create-checkout` — POST `{ tierId, interval: 'monthly'|'annual', returnUrl }` → returns `{ clientSecret }`. Resolves/creates customer (by `metadata.userId` for signed-in users, by email for guests), creates embedded checkout session in subscription mode with `managed_payments: { enabled: true }`.
+- `stripe-get-checkout-session` — POST `{ sessionId }` → returns `{ email, subscriptionId, customerId, priceId, status }` for the return page.
+- `stripe-create-portal` — POST `{ returnUrl }` (auth required) → returns `{ url }`.
+- `stripe-preview-cancel` / `stripe-cancel-membership` — auth required, computes prorated refund (`remaining_days / cycle_days × amount_paid`), issues refund, cancels subscription immediately, writes `cancellation_audit`, flips local `subscriptions.status` to canceled.
+- `stripe-webhook` — verifies signature via `STRIPE_WEBHOOK_SECRET`, handles `customer.subscription.{created,updated,deleted}` and `checkout.session.completed`; writes to `subscriptions` when `metadata.userId` is present, otherwise upserts `pending_memberships` keyed by Stripe customer email. Deployed with `verify_jwt = false`.
 
-## Deliverable
+All functions use `npm:stripe@^17` and the shared CORS helper already used in this project.
 
-Two files in `/mnt/documents/`:
+## Frontend changes
+- `src/lib/stripe.ts` — `getStripe()` using `STRIPE_PUBLISHABLE_KEY` from env.
+- `src/components/membership/StripeEmbeddedCheckout.tsx` — wraps `@stripe/react-stripe-js` `EmbeddedCheckoutProvider` in a dialog.
+- `src/hooks/useStripeCheckout.ts` — calls `stripe-create-checkout`.
+- `src/hooks/useSubscription.ts` — reads `subscriptions` for current user (replaces `useMyMembership` for gating).
+- `src/pages/Pricing.tsx` — replace `useSelectMembership` (which just updates `profiles.membership_tier_id`) with `useStripeCheckout`; CTA opens the embedded checkout dialog. Monthly/annual toggle drives which lookup key is used.
+- `src/pages/CheckoutReturn.tsx` (`/checkout/return`) — reads `session_id`, calls `stripe-get-checkout-session`, shows success state; for guests shows "finish creating your account" form.
+- `src/pages/AccountBilling.tsx` (`/account/billing`) — current plan card, "Manage in Stripe" button, "Cancel membership" dialog showing prorated refund preview.
+- Route registrations in `src/App.tsx`.
+- Admin pricing page: add two inputs for `stripe_price_lookup_monthly` / `stripe_price_lookup_annual` per tier.
 
-1. `accountabul-frontend-handoff.pdf` — polished, branded, easy to read on any device
-2. `accountabul-frontend-handoff.md` — same content as Markdown for easy reference / copy-paste
+## Stripe dashboard (manual, one-time)
+User creates 3 products + monthly/annual prices in Stripe (test mode), assigns lookup keys like `accountabul_starter_monthly`, `accountabul_starter_annual`, etc., and pastes them into `/admin/pricing`. Webhook endpoint URL (the deployed `stripe-webhook` function) gets registered in Stripe → produces `STRIPE_WEBHOOK_SECRET` which we'll request as a secret.
 
-## Document Outline
+## Packages to add
+`@stripe/stripe-js`, `@stripe/react-stripe-js` (already present in repo — will reuse).
 
-1. **Welcome / Context** — what Accountabul is, what the vendor shop page is for, what we want from him (creative direction, 1–2 mockups first)
-2. **Tech Stack** — React 18, Vite 5, TypeScript 5, Tailwind v3, shadcn/ui, React Router 6, React Query, React Hook Form + Zod, Sonner, Lucide icons, Recharts, Supabase client
-3. **Project Structure** — key folders: `src/pages/`, `src/components/`, `src/components/ui/` (shadcn — don't edit), `src/components/vendor/`, `src/hooks/`, `src/lib/`, `src/integrations/supabase/` (auto-gen — don't edit)
-4. **Design System**
-  - HSL semantic tokens only — never raw colors like `text-white`, `bg-[#fff]`
-  - Token reference table (primary, secondary, accent, muted, success, warning, destructive, background, foreground, border, etc.)
-  - Gradients (`gradient-primary`, `gradient-hero`, `gradient-card`) and shadows (`shadow-elegant`, `shadow-glow`, `shadow-card`)
-  - Dark mode parity required (both themes defined in `src/index.css`)
-  - Button variants available (`default`, `outline`, `ghost`, `hero`, `gradient`, `premium`, `success`)
-  - Standard button height 40px, radius `--radius: 0.5rem`
-  - Animations available (`fade-in`, `slide-in`, `float`, `pulse-glow`)
-5. **Component Conventions**
-  - Use shadcn primitives from `src/components/ui/` — compose, don't modify
-  - New components go in `src/components/vendor/` for vendor-scoped work
-  - Use `cn()` from `@/lib/utils` for class merging
-  - Icons from `lucide-react`
-  - Toasts via `sonner`
-6. **Vendor Shop Page — Current State**
-  - Route: `/vendor/:slug` → `src/pages/VendorPublicProfile.tsx`
-  - Data via RPC `get_vendor_public_profile_by_slug` (already wired)
-  - Sidebar component: `src/components/vendor/VendorPublicSidebar.tsx`
-  - Lead capture modal: `src/components/vendor/VendorLeadModal.tsx`
-  - Test URL (live): `/vendor/vendor-marketplace-approved`
-7. **Required Elements on the Page** (from the brief)
-  - Logo, business name + verified badge, industry, short description, location/service area
-  - Primary CTA (Request/Buy Service), Secondary CTA (Message Vendor)
-  - Product/service cards with fixed pricing
-  - Credibility section, reviews/rating placeholder, contact section
-  - Mobile responsive
-8. **Hard Rules / Don't Touch**
-  - No edits to `src/components/ui/`, `src/integrations/supabase/types.ts`, `src/integrations/supabase/client.ts`, `.env`
-  - No raw color classes — semantic tokens only
-  - No business logic changes for this task — visual/layout only
-  - No new heavy dependencies without asking — work within the existing stack
-  - Mobile-first, horizontal overflow hidden globally
-9. **How to Run Locally** — `npm i`, `npm run dev`, env already in `.env`
-10. **What We Want Back** — 1–2 mockups (can be a branch with the new layout, or static design files); review visual direction before full implementation
+## Out of scope (call out, don't build)
+- Migrating campaign one-time payment flows (already working in this project).
+- Live mode — sandbox/test only until user verifies.
+- Changing existing `profiles.membership_tier_id` consumers beyond pointing them at `subscriptions` for gating.
 
-## Generation Approach (technical)
-
-- Write Markdown source
-- Use `pandoc` to convert to PDF (LaTeX/wkhtmltopdf engine), with a simple branded cover, Accountabul color accents using our actual `--primary` HSL → hex, clean typography
-- QA: render PDF pages to images, inspect every page for layout/clipping issues, fix and re-run until clean
-- Output both files to `/mnt/documents/`, attach via `<presentation-artifact>` tags
-
-## Out of Scope
-
-- No design mockups generated by us — that's Joseph's job
-- No new vendor features
+## Open question
+Do you want me to also delete / disable the equivalent files in **Real Estate Explorer** after this lands, or leave that project untouched? (Default: leave it alone.)
