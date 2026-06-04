@@ -144,6 +144,25 @@ function TierEditor({ tier }: { tier: MembershipTier }) {
         />
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Stripe price lookup key (monthly)</Label>
+          <Input
+            value={draft.stripe_price_lookup_monthly ?? ''}
+            onChange={e => updateField('stripe_price_lookup_monthly', e.target.value || null)}
+            placeholder="e.g. accountabul_starter_monthly"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Stripe price lookup key (annual)</Label>
+          <Input
+            value={draft.stripe_price_lookup_annual ?? ''}
+            onChange={e => updateField('stripe_price_lookup_annual', e.target.value || null)}
+            placeholder="e.g. accountabul_starter_annual"
+          />
+        </div>
+      </div>
+
       <div>
         <Label className="text-xs text-muted-foreground mb-2 block">Features List</Label>
         <div className="space-y-2 mb-3">
