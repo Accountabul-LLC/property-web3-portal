@@ -227,6 +227,17 @@ export default function Pricing() {
       </main>
 
       <Footer />
+
+      {checkout && (
+        <MembershipCheckoutModal
+          open={!!checkout}
+          onOpenChange={(o) => { if (!o) setCheckout(null) }}
+          tierId={checkout.tierId}
+          tierName={checkout.tierName}
+          interval={annual ? 'annual' : 'monthly'}
+        />
+      )}
     </div>
   )
 }
+

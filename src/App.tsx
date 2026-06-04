@@ -55,6 +55,8 @@ const Settings = lazyPage(() => import("./pages/Settings"));
 const PaymentsHistory = lazyPage(() => import("./pages/PaymentsHistory"));
 const PaymentDetail = lazyPage(() => import("./pages/PaymentDetail"));
 const Pricing = lazyPage(() => import("./pages/Pricing"));
+const CheckoutReturn = lazyPage(() => import("./pages/CheckoutReturn"));
+const AccountBilling = lazyPage(() => import("./pages/AccountBilling"));
 const Escrow = lazyPage(() => import("./pages/Escrow"));
 const SmartEscrow = lazyPage(() => import("./pages/SmartEscrow"));
 const DeedProtection = lazyPage(() => import("./pages/DeedProtection"));
@@ -119,6 +121,8 @@ const App = () => (
                 <Route path="/admin/causes" element={<AdminCauses />} />
                 <Route path="/admin/pricing" element={<AdminPricing />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/checkout/return" element={<CheckoutReturn />} />
+                <Route path="/account/billing" element={<AccountBilling />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/action-items" element={<ActionItems />} />
                 <Route path="/credentials" element={<Credentials />} />
