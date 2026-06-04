@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import Navigation from '@/components/Navigation'
 import Footer from '@/components/Footer'
-import { useMembershipTiers, useMyMembership, useSelectMembership } from '@/hooks/useMembershipTiers'
+import { useMembershipTiers, useMyMembership } from '@/hooks/useMembershipTiers'
 import { useAuth } from '@/hooks/useAuth'
-import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import MembershipCheckoutModal from '@/components/membership/MembershipCheckoutModal'
 
 export default function Pricing() {
   const navigate = useNavigate()
@@ -16,7 +16,7 @@ export default function Pricing() {
   const [annual, setAnnual] = useState(false)
   const { data: tiers, isLoading } = useMembershipTiers()
   const { data: myTier } = useMyMembership()
-  const selectMembership = useSelectMembership()
+  const [checkout, setCheckout] = useState<{ tierId: string; tierName: string } | null>(null)
 
   function getDisplayedPrice(tier: NonNullable<typeof tiers>[number]) {
     if (tier.price_label) return tier.price_label
@@ -28,21 +28,13 @@ export default function Pricing() {
   }
 
   function isSelectable(tier: NonNullable<typeof tiers>[number]) {
-    return tier.slug === 'starter'
+    return tier.slug === 'starter' || !!tier.stripe_price_lookup_monthly || !!tier.stripe_price_lookup_annual
   }
 
-  async function handleSelect(tierId: string, tierName: string) {
-    if (!user) {
-      navigate('/auth', { state: { next: '/pricing' }, replace: false })
-      return
-    }
-    try {
-      await selectMembership.mutateAsync(tierId)
-      toast.success(`You're now on the ${tierName} plan!`)
-    } catch {
-      toast.error('Failed to update plan. Please try again.')
-    }
+  function handleSelect(tierId: string, tierName: string) {
+    setCheckout({ tierId, tierName })
   }
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col overflow-x-hidden">
@@ -216,11 +208,12 @@ export default function Pricing() {
                       className="w-full"
                       variant={tier.is_popular ? 'default' : 'outline'}
                       size="lg"
-                      disabled={isCurrentTier || selectMembership.isPending || lockedPlan}
+                      disabled={isCurrentTier || lockedPlan}
                       onClick={() => handleSelect(tier.id, tier.name)}
                     >
                       {isCurrentTier ? 'Current Plan' : tier.cta_label}
                     </Button>
+
                   </div>
                 )
               })}
