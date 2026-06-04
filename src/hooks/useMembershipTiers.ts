@@ -15,6 +15,8 @@ export type MembershipTier = {
   is_active: boolean
   sort_order: number
   cta_label: string
+  stripe_price_lookup_monthly: string | null
+  stripe_price_lookup_annual: string | null
   created_at: string
   updated_at: string
 }
@@ -22,6 +24,7 @@ export type MembershipTier = {
 const MEMBERSHIP_TIER_SELECT = `
   id, name, slug, price_monthly, price_annual, price_label, description, features,
   highlight_feature, is_popular, is_active, sort_order, cta_label,
+  stripe_price_lookup_monthly, stripe_price_lookup_annual,
   created_at, updated_at
 `
 

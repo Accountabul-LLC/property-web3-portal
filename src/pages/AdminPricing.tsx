@@ -49,6 +49,8 @@ function TierEditor({ tier }: { tier: MembershipTier }) {
         is_active: draft.is_active,
         sort_order: draft.sort_order,
         cta_label: draft.cta_label,
+        stripe_price_lookup_monthly: draft.stripe_price_lookup_monthly,
+        stripe_price_lookup_annual: draft.stripe_price_lookup_annual,
       })
       toast.success(`${draft.name} tier saved`)
     } catch {
@@ -140,6 +142,25 @@ function TierEditor({ tier }: { tier: MembershipTier }) {
           onChange={e => updateField('highlight_feature', e.target.value || null)}
           placeholder="e.g. Deed fraud monitoring included"
         />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Stripe price lookup key (monthly)</Label>
+          <Input
+            value={draft.stripe_price_lookup_monthly ?? ''}
+            onChange={e => updateField('stripe_price_lookup_monthly', e.target.value || null)}
+            placeholder="e.g. accountabul_starter_monthly"
+          />
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Stripe price lookup key (annual)</Label>
+          <Input
+            value={draft.stripe_price_lookup_annual ?? ''}
+            onChange={e => updateField('stripe_price_lookup_annual', e.target.value || null)}
+            placeholder="e.g. accountabul_starter_annual"
+          />
+        </div>
       </div>
 
       <div>
