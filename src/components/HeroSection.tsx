@@ -97,6 +97,24 @@ const HeroSection = ({ onGetStarted, onExploreMarketplace }: HeroSectionProps) =
                 <strong>Membership Required:</strong> All tokenization and marketplace features require active Accountabul Membership.
               </p>
             </div>
+
+            <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-5 max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+              <div className="flex items-center gap-3 flex-1">
+                <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center shrink-0">
+                  <Briefcase className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-semibold text-foreground">Are you a service provider or business?</p>
+                  <p className="text-sm text-muted-foreground">List your services to real estate investors on Accountabul.</p>
+                </div>
+              </div>
+              <Button asChild variant="outline" className="shrink-0">
+                <Link to="/auth/vendor">
+                  Join the Vendor Network
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
 
