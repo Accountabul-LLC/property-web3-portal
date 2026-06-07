@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mail, Lock, ArrowRight, User, Building2, Store } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User, Building2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-export type AuthFormVariant = 'individual' | 'business' | 'vendor';
+export type AuthFormVariant = 'individual' | 'business';
 
 interface AuthFormProps {
   variant: AuthFormVariant;
@@ -20,12 +21,13 @@ interface AuthFormProps {
   subtitle: string;
   redirectAfterSignup: string;
   redirectAfterLogin?: string;
+  showVendorOptIn?: boolean;
+  vendorRedirect?: string;
 }
 
 const VARIANT_ICON: Record<AuthFormVariant, React.ComponentType<{ className?: string }>> = {
   individual: User,
   business: Building2,
-  vendor: Store,
 };
 
 export function AuthForm({
@@ -34,6 +36,8 @@ export function AuthForm({
   subtitle,
   redirectAfterSignup,
   redirectAfterLogin,
+  showVendorOptIn = false,
+  vendorRedirect = '/vendors/apply',
 }: AuthFormProps) {
   const navigate = useNavigate();
   const location = useLocation();
