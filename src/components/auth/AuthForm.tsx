@@ -181,6 +181,23 @@ export function AuthForm({
                     </div>
                   </div>
                 )}
+
+                {showVendorOptIn && variant === 'business' && (
+                  <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3">
+                    <Checkbox
+                      id="joinVendorNetwork"
+                      checked={joinVendorNetwork}
+                      onCheckedChange={(v) => setJoinVendorNetwork(v === true)}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor="joinVendorNetwork" className="text-sm font-normal leading-snug cursor-pointer">
+                      Also apply to join the verified vendor network
+                      <span className="block text-xs text-muted-foreground mt-0.5">
+                        We'll take you to the vendor application after signup.
+                      </span>
+                    </Label>
+                  </div>
+                )}
               </>
             )}
 
