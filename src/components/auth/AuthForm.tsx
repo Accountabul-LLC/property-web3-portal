@@ -55,6 +55,7 @@ export function AuthForm({
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [joinVendorNetwork, setJoinVendorNetwork] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -110,7 +111,8 @@ export function AuthForm({
 
         if (data.session) {
           toast.success('Account created! Welcome.');
-          navigate(redirectAfterSignup, { replace: true });
+          const dest = showVendorOptIn && joinVendorNetwork ? vendorRedirect : redirectAfterSignup;
+          navigate(dest, { replace: true });
         } else {
           toast.success('Account created. Please sign in.');
           setMode('login');
@@ -126,7 +128,7 @@ export function AuthForm({
   const otherVariantLinks: { label: string; to: string }[] = [];
   if (variant !== 'individual') otherVariantLinks.push({ label: 'Individual', to: '/auth/individual' });
   if (variant !== 'business') otherVariantLinks.push({ label: 'Business', to: '/auth/business' });
-  if (variant !== 'vendor') otherVariantLinks.push({ label: 'Vendor', to: '/auth/vendor' });
+
 
   return (
     <div className="min-h-screen bg-background">
