@@ -176,7 +176,7 @@ export async function buildVendorSlug(companyName: string, collisionCount = 0, s
 }
 
 export function getVendorPublicUrl(slug: string) {
-  return `/vendor/${slug}`
+  return `/vendors/${slug}`
 }
 
 export function getVendorVerificationLabel(status?: VendorVerificationStatus | string | null) {

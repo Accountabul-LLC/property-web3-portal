@@ -1,8 +1,8 @@
 export const VENDOR_CREDENTIAL_KEY = 'vendor'
 
 export const VENDOR_ENTRY_ROUTE = '/vendors'
-export const VENDOR_ONBOARDING_ROUTE = '/vendor/onboarding'
-export const VENDOR_DASHBOARD_ROUTE = '/vendor/dashboard'
+export const VENDOR_ONBOARDING_ROUTE = '/vendors/apply'
+export const VENDOR_DASHBOARD_ROUTE = '/vendors/dashboard'
 // Legacy alias kept so callers that referenced a separate status page resolve to the dashboard.
 export const VENDOR_STATUS_ROUTE = VENDOR_DASHBOARD_ROUTE
 
