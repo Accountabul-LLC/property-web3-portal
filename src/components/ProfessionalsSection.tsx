@@ -250,7 +250,7 @@ const MarketplaceSection = () => {
           Join our marketplace, submit a verified vendor onboarding request, and connect with property owners looking for verified services.
         </p>
         <Button variant="secondary" size="lg" asChild>
-          <Link to="/vendor/onboarding">
+          <Link to="/vendors/apply">
             Apply to Become a Vendor
           </Link>
         </Button>

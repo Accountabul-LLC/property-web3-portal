@@ -104,7 +104,7 @@ export default function VendorPublicProfile() {
                 vendor.business_description ||
                 'Verified vendor profile on Accountabul.'
               }
-              path={`/vendor/${vendor.slug}`}
+              path={`/vendors/${vendor.slug}`}
             />
           ) : null}
 
@@ -264,7 +264,7 @@ export default function VendorPublicProfile() {
                       <CardHeader className="flex flex-row items-center justify-between space-y-0">
                         <CardTitle className="text-xl">Products & Services</CardTitle>
                         <Button variant="ghost" size="sm" asChild>
-                          <Link to={`/vendor/${vendor.slug}/shop`}>View all</Link>
+                          <Link to={`/vendors/${vendor.slug}/shop`}>View all</Link>
                         </Button>
                       </CardHeader>
                       <CardContent>
@@ -283,7 +283,7 @@ export default function VendorPublicProfile() {
                             {products.map((p) => (
                               <Link
                                 key={p.id}
-                                to={`/vendor/${vendor.slug}/shop/${p.id}`}
+                                to={`/vendors/${vendor.slug}/shop/${p.id}`}
                                 className="group flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-primary/50"
                               >
                                 <div className="flex aspect-[4/3] items-center justify-center overflow-hidden bg-muted">

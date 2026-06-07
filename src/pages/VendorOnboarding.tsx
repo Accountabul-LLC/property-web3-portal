@@ -38,7 +38,7 @@ export default function VendorOnboarding() {
   useEffect(() => {
     if (authLoading || profileLoading || kycLoading || isLoading) return
     if (!user) {
-      navigate('/auth?next=/vendor/onboarding', { replace: true })
+      navigate('/auth?next=/vendors/apply', { replace: true })
       return
     }
     const normalized = normalizeVendorStatus(vendorApplication?.status)
@@ -72,7 +72,7 @@ export default function VendorOnboarding() {
     try {
       await submitVendorApplication()
       toast.success('Vendor application submitted. We will review it within 24 to 48 hours.')
-      navigate('/vendor/dashboard', { replace: true })
+      navigate('/vendors/dashboard', { replace: true })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not submit vendor application.')
     } finally {
@@ -85,7 +85,7 @@ export default function VendorOnboarding() {
       <Seo
         title="Apply to Become a Vendor | Accountabul"
         description="Submit a paid verified vendor application for manual review. Accountabul reviews vendor applications within 24 to 48 hours."
-        path="/vendor/onboarding"
+        path="/vendors/apply"
         noindex
       />
       <Navigation />
@@ -210,7 +210,7 @@ export default function VendorOnboarding() {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
               <Button asChild variant="outline" size="lg">
-                <Link to="/vendor/dashboard">Check status</Link>
+                <Link to="/vendors/dashboard">Check status</Link>
               </Button>
             </div>
 
@@ -221,7 +221,7 @@ export default function VendorOnboarding() {
 
           <div className="space-y-6">
             <VendorBenefitsCard
-              primaryHref="/vendor/dashboard"
+              primaryHref="/vendors/dashboard"
               primaryLabel="Check status"
               secondaryHref="/vendors"
               secondaryLabel="Browse vendor directory"

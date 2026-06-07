@@ -25,12 +25,12 @@ export default function VendorDashboard() {
   useEffect(() => {
     if (isLoading) return
     if (!user) {
-      navigate('/auth?next=/vendor/dashboard', { replace: true })
+      navigate('/auth?next=/vendors/dashboard', { replace: true })
       return
     }
     // Only bounce to onboarding when there's truly no application AND no vendor profile.
     if (status === 'none' && !vendorProfile) {
-      navigate('/vendor/onboarding', { replace: true })
+      navigate('/vendors/apply', { replace: true })
     }
   }, [isLoading, navigate, user, status, vendorProfile])
 
@@ -51,7 +51,7 @@ export default function VendorDashboard() {
       <Seo
         title="Vendor Dashboard | Accountabul"
         description="Manage your verified vendor profile, marketplace exposure, and business tools on Accountabul."
-        path="/vendor/dashboard"
+        path="/vendors/dashboard"
         noindex
       />
       <Navigation />
@@ -114,7 +114,7 @@ export default function VendorDashboard() {
                   </Button>
                 ) : null}
                 <Button asChild variant="outline">
-                  <Link to="/vendor/onboarding">Edit application</Link>
+                  <Link to="/vendors/apply">Edit application</Link>
                 </Button>
               </div>
             </CardContent>
@@ -171,7 +171,7 @@ export default function VendorDashboard() {
             </Card>
 
             <VendorBenefitsCard
-              primaryHref="/vendor/onboarding"
+              primaryHref="/vendors/apply"
               primaryLabel="Edit application"
               secondaryHref="/professionals"
               secondaryLabel="Open marketplace"
