@@ -64,7 +64,7 @@ const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
 const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
 const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
-const VendorJoin = lazyPage(() => import("./pages/VendorJoin"));
+
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 
 function RouteFallback() {
@@ -135,7 +135,7 @@ const App = () => (
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
-                <Route path="/vendors/join" element={<VendorJoin />} />
+                <Route path="/vendors/join" element={<Navigate to="/auth/vendor" replace />} />
                 <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
                 {/* Legacy redirects */}
                 <Route path="/vendor" element={<Navigate to="/vendors" replace />} />
