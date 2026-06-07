@@ -10,9 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Mail, Lock, ArrowRight, User, Building2, Store } from 'lucide-react';
+import { Mail, Lock, ArrowRight, User, Building2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-export type AuthFormVariant = 'individual' | 'business' | 'vendor';
+export type AuthFormVariant = 'individual' | 'business';
 
 interface AuthFormProps {
   variant: AuthFormVariant;
@@ -20,12 +21,13 @@ interface AuthFormProps {
   subtitle: string;
   redirectAfterSignup: string;
   redirectAfterLogin?: string;
+  showVendorOptIn?: boolean;
+  vendorRedirect?: string;
 }
 
 const VARIANT_ICON: Record<AuthFormVariant, React.ComponentType<{ className?: string }>> = {
   individual: User,
   business: Building2,
-  vendor: Store,
 };
 
 export function AuthForm({
@@ -34,6 +36,8 @@ export function AuthForm({
   subtitle,
   redirectAfterSignup,
   redirectAfterLogin,
+  showVendorOptIn = false,
+  vendorRedirect = '/vendors/apply',
 }: AuthFormProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -51,6 +55,7 @@ export function AuthForm({
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [companyName, setCompanyName] = useState('');
+  const [joinVendorNetwork, setJoinVendorNetwork] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -106,7 +111,8 @@ export function AuthForm({
 
         if (data.session) {
           toast.success('Account created! Welcome.');
-          navigate(redirectAfterSignup, { replace: true });
+          const dest = showVendorOptIn && joinVendorNetwork ? vendorRedirect : redirectAfterSignup;
+          navigate(dest, { replace: true });
         } else {
           toast.success('Account created. Please sign in.');
           setMode('login');
@@ -122,7 +128,7 @@ export function AuthForm({
   const otherVariantLinks: { label: string; to: string }[] = [];
   if (variant !== 'individual') otherVariantLinks.push({ label: 'Individual', to: '/auth/individual' });
   if (variant !== 'business') otherVariantLinks.push({ label: 'Business', to: '/auth/business' });
-  if (variant !== 'vendor') otherVariantLinks.push({ label: 'Vendor', to: '/auth/vendor' });
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -173,6 +179,23 @@ export function AuthForm({
                         required
                       />
                     </div>
+                  </div>
+                )}
+
+                {showVendorOptIn && variant === 'business' && (
+                  <div className="flex items-start gap-2 rounded-md border border-border bg-muted/30 p-3">
+                    <Checkbox
+                      id="joinVendorNetwork"
+                      checked={joinVendorNetwork}
+                      onCheckedChange={(v) => setJoinVendorNetwork(v === true)}
+                      className="mt-0.5"
+                    />
+                    <Label htmlFor="joinVendorNetwork" className="text-sm font-normal leading-snug cursor-pointer">
+                      Also apply to join the verified vendor network
+                      <span className="block text-xs text-muted-foreground mt-0.5">
+                        We'll take you to the vendor application after signup.
+                      </span>
+                    </Label>
                   </div>
                 )}
               </>

@@ -77,7 +77,7 @@ export default function VendorsDirectory() {
             </p>
           </div>
           <Button asChild>
-            <Link to="/auth/vendor">
+            <Link to="/auth/business">
               Become a verified vendor
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
@@ -147,7 +147,7 @@ export default function VendorsDirectory() {
                   No vendors match the current filters. Adjust your search, or apply to join the verified vendor network.
                 </p>
                 <Button asChild className="mt-6">
-                  <Link to="/auth/vendor">Apply as a vendor</Link>
+                  <Link to="/auth/business">Apply as a vendor</Link>
                 </Button>
               </CardContent>
             </Card>

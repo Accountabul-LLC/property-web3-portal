@@ -21,7 +21,7 @@ const Tokenize = lazyPage(() => import("./pages/Tokenize"));
 const Auth = lazyPage(() => import("./pages/Auth"));
 const AuthIndividual = lazyPage(() => import("./pages/AuthIndividual"));
 const AuthBusiness = lazyPage(() => import("./pages/AuthBusiness"));
-const AuthVendor = lazyPage(() => import("./pages/AuthVendor"));
+
 const ResetPassword = lazyPage(() => import("./pages/ResetPassword"));
 const Dashboard = lazyPage(() => import("./pages/Dashboard"));
 const Professionals = lazyPage(() => import("./pages/Professionals"));
@@ -90,7 +90,7 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/auth/individual" element={<AuthIndividual />} />
                 <Route path="/auth/business" element={<AuthBusiness />} />
-                <Route path="/auth/vendor" element={<AuthVendor />} />
+                
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
