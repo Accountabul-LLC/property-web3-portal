@@ -1,7 +1,8 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowRight, Shield, TrendingUp, Users, Zap } from 'lucide-react';
+import { ArrowRight, Briefcase, Shield, TrendingUp, Users, Zap } from 'lucide-react';
 import heroImage from '@/assets/hero-image.jpg';
 
 interface HeroSectionProps {
