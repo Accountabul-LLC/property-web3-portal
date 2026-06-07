@@ -255,9 +255,9 @@ const Navigation = () => {
             )}
             {user && vendorSlug && (
               <Button
-                variant={currentPath === `/vendor/${vendorSlug}` ? 'default' : 'outline'}
+                variant={currentPath === `/vendors/${vendorSlug}` ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => navigate(`/vendor/${vendorSlug}`)}
+                onClick={() => navigate(`/vendors/${vendorSlug}`)}
                 className="h-8 px-3 text-xs font-medium"
                 title="My public vendor profile"
               >
@@ -349,9 +349,9 @@ const Navigation = () => {
               )}
               {user && vendorSlug && (
                 <button
-                  onClick={() => { navigate(`/vendor/${vendorSlug}`); setIsMobileMenuOpen(false); }}
+                  onClick={() => { navigate(`/vendors/${vendorSlug}`); setIsMobileMenuOpen(false); }}
                   className={`flex items-center space-x-2 w-full px-3 py-2 rounded-md text-sm font-medium transition-all duration-300 ${
-                    currentPath === `/vendor/${vendorSlug}`
+                    currentPath === `/vendors/${vendorSlug}`
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}

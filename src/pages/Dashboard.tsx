@@ -309,8 +309,8 @@ const Dashboard = () => {
     vendorStatus === 'under_review' ||
     vendorStatus === 'approved' ||
     vendorStatus === 'issued_pending_acceptance'
-      ? '/vendor/dashboard'
-      : '/vendor/onboarding';
+      ? '/vendors/dashboard'
+      : '/vendors/apply';
   const vendorActionLabel =
     vendorStatus === 'active'
       ? 'Open vendor dashboard'

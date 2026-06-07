@@ -71,8 +71,8 @@ const STATIC_ROUTES: Record<string, RouteMeta> = {
   '/payments': { title: `Payments | ${SITE_NAME}`, description: 'Payments and invoices.', noindex: true },
   '/payments/history': { title: `Payment History | ${SITE_NAME}`, description: 'Payment history.', noindex: true },
   '/settings': { title: `Settings | ${SITE_NAME}`, description: 'Account settings and preferences.', noindex: true },
-  '/vendor/onboarding': { title: `Apply to Become a Vendor | ${SITE_NAME}`, description: 'Submit your vendor application.', noindex: true },
-  '/vendor/dashboard': { title: `Vendor Dashboard | ${SITE_NAME}`, description: 'Vendor dashboard.', noindex: true },
+  '/vendors/apply': { title: `Apply to Become a Vendor | ${SITE_NAME}`, description: 'Submit your vendor application.', noindex: true },
+  '/vendors/dashboard': { title: `Vendor Dashboard | ${SITE_NAME}`, description: 'Vendor dashboard.', noindex: true },
   
 };
 
@@ -83,7 +83,7 @@ const matchDynamic = (pathname: string): RouteMeta | null => {
       description: 'View tokenized property details, financials, documents, and on-chain ownership on Accountabul.',
     };
   }
-  if (pathname.startsWith('/vendor/')) {
+  if (pathname.startsWith('/vendors/') && pathname !== '/vendors/apply' && pathname !== '/vendors/dashboard' && pathname !== '/vendors/status') {
     return {
       title: `Vendor Profile | ${SITE_NAME}`,
       description: 'Public verified vendor profile on Accountabul.',

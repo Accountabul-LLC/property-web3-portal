@@ -12,8 +12,8 @@ const AuthVendor = () => (
       variant="vendor"
       title="Vendor Account"
       subtitle="Join the verified vendor network and earn the trust badge"
-      redirectAfterSignup="/vendor/onboarding"
-      redirectAfterLogin="/vendor/onboarding"
+      redirectAfterSignup="/vendors/apply"
+      redirectAfterLogin="/vendors/apply"
     />
   </>
 );
