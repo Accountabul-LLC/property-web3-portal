@@ -1895,79 +1895,49 @@ export type Database = {
       }
       vendor_leads: {
         Row: {
-          assigned_admin_id: string | null
-          best_time_to_contact: string | null
-          business_name: string | null
-          city_service_area: string | null
           created_at: string
-          follow_up_date: string | null
           id: string
-          internal_notes: string | null
-          licensed_status: string | null
-          message: string | null
-          occupation: string | null
+          message: string
           property_address: string | null
           requester_email: string
           requester_name: string
           requester_phone: string | null
-          serves_real_estate: string | null
-          service_description: string | null
           service_needed: string | null
           source: string
           status: string
           updated_at: string
           vendor_notes: string | null
-          vendor_profile_id: string | null
+          vendor_profile_id: string
         }
         Insert: {
-          assigned_admin_id?: string | null
-          best_time_to_contact?: string | null
-          business_name?: string | null
-          city_service_area?: string | null
           created_at?: string
-          follow_up_date?: string | null
           id?: string
-          internal_notes?: string | null
-          licensed_status?: string | null
-          message?: string | null
-          occupation?: string | null
+          message: string
           property_address?: string | null
           requester_email: string
           requester_name: string
           requester_phone?: string | null
-          serves_real_estate?: string | null
-          service_description?: string | null
           service_needed?: string | null
           source?: string
           status?: string
           updated_at?: string
           vendor_notes?: string | null
-          vendor_profile_id?: string | null
+          vendor_profile_id: string
         }
         Update: {
-          assigned_admin_id?: string | null
-          best_time_to_contact?: string | null
-          business_name?: string | null
-          city_service_area?: string | null
           created_at?: string
-          follow_up_date?: string | null
           id?: string
-          internal_notes?: string | null
-          licensed_status?: string | null
-          message?: string | null
-          occupation?: string | null
+          message?: string
           property_address?: string | null
           requester_email?: string
           requester_name?: string
           requester_phone?: string | null
-          serves_real_estate?: string | null
-          service_description?: string | null
           service_needed?: string | null
           source?: string
           status?: string
           updated_at?: string
           vendor_notes?: string | null
-          vendor_profile_id?: string | null
+          vendor_profile_id?: string
         }
         Relationships: [
           {

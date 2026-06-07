@@ -6,8 +6,6 @@ import Footer from '@/components/Footer'
 import { useAuth } from '@/hooks/useAuth'
 import { useTeamAccess } from '@/hooks/useTeamAccess'
 import VendorCRMPanel from '@/components/admin/VendorCRMPanel'
-import VendorIntakeLeadsPanel from '@/components/admin/VendorIntakeLeadsPanel'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
 export default function AdminVendors() {
   const navigate = useNavigate()
@@ -46,23 +44,12 @@ export default function AdminVendors() {
           <div>
             <h1 className="text-2xl font-bold">Verified Vendors</h1>
             <p className="text-sm text-muted-foreground">
-              Review applications, KYC/KYB context, ads, marketplace status, and prospective vendor intake leads.
+              Review applications, KYC/KYB context, ads, and marketplace status.
             </p>
           </div>
         </div>
 
-        <Tabs defaultValue="vendors" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="vendors">Vendors</TabsTrigger>
-            <TabsTrigger value="intake">Intake Leads</TabsTrigger>
-          </TabsList>
-          <TabsContent value="vendors">
-            <VendorCRMPanel />
-          </TabsContent>
-          <TabsContent value="intake">
-            <VendorIntakeLeadsPanel />
-          </TabsContent>
-        </Tabs>
+        <VendorCRMPanel />
       </div>
       <Footer />
     </div>

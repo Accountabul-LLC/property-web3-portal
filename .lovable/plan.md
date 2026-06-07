@@ -1,105 +1,54 @@
-# Vendor Intake Form + Admin CRM Tab
+# Remove Duplicate Vendor Flow
 
-Reuse the existing `vendor_leads` table and the `/admin/vendors` page rather than creating parallel infrastructure. Intake submissions are flagged via `source = 'intake_join'` and stored without a vendor profile.
+You're right — last turn I added a parallel `/vendors/join` intake form and an "Intake Leads" admin tab on top of the existing vendor signup. That split the flow in two. This plan reverts that duplication and leaves a single, simple vendor path.
 
-## 1. Public intake page — `/vendors/join`
+## The duplication
 
-New file: `src/pages/VendorJoin.tsx` (route added to `src/App.tsx`). Linked from Navigation, Footer, and a "Join the Network" CTA on `/vendors`.
+| Concept | Existing (keep) | Duplicate (remove) |
+|---|---|---|
+| Apply / signup | `/auth/vendor` → `/vendor/onboarding` | `/vendors/join` |
+| Vendor record | `vendor_profiles` (account-tied) | `vendor_leads` intake rows (no account) |
+| Admin review | Vendors panel in `/admin/vendors` | "Intake Leads" tab |
+| Footer link | "Verified Vendors" | "Join the Vendor Network" |
+| Directory CTAs | "Apply as a vendor" → `/auth/vendor` | "Join the Network" → `/vendors/join` |
 
-Single-column form (mobile-first, matches existing brand: dark/light, blue gradients, 40px buttons, Sonner toasts), validated with zod.
+`/vendor/dashboard` and `/vendor/status` only appear once — the others (`/vendors/dashboard`, `/vendors/status`, `/vendors/apply`) are pure redirects and stay so old links don't 404.
 
-**Required**
+## Single canonical flow (after cleanup)
 
-- Full Name
-- Business Name
-- Phone Number
-- Email Address
-- City / Service Area
-- Occupation / Trade
-- Licensed or Insured Status (radio: Licensed, Insured, Both, Neither)
-- Best Time to Contact You (select: Morning / Afternoon / Evening / Anytime)
+```
+/vendors (directory)
+   └─ "Apply as a vendor" → /auth/vendor (sign up / log in)
+                              └─ /vendor/onboarding (the one application form)
+                                    └─ /vendor/dashboard (status + management)
+```
 
-**Optional**
+Admin sees every vendor — applied, under review, approved — in the existing Vendors panel at `/admin/vendors`. No second list.
 
-- Type of Business or Services Offered (text)
-- Do you currently serve real estate investors, landlords, or property owners? (Yes / No / Sometimes)
-- Short description of what you do (textarea, 1000 char)
+## Changes
 
-**Submit button:** "Submit"
+**Delete**
+- `src/pages/VendorJoin.tsx`
+- `src/components/admin/VendorIntakeLeadsPanel.tsx`
+- `src/hooks/useVendorIntakeLeads.ts`
 
-**Confirmation dialog after success:**
+**Edit**
+- `src/App.tsx` — remove `VendorJoin` import + `/vendors/join` route; keep the legacy redirects.
+- `src/pages/AdminVendors.tsx` — drop the Tabs wrapper, render `VendorCRMPanel` directly, restore the original heading copy.
+- `src/pages/VendorsDirectory.tsx` — remove the "Join the Network" CTA block; keep the single "Apply as a vendor" link to `/auth/vendor`.
+- `src/components/Footer.tsx` — remove the "Join the Vendor Network" link.
 
-> Thank you. The form has been submitted. A member of the Accountabul team will review your details and give you a call within the next 7 days.
->
-> Would you like to also create a business account with us to track your application and unlock vendor tools?
-> [Create Business Account → `/auth/vendor`] [No thanks]
+**Database** — new migration that reverses the prior `vendor_leads` extension:
+- Drop the columns added last turn: `business_name`, `city_service_area`, `occupation`, `licensed_status`, `best_time_to_contact`, `serves_real_estate`, `service_description`, `internal_notes`, `follow_up_date`, `assigned_admin_id`.
+- Drop the `anon`/`authenticated` INSERT policy for `source = 'intake_join'`.
+- Delete any rows where `source = 'intake_join'` (intake submissions made in the last day, if any).
+- Restore `vendor_profile_id` and `message` to `NOT NULL` (after the delete above, the table is back to customer-inquiry rows only, which always have both).
 
-No auth required to submit. Honeypot + simple rate-limit guard (one submit per minute per IP via supabase function) — optional, deferred unless asked.
+## Out of scope
 
-## 2. Data model — extend `vendor_leads`
+- The customer → vendor inquiry feature that originally used `vendor_leads` (different feature, untouched).
+- Any change to the actual `/vendor/onboarding` form or `/vendor/dashboard` page.
 
-One migration (adds columns nullable so existing customer-inquiry rows are unaffected; makes `vendor_profile_id` and `message` nullable for intake rows; adds new statuses).
+## Confirm before I run it
 
-New columns:
-
-- `business_name text`
-- `city_service_area text`
-- `occupation text`
-- `licensed_status text` (Licensed | Insured | Both | Neither)
-- `best_time_to_contact text`
-- `serves_real_estate text` (Yes | No | Sometimes)
-- `service_description text`
-- `internal_notes text` (admin-only notes, distinct from existing `vendor_notes` used by vendor users)
-- `follow_up_date date`
-- `assigned_admin_id uuid` (nullable, future use)
-
-Status check constraint expanded to: `new | contacted | interested | not_interested | approved | rejected | closed | spam | archived` (keeps old values for back-compat).
-
-Source values: existing `vendor_directory` (customer → vendor) + new `intake_join` (prospective vendor → Accountabul).
-
-**RLS additions**
-
-- New INSERT policy: `anon` and `authenticated` may insert rows where `source = 'intake_join'` AND `vendor_profile_id IS NULL`.
-- Existing admin-all policy already covers read/update/delete of intake rows.
-
-## 3. Admin CRM — new tab in `/admin/vendors`
-
-Extend `src/pages/AdminVendors.tsx` (or its panel `src/components/admin/VendorCRMPanel.tsx`) with tabs:
-
-- **Vendors** (existing list of vendor profiles / signups)
-- **Customer Leads** (existing per-vendor inquiries, `source = 'vendor_directory'`)
-- **Intake Leads** (new, `source = 'intake_join'`) — the focus here.
-
-Intake Leads tab provides:
-
-- Table columns: Submitted, Full Name, Business, City, Occupation, Licensed, Best Time, Status, Follow-up.
-- Filters: status (multi), city (text), occupation (text), date range.
-- Row click → side drawer with full details, internal notes editor, status dropdown, follow-up date picker, and a timeline of `updated_at` changes.
-- Status colors via existing badge variants.
-- CSV export (client-side) of current filtered rows.
-
-New hook: `src/hooks/useVendorIntakeLeads.ts` (React Query, 15s staleTime, follows project conventions). Reuse Sonner for save toasts.
-
-## 4. Files touched
-
-- `supabase/migrations/<ts>_vendor_intake_extend.sql` — schema + RLS.
-- `src/pages/VendorJoin.tsx` — new.
-- `src/App.tsx` — add `/vendors/join` route.
-- `src/components/Navigation.tsx`, `src/components/Footer.tsx` — add link.
-- `src/pages/VendorsDirectory.tsx` — "Join the Network" CTA.
-- `src/pages/AdminVendors.tsx` and/or `src/components/admin/VendorCRMPanel.tsx` — Intake Leads tab.
-- `src/hooks/useVendorIntakeLeads.ts` — new hook.
-- Types regenerate automatically after migration.
-
-## Technical notes
-
-- Validation: zod schema mirrored in client + edge-function-free direct insert (RLS gates it).
-- Phone/email stored as text with the existing length + format check constraints; we'll add a similar length cap (≤120) for new text columns.
-- `vendor_profile_id` made nullable: existing FK + cascade stays; intake rows simply have NULL.
-- No XRPL, payments, or AI changes.
-
-## Out of scope (ask if wanted)
-
-- Email/SMS notification to admins on new intake submission.
-- Auto-account-creation flow when user clicks "Create Business Account" (currently routes to existing `/auth/vendor`).
-- Audit trail table for status changes (could reuse `updated_at` only for v1).
+The migration deletes intake submissions captured at `/vendors/join` since yesterday. Say the word if you'd like me to export them to CSV first, otherwise I'll proceed as written.
