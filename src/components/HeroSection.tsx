@@ -109,7 +109,7 @@ const HeroSection = ({ onGetStarted, onExploreMarketplace }: HeroSectionProps) =
                 </div>
               </div>
               <Button asChild variant="outline" className="shrink-0">
-                <Link to="/auth/vendor">
+                <Link to="/auth/business">
                   Join the Vendor Network
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>
