@@ -76,12 +76,20 @@ export default function VendorsDirectory() {
               Browse approved vendors, filter by industry and state, and contact a business directly from its public profile.
             </p>
           </div>
-          <Button asChild variant="outline">
-            <Link to="/auth/vendor">
-              Become a verified vendor
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button asChild>
+              <Link to="/vendors/join">
+                Join the Network
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/auth/vendor">
+                Become a verified vendor
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
         </div>
 
         <Card className="mt-8">

@@ -8,6 +8,7 @@ const Footer = () => {
     Platform: [
       { label: 'Real Estate Marketplace', href: '/marketplace' },
       { label: 'Verified Vendors', href: '/vendors' },
+      { label: 'Join the Vendor Network', href: '/vendors/join' },
       { label: 'Smart Escrow', href: '/smart-escrow' },
       { label: 'Tokenize Property', href: '/tokenize' },
       { label: 'Professional Marketplace', href: '/professionals' },
