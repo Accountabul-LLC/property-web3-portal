@@ -135,7 +135,7 @@ const App = () => (
                 <Route path="/vendors" element={<VendorsDirectory />} />
                 <Route path="/vendors/apply" element={<VendorOnboarding />} />
                 <Route path="/vendors/dashboard" element={<VendorDashboard />} />
-                <Route path="/vendors/status" element={<VendorDashboard />} />
+                <Route path="/vendors/status" element={<Navigate to="/vendors/dashboard" replace />} />
                 <Route path="/vendors/:slug" element={<VendorPublicProfile />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
