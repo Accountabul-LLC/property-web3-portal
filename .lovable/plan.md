@@ -1,52 +1,105 @@
-## Goal
-Port the membership / subscription Stripe setup from **Real Estate Explorer** into this project so `/pricing` becomes a working subscription checkout. The other project uses TanStack Start server functions — here we'll re-implement the same behavior with **Supabase Edge Functions** (this is a React + Vite + Supabase stack). All Stripe secrets are already configured (`STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`).
+# Vendor Intake Form + Admin CRM Tab
 
-## What gets ported (feature parity)
-1. Stripe Embedded Checkout for 3 tiers (Starter / Professional / Portfolio), monthly + annual toggle.
-2. Guest checkout supported (no auth required to pay). If signed in we tag the Stripe Customer/Subscription with `userId`.
-3. Post-purchase `/checkout/return` page that retrieves the session and, for guests, prompts account creation; matching `pending_memberships` row is linked to the new user on signup.
-4. `/account/billing` page: shows current tier, renewal date, Stripe Billing Portal button, custom Cancel-with-prorated-refund flow.
-5. Webhook handler keeps `subscriptions` in sync.
-6. Membership gating reads from `subscriptions.status` (active/trialing) instead of `profiles.membership_tier_id`.
+Reuse the existing `vendor_leads` table and the `/admin/vendors` page rather than creating parallel infrastructure. Intake submissions are flagged via `source = 'intake_join'` and stored without a vendor profile.
 
-## Database (one migration)
-- New table `subscriptions` — user_id, stripe_subscription_id (unique), stripe_customer_id, product_id, price_id, status, current_period_start, current_period_end, cancel_at_period_end, environment.
-- New table `pending_memberships` — email, stripe_subscription_id (unique), stripe_customer_id, product_id, price_id, status, current_period_*, environment.
-- New table `cancellation_audit` — user_id, stripe_subscription_id, stripe_customer_id, stripe_refund_id, original_amount_cents, refund_amount_cents, currency, cycle_start, cycle_end, days_used, days_remaining.
-- Add columns to `membership_tiers`: `stripe_price_lookup_monthly`, `stripe_price_lookup_annual` (text). Admin sets these in `/admin/pricing`.
-- Extend `handle_new_user` trigger to move any `pending_memberships` row matching the new user's email into `subscriptions`.
-- RLS: users can `SELECT` own `subscriptions` / `cancellation_audit`. `pending_memberships` is service-role only. GRANTs for `authenticated` + `service_role` on each new table.
+## 1. Public intake page — `/vendors/join`
 
-## Edge functions (new, under `supabase/functions/`)
-- `stripe-create-checkout` — POST `{ tierId, interval: 'monthly'|'annual', returnUrl }` → returns `{ clientSecret }`. Resolves/creates customer (by `metadata.userId` for signed-in users, by email for guests), creates embedded checkout session in subscription mode with `managed_payments: { enabled: true }`.
-- `stripe-get-checkout-session` — POST `{ sessionId }` → returns `{ email, subscriptionId, customerId, priceId, status }` for the return page.
-- `stripe-create-portal` — POST `{ returnUrl }` (auth required) → returns `{ url }`.
-- `stripe-preview-cancel` / `stripe-cancel-membership` — auth required, computes prorated refund (`remaining_days / cycle_days × amount_paid`), issues refund, cancels subscription immediately, writes `cancellation_audit`, flips local `subscriptions.status` to canceled.
-- `stripe-webhook` — verifies signature via `STRIPE_WEBHOOK_SECRET`, handles `customer.subscription.{created,updated,deleted}` and `checkout.session.completed`; writes to `subscriptions` when `metadata.userId` is present, otherwise upserts `pending_memberships` keyed by Stripe customer email. Deployed with `verify_jwt = false`.
+New file: `src/pages/VendorJoin.tsx` (route added to `src/App.tsx`). Linked from Navigation, Footer, and a "Join the Network" CTA on `/vendors`.
 
-All functions use `npm:stripe@^17` and the shared CORS helper already used in this project.
+Single-column form (mobile-first, matches existing brand: dark/light, blue gradients, 40px buttons, Sonner toasts), validated with zod.
 
-## Frontend changes
-- `src/lib/stripe.ts` — `getStripe()` using `STRIPE_PUBLISHABLE_KEY` from env.
-- `src/components/membership/StripeEmbeddedCheckout.tsx` — wraps `@stripe/react-stripe-js` `EmbeddedCheckoutProvider` in a dialog.
-- `src/hooks/useStripeCheckout.ts` — calls `stripe-create-checkout`.
-- `src/hooks/useSubscription.ts` — reads `subscriptions` for current user (replaces `useMyMembership` for gating).
-- `src/pages/Pricing.tsx` — replace `useSelectMembership` (which just updates `profiles.membership_tier_id`) with `useStripeCheckout`; CTA opens the embedded checkout dialog. Monthly/annual toggle drives which lookup key is used.
-- `src/pages/CheckoutReturn.tsx` (`/checkout/return`) — reads `session_id`, calls `stripe-get-checkout-session`, shows success state; for guests shows "finish creating your account" form.
-- `src/pages/AccountBilling.tsx` (`/account/billing`) — current plan card, "Manage in Stripe" button, "Cancel membership" dialog showing prorated refund preview.
-- Route registrations in `src/App.tsx`.
-- Admin pricing page: add two inputs for `stripe_price_lookup_monthly` / `stripe_price_lookup_annual` per tier.
+**Required**
 
-## Stripe dashboard (manual, one-time)
-User creates 3 products + monthly/annual prices in Stripe (test mode), assigns lookup keys like `accountabul_starter_monthly`, `accountabul_starter_annual`, etc., and pastes them into `/admin/pricing`. Webhook endpoint URL (the deployed `stripe-webhook` function) gets registered in Stripe → produces `STRIPE_WEBHOOK_SECRET` which we'll request as a secret.
+- Full Name
+- Business Name
+- Phone Number
+- Email Address
+- City / Service Area
+- Occupation / Trade
+- Licensed or Insured Status (radio: Licensed, Insured, Both, Neither)
+- Best Time to Contact You (select: Morning / Afternoon / Evening / Anytime)
 
-## Packages to add
-`@stripe/stripe-js`, `@stripe/react-stripe-js` (already present in repo — will reuse).
+**Optional**
 
-## Out of scope (call out, don't build)
-- Migrating campaign one-time payment flows (already working in this project).
-- Live mode — sandbox/test only until user verifies.
-- Changing existing `profiles.membership_tier_id` consumers beyond pointing them at `subscriptions` for gating.
+- Type of Business or Services Offered (text)
+- Do you currently serve real estate investors, landlords, or property owners? (Yes / No / Sometimes)
+- Short description of what you do (textarea, 1000 char)
 
-## Open question
-Do you want me to also delete / disable the equivalent files in **Real Estate Explorer** after this lands, or leave that project untouched? (Default: leave it alone.)
+**Submit button:** "Submit"
+
+**Confirmation dialog after success:**
+
+> Thank you. The form has been submitted. A member of the Accountabul team will review your details and give you a call within the next 7 days.
+>
+> Would you like to also create a business account with us to track your application and unlock vendor tools?
+> [Create Business Account → `/auth/vendor`] [No thanks]
+
+No auth required to submit. Honeypot + simple rate-limit guard (one submit per minute per IP via supabase function) — optional, deferred unless asked.
+
+## 2. Data model — extend `vendor_leads`
+
+One migration (adds columns nullable so existing customer-inquiry rows are unaffected; makes `vendor_profile_id` and `message` nullable for intake rows; adds new statuses).
+
+New columns:
+
+- `business_name text`
+- `city_service_area text`
+- `occupation text`
+- `licensed_status text` (Licensed | Insured | Both | Neither)
+- `best_time_to_contact text`
+- `serves_real_estate text` (Yes | No | Sometimes)
+- `service_description text`
+- `internal_notes text` (admin-only notes, distinct from existing `vendor_notes` used by vendor users)
+- `follow_up_date date`
+- `assigned_admin_id uuid` (nullable, future use)
+
+Status check constraint expanded to: `new | contacted | interested | not_interested | approved | rejected | closed | spam | archived` (keeps old values for back-compat).
+
+Source values: existing `vendor_directory` (customer → vendor) + new `intake_join` (prospective vendor → Accountabul).
+
+**RLS additions**
+
+- New INSERT policy: `anon` and `authenticated` may insert rows where `source = 'intake_join'` AND `vendor_profile_id IS NULL`.
+- Existing admin-all policy already covers read/update/delete of intake rows.
+
+## 3. Admin CRM — new tab in `/admin/vendors`
+
+Extend `src/pages/AdminVendors.tsx` (or its panel `src/components/admin/VendorCRMPanel.tsx`) with tabs:
+
+- **Vendors** (existing list of vendor profiles / signups)
+- **Customer Leads** (existing per-vendor inquiries, `source = 'vendor_directory'`)
+- **Intake Leads** (new, `source = 'intake_join'`) — the focus here.
+
+Intake Leads tab provides:
+
+- Table columns: Submitted, Full Name, Business, City, Occupation, Licensed, Best Time, Status, Follow-up.
+- Filters: status (multi), city (text), occupation (text), date range.
+- Row click → side drawer with full details, internal notes editor, status dropdown, follow-up date picker, and a timeline of `updated_at` changes.
+- Status colors via existing badge variants.
+- CSV export (client-side) of current filtered rows.
+
+New hook: `src/hooks/useVendorIntakeLeads.ts` (React Query, 15s staleTime, follows project conventions). Reuse Sonner for save toasts.
+
+## 4. Files touched
+
+- `supabase/migrations/<ts>_vendor_intake_extend.sql` — schema + RLS.
+- `src/pages/VendorJoin.tsx` — new.
+- `src/App.tsx` — add `/vendors/join` route.
+- `src/components/Navigation.tsx`, `src/components/Footer.tsx` — add link.
+- `src/pages/VendorsDirectory.tsx` — "Join the Network" CTA.
+- `src/pages/AdminVendors.tsx` and/or `src/components/admin/VendorCRMPanel.tsx` — Intake Leads tab.
+- `src/hooks/useVendorIntakeLeads.ts` — new hook.
+- Types regenerate automatically after migration.
+
+## Technical notes
+
+- Validation: zod schema mirrored in client + edge-function-free direct insert (RLS gates it).
+- Phone/email stored as text with the existing length + format check constraints; we'll add a similar length cap (≤120) for new text columns.
+- `vendor_profile_id` made nullable: existing FK + cascade stays; intake rows simply have NULL.
+- No XRPL, payments, or AI changes.
+
+## Out of scope (ask if wanted)
+
+- Email/SMS notification to admins on new intake submission.
+- Auto-account-creation flow when user clicks "Create Business Account" (currently routes to existing `/auth/vendor`).
+- Audit trail table for status changes (could reuse `updated_at` only for v1).
