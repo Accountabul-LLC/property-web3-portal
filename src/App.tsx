@@ -64,6 +64,7 @@ const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
 const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
 const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
+const VendorJoin = lazyPage(() => import("./pages/VendorJoin"));
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 
 function RouteFallback() {
