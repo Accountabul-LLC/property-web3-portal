@@ -135,6 +135,7 @@ const App = () => (
                 <Route path="/vendor/onboarding" element={<VendorOnboarding />} />
                 <Route path="/vendor/dashboard" element={<VendorDashboard />} />
                 <Route path="/vendors" element={<VendorsDirectory />} />
+                <Route path="/vendors/join" element={<VendorJoin />} />
                 <Route path="/vendor/:slug" element={<VendorPublicProfile />} />
                 {/* Legacy redirects */}
                 <Route path="/vendor" element={<Navigate to="/vendors" replace />} />
