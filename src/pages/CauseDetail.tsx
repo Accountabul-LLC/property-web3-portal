@@ -66,7 +66,7 @@ function CauseHero({ campaign }: { campaign: any }) {
             <Heart className="w-24 h-24 text-primary/20" />
           </div>
         )}
-        {campaign.status === 'completed' && (
+        {campaign.status === 'completed' && campaign.goal_amount != null && campaign.total_raised >= campaign.goal_amount && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <div className="text-center text-white">
               <CheckCircle2 className="w-12 h-12 mx-auto mb-2 text-green-400" />
@@ -213,7 +213,7 @@ export default function CauseDetail() {
                   <Lock className="w-3 h-3" />
                   {isDirectCampaign ? 'Direct Donation' : 'XRPL Escrow'}
                 </Badge>
-                {campaign.status === 'completed' && (
+                {campaign.status === 'completed' && campaign.goal_amount != null && campaign.total_raised >= campaign.goal_amount && (
                   <Badge className="bg-green-600 text-white">Funded</Badge>
                 )}
               </div>
