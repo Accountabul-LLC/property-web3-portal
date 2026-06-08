@@ -50,6 +50,16 @@ export function useTeamAccess() {
       return;
     }
 
+    // Hard email allowlist — only the designated admin email can pass,
+    // even if a user_roles row exists for another account.
+    if ((user.email ?? '').toLowerCase() !== ADMIN_EMAIL) {
+      roleCache.set(user.id, false);
+      setHasAccess(false);
+      setLoading(false);
+      return;
+    }
+
+
     const known = roleCache.get(user.id);
     if (known !== undefined) {
       setHasAccess(known);
