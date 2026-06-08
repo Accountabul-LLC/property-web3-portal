@@ -108,44 +108,77 @@ function PropertyCard({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">${property.price_per_token}</span>
-              <div className="flex items-center text-success text-sm font-medium">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {property.projected_rental_yield}% yield
+          {isStandard ? (
+            <>
+              <div className="space-y-1">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-bold">
+                    {property.listing_price != null
+                      ? `$${Number(property.listing_price).toLocaleString()}`
+                      : 'Contact for price'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">List price</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Posted by a third-party business. Not a tokenized asset.
+                </p>
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              per token • {(property.tokens_available || 0).toLocaleString()} of {(property.total_tokens || 0).toLocaleString()} available
-            </p>
-          </div>
 
-          <div className="space-y-1">
-            <div className="w-full bg-muted rounded-full h-2">
-              <div
-                className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${property.total_tokens
-                    ? ((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100
-                    : 0}%`,
-                }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {property.total_tokens
-                ? Math.round(((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100)
-                : 0}% funded
-            </p>
-          </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {property.contact_email ? (
+                  <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" /> {property.contact_email}</span>
+                ) : null}
+                {property.contact_phone ? (
+                  <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" /> {property.contact_phone}</span>
+                ) : null}
+              </div>
 
-          <Button
-            className="w-full"
-            variant={property.status === 'active' ? 'default' : 'secondary'}
-            onClick={() => navigate(`/property/${property.id}`)}
-          >
-            View Details
-          </Button>
+              <Button className="w-full" onClick={() => navigate(`/property/${property.id}`)}>
+                View Listing
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold">${property.price_per_token}</span>
+                  <div className="flex items-center text-success text-sm font-medium">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    {property.projected_rental_yield}% yield
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  per token • {(property.tokens_available || 0).toLocaleString()} of {(property.total_tokens || 0).toLocaleString()} available
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${property.total_tokens
+                        ? ((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100
+                        : 0}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {property.total_tokens
+                    ? Math.round(((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100)
+                    : 0}% funded
+                </p>
+              </div>
+
+              <Button
+                className="w-full"
+                variant={property.status === 'active' ? 'default' : 'secondary'}
+                onClick={() => navigate(`/property/${property.id}`)}
+              >
+                View Details
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
