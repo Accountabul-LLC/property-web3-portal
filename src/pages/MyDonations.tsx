@@ -33,7 +33,7 @@ function formatDateTime(date: string) {
 }
 
 function formatUsd(value: number | null | undefined) {
-  if (!Number.isFinite(Number(value))) return '—'
+  if (!Number.isFinite(Number(value))) return '-'
   return Number(value).toLocaleString('en-US', {
     style: 'currency',
     currency: 'USD',

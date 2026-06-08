@@ -88,7 +88,7 @@ export function NotificationBell() {
       donation_id: null,
       raw: n,
     }));
-    // Dedupe by tx_hash — prefer server entries
+    // Dedupe by tx_hash - prefer server entries
     const seenTx = new Set(fromServer.map((n) => n.tx_hash).filter(Boolean) as string[]);
     const walletDeduped = fromWallet.filter((n) => !n.tx_hash || !seenTx.has(n.tx_hash));
     return [...fromServer, ...walletDeduped].sort(

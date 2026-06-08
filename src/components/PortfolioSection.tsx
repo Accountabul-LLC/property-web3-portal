@@ -486,7 +486,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                       {isXrpExpanded && (
                         <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
                           <p className="text-sm text-muted-foreground">
-                            XRP is the native digital asset of the XRP Ledger — a decentralized, open-source blockchain. It's used for fast, low-cost cross-border payments and serves as the bridge currency on the XRPL DEX.
+                            XRP is the native digital asset of the XRP Ledger - a decentralized, open-source blockchain. It's used for fast, low-cost cross-border payments and serves as the bridge currency on the XRPL DEX.
                           </p>
 
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -672,7 +672,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                   );
                 })}
 
-                {/* MPT Issuances — tokens this wallet created */}
+                {/* MPT Issuances - tokens this wallet created */}
                 {xrplData.mpt_issuances && xrplData.mpt_issuances.length > 0 && (() => {
                   const filtered = xrplData.mpt_issuances.filter(mpt => {
                     if (!mptSearchQuery) return true;
@@ -708,7 +708,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                               className="h-7 text-xs px-2"
                               onClick={() => setMptSortMode(mode)}
                             >
-                              {mode === 'newest' ? 'Newest' : mode === 'alpha' ? 'A–Z' : 'Supply'}
+                              {mode === 'newest' ? 'Newest' : mode === 'alpha' ? 'A-Z' : 'Supply'}
                             </Button>
                           ))}
                         </div>
@@ -918,7 +918,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                   );
                 })()}
 
-                {/* MPT Holdings — tokens this wallet holds (not issued) */}
+                {/* MPT Holdings - tokens this wallet holds (not issued) */}
                 {xrplData.mpt_holdings && xrplData.mpt_holdings.length > 0 && (
                   <>
                     <h4 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
@@ -1095,7 +1095,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              {tx.date ? new Date(tx.date).toLocaleString() : '—'}
+                              {tx.date ? new Date(tx.date).toLocaleString() : '-'}
                               {tx.fee > 0 && ` • Fee: ${tx.fee} XRP`}
                             </p>
                           </div>

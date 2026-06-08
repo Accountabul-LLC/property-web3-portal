@@ -266,7 +266,7 @@ export default function AdminCauses() {
       } else if (json.campaign_completed) {
         toast.success(`All escrow released for ${campaign.title}`)
       } else if ((json.manual_count ?? 0) > 0 && (json.released_count ?? 0) === 0) {
-        toast.info(`Release prepared for manual signing — ${json.manual_count} escrow(s) waiting`)
+        toast.info(`Release prepared for manual signing - ${json.manual_count} escrow(s) waiting`)
       } else if ((json.manual_count ?? 0) > 0) {
         toast.info(`${json.released_count} escrow(s) released, ${json.manual_count} still need manual signing`)
       } else {
@@ -673,7 +673,7 @@ export default function AdminCauses() {
                   maxLength={34}
                 />
                 <p className="text-xs text-muted-foreground">
-                  The beneficiary's XRPL address — donations sit in on-chain escrow until the release date, then settle to this wallet. This is not an intermediary or platform wallet.
+                  The beneficiary's XRPL address - donations sit in on-chain escrow until the release date, then settle to this wallet. This is not an intermediary or platform wallet.
                 </p>
               </div>
 
@@ -872,7 +872,7 @@ export default function AdminCauses() {
                 )}
               </DialogTitle>
               <DialogDescription>
-                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions. Closing this dialog keeps your edits as a local draft — nothing changes until you click <span className="font-medium">Save Changes</span>.
+                Update the cause title, description, goal, and images. Structural fields (wallet, network, release date, status) are managed through the dedicated actions. Closing this dialog keeps your edits as a local draft - nothing changes until you click <span className="font-medium">Save Changes</span>.
               </DialogDescription>
             </DialogHeader>
 
@@ -1026,7 +1026,7 @@ export default function AdminCauses() {
               </div>
 
 
-              {/* Visibility toggle — applied on Save Changes */}
+              {/* Visibility toggle - applied on Save Changes */}
               <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1">
@@ -1297,7 +1297,7 @@ export default function AdminCauses() {
                       <div className="border-t border-border pt-4 space-y-3">
                         <Label className="text-sm font-medium">Rejection Reason</Label>
                         <Textarea
-                          placeholder="Required when rejecting — this will be on record."
+                          placeholder="Required when rejecting - this will be on record."
                           value={rejectionReason}
                           onChange={(e) => setRejectionReason(e.target.value)}
                           rows={2}

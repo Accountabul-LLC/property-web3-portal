@@ -100,7 +100,7 @@ export function IssuerWalletPanel() {
         </div>
         <CardDescription>
           Platform wallet that signs XRPL CredentialCreate transactions. The seed is stored
-          only as a Supabase project secret — never in this database.
+          only as a Supabase project secret - never in this database.
         </CardDescription>
       </CardHeader>
 
@@ -145,7 +145,7 @@ export function IssuerWalletPanel() {
               <span>
                 {data.seed_configured
                   ? <span className="flex items-center gap-1 text-green-600"><CheckCircle2 className="h-3.5 w-3.5" /> Yes</span>
-                  : <span className="flex items-center gap-1 text-red-600"><AlertCircle className="h-3.5 w-3.5" /> Not set — add to Supabase secrets</span>
+                  : <span className="flex items-center gap-1 text-red-600"><AlertCircle className="h-3.5 w-3.5" /> Not set - add to Supabase secrets</span>
                 }
               </span>
 
@@ -167,7 +167,7 @@ export function IssuerWalletPanel() {
               {data.xrpl && !data.xrpl.found && (
                 <>
                   <span className="text-muted-foreground">XRPL status</span>
-                  <span className="text-yellow-600 text-xs">Account not found — fund it via testnet faucet</span>
+                  <span className="text-yellow-600 text-xs">Account not found - fund it via testnet faucet</span>
                 </>
               )}
 

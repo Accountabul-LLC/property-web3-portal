@@ -61,7 +61,7 @@ export default function MarketplaceDisclaimerModal({ open, onAcknowledge }: Prop
           </p>
           <p>
             Listings may be <span className="font-medium text-foreground">Standard Listings</span> (regular property listings
-            posted by third parties — <span className="font-medium text-foreground">not tokenized</span>) or
+            posted by third parties - <span className="font-medium text-foreground">not tokenized</span>) or
             {' '}<span className="font-medium text-foreground">Tokenized Properties</span> (on-chain fractional offerings).
           </p>
           <p>
@@ -88,7 +88,7 @@ export default function MarketplaceDisclaimerModal({ open, onAcknowledge }: Prop
 
         <DialogFooter>
           <Button onClick={handleAcknowledge} className="w-full">
-            I Understand — Continue to Marketplace
+            I Understand - Continue to Marketplace
           </Button>
         </DialogFooter>
       </DialogContent>

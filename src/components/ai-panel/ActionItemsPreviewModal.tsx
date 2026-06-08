@@ -421,7 +421,7 @@ function parseFallback(text: string): ActionItem[] {
   };
 
   for (const line of lines) {
-    const match = line.match(/^\d+[\.\)]\s*\*{0,2}(.+?)\*{0,2}\s*[:\-–]\s*(.*)/);
+    const match = line.match(/^\d+[\.\)]\s*\*{0,2}(.+?)\*{0,2}\s*[:\--]\s*(.*)/);
     if (match) {
       flush();
       currentTitle = match[1].trim();

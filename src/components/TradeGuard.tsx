@@ -11,9 +11,9 @@
  *   </TradeGuard>
  *
  * Props:
- *   children      — content shown when trade-enabled
- *   fallback      — optional custom fallback; defaults to a compliance prompt card
- *   compact       — renders a compact inline message instead of a full card
+ *   children      - content shown when trade-enabled
+ *   fallback      - optional custom fallback; defaults to a compliance prompt card
+ *   compact       - renders a compact inline message instead of a full card
  */
 
 import { ReactNode } from 'react'

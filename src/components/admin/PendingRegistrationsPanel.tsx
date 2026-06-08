@@ -189,14 +189,14 @@ export function PendingRegistrationsPanel() {
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                     <span className="text-muted-foreground">Wallet</span>
                     <span className="font-mono break-all">
-                      {reg.user_wallets?.wallet_address ?? '—'}
+                      {reg.user_wallets?.wallet_address ?? '-'}
                     </span>
 
                     <span className="text-muted-foreground">Network</span>
-                    <span>{reg.user_wallets?.network ?? '—'}</span>
+                    <span>{reg.user_wallets?.network ?? '-'}</span>
 
                     <span className="text-muted-foreground">KYC status</span>
-                    <span>{reg.kyc_cases?.status ?? '—'}</span>
+                    <span>{reg.kyc_cases?.status ?? '-'}</span>
 
                     <span className="text-muted-foreground">Requested</span>
                     <span>{new Date(reg.created_at).toLocaleString()}</span>

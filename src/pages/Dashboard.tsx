@@ -621,7 +621,7 @@ const Dashboard = () => {
                     <VerifiedBadge source={verifications.getVerification('first_name')!.source} verifiedAt={verifications.getVerification('first_name')!.verified_at} />
                   )}
                 </p>
-                <p className="font-medium">{profile?.first_name || '—'}</p>
+                <p className="font-medium">{profile?.first_name || '-'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">Last Name
@@ -629,11 +629,11 @@ const Dashboard = () => {
                     <VerifiedBadge source={verifications.getVerification('last_name')!.source} verifiedAt={verifications.getVerification('last_name')!.verified_at} />
                   )}
                 </p>
-                <p className="font-medium">{profile?.last_name || '—'}</p>
+                <p className="font-medium">{profile?.last_name || '-'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Phone</p>
-                <p className="font-medium">{profile?.phone ? formatPhone(profile.phone) : '—'}</p>
+                <p className="font-medium">{profile?.phone ? formatPhone(profile.phone) : '-'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground flex items-center gap-1">Date of Birth
@@ -641,11 +641,11 @@ const Dashboard = () => {
                     <VerifiedBadge source={verifications.getVerification('date_of_birth')!.source} verifiedAt={verifications.getVerification('date_of_birth')!.verified_at} />
                   )}
                 </p>
-                <p className="font-medium">{profile?.date_of_birth ? new Date(profile.date_of_birth + 'T00:00:00').toLocaleDateString() : '—'}</p>
+                <p className="font-medium">{profile?.date_of_birth ? new Date(profile.date_of_birth + 'T00:00:00').toLocaleDateString() : '-'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Gender</p>
-                <p className="font-medium capitalize">{profile?.gender?.replace('-', ' ') || '—'}</p>
+                <p className="font-medium capitalize">{profile?.gender?.replace('-', ' ') || '-'}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Account Type</p>
@@ -654,13 +654,13 @@ const Dashboard = () => {
               {profile?.account_type === 'business' && (
                 <div>
                   <p className="text-muted-foreground">Company</p>
-                  <p className="font-medium">{profile?.company_name || '—'}</p>
+                  <p className="font-medium">{profile?.company_name || '-'}</p>
                 </div>
               )}
               <div>
                 <p className="text-muted-foreground">Member Since</p>
                 <p className="font-medium">
-                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '—'}
+                  {profile?.created_at ? new Date(profile.created_at).toLocaleDateString() : '-'}
                 </p>
               </div>
               {(profile?.address_line1 || profile?.city) && (

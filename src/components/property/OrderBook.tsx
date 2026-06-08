@@ -81,11 +81,11 @@ const OrderBook: React.FC = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-success/10 rounded-lg">
                   <div className="text-sm text-muted-foreground">Best Bid</div>
-                  <div className="text-lg font-bold text-success">{bestBid ? `$${bestBid}` : '—'}</div>
+                  <div className="text-lg font-bold text-success">{bestBid ? `$${bestBid}` : '-'}</div>
                 </div>
                 <div className="p-3 bg-destructive/10 rounded-lg">
                   <div className="text-sm text-muted-foreground">Best Ask</div>
-                  <div className="text-lg font-bold text-destructive">{bestAsk ? `$${bestAsk}` : '—'}</div>
+                  <div className="text-lg font-bold text-destructive">{bestAsk ? `$${bestAsk}` : '-'}</div>
                 </div>
               </div>
               {bestBid && bestAsk && (

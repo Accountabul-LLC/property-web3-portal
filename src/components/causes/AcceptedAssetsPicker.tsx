@@ -87,7 +87,7 @@ export function AcceptedAssetsPicker({ value, onChange }: Props) {
         </p>
       </div>
 
-      {/* XRP — locked on */}
+      {/* XRP - locked on */}
       <label className="flex items-start gap-3 rounded-md border border-border bg-background p-3 cursor-default">
         <input
           type="checkbox"
@@ -112,7 +112,7 @@ export function AcceptedAssetsPicker({ value, onChange }: Props) {
         </div>
       </label>
 
-      {/* RLUSD — only if trustline */}
+      {/* RLUSD - only if trustline */}
       {hasRLUSDTrustline ? (
         <label className="flex items-start gap-3 rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
           <input
@@ -125,7 +125,7 @@ export function AcceptedAssetsPicker({ value, onChange }: Props) {
             <span className="text-sm font-medium text-foreground">RLUSD</span>
             <p className="text-xs text-muted-foreground">
               Ripple USD stablecoin · Trustline detected. Selecting this switches the
-              campaign to direct mode (no escrow — funds forward immediately).
+              campaign to direct mode (no escrow - funds forward immediately).
             </p>
           </div>
         </label>
@@ -142,11 +142,11 @@ export function AcceptedAssetsPicker({ value, onChange }: Props) {
         </div>
       )}
 
-      {/* Other holdings — informational only */}
+      {/* Other holdings - informational only */}
       {otherHoldings.length > 0 && (
         <details className="text-xs">
           <summary className="text-muted-foreground cursor-pointer hover:text-foreground">
-            Other assets in your wallet ({otherHoldings.length}) — not supported yet
+            Other assets in your wallet ({otherHoldings.length}) - not supported yet
           </summary>
           <ul className="mt-2 space-y-1 pl-3">
             {otherHoldings.slice(0, 8).map((h, i) => (

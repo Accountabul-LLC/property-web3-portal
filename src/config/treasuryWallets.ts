@@ -1,5 +1,5 @@
 // Public, hardcoded list of treasury wallets shown on /treasury.
-// `mockUsd` is the demo allocation displayed in the pie chart — live on-chain
+// `mockUsd` is the demo allocation displayed in the pie chart - live on-chain
 // holdings still render in the wallet detail card below.
 export interface MockTokenHolding {
   symbol: string;
@@ -38,7 +38,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     network: 'testnet',
     purpose: 'Accountabul Token Reserve',
     description:
-      'Dedicated treasury for the Accountabul (ABUL) governance token — long-term protocol reserve, vesting allocations, and liquidity backing.',
+      'Dedicated treasury for the Accountabul (ABUL) governance token - long-term protocol reserve, vesting allocations, and liquidity backing.',
     mockUsd: 6_982_317.04,
     mockTokens: [abul(14_756_173.92)],
     isPlaceholder: true,
@@ -50,7 +50,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     network: 'testnet',
     purpose: 'Operations',
     description:
-      'Primary operating treasury — funds day-to-day platform expenses, gas fees, and short-term obligations.',
+      'Primary operating treasury - funds day-to-day platform expenses, gas fees, and short-term obligations.',
     mockUsd: 1_184_372.41,
     mockTokens: [abul(487_213.76)],
   },
@@ -70,7 +70,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     network: 'testnet',
     purpose: 'Financial Yield Product',
     description:
-      'Funds the yield-bearing financial product — interest accrual, lending positions, and liquidity provision.',
+      'Funds the yield-bearing financial product - interest accrual, lending positions, and liquidity provision.',
     mockUsd: 1_213_604.88,
     mockTokens: [abul(612_489.03)],
   },
@@ -80,7 +80,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     network: 'testnet',
     purpose: 'Ecosystem Rewards',
     description:
-      'Member rewards & ecosystem incentives — referrals, loyalty, and quarterly buyback distributions.',
+      'Member rewards & ecosystem incentives - referrals, loyalty, and quarterly buyback distributions.',
     mockUsd: 793_146.52,
     mockTokens: [abul(358_927.44)],
   },
@@ -100,7 +100,7 @@ export const TREASURY_WALLETS: TreasuryWalletConfig[] = [
     network: 'testnet',
     purpose: 'Long-term Reserves',
     description:
-      'Long-term cold reserve — multi-sig protected, used only for strategic acquisitions and emergencies.',
+      'Long-term cold reserve - multi-sig protected, used only for strategic acquisitions and emergencies.',
     mockUsd: 574_986.08,
     mockTokens: [abul(247_851.92)],
   },

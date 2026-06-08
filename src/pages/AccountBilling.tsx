@@ -129,12 +129,12 @@ export default function AccountBilling() {
                 <div>
                   <div className="text-muted-foreground">Renews</div>
                   <div className="font-medium">
-                    {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}
+                    {sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '-'}
                   </div>
                 </div>
                 <div className="col-span-2">
                   <div className="text-muted-foreground">Plan</div>
-                  <div className="font-medium">{sub.price_id ?? '—'}</div>
+                  <div className="font-medium">{sub.price_id ?? '-'}</div>
                 </div>
               </div>
 

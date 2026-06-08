@@ -40,7 +40,7 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
       // Add it via context; the testnet seed stays in the browser session only
       await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
 
-      toast.success(`🧪 Testnet Wallet Created — Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
+      toast.success(`🧪 Testnet Wallet Created - Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
       setIsOpen(false);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';

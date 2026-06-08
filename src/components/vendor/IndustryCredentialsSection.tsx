@@ -42,7 +42,7 @@ export function IndustryCredentialsSection({
     return industryDef.suggested.filter((t) => !saved.has(t))
   }, [industryDef, credentials])
 
-  // Types already represented (saved or drafted) — filter from picker
+  // Types already represented (saved or drafted) - filter from picker
   const usedDraftTypes = new Set(draftTypes)
 
   const pickableTypes = useMemo(() => {

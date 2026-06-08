@@ -44,7 +44,7 @@ const DebateTurn = ({ turn, roundNumber }: Props) => {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  // User message — right-aligned bubble
+  // User message - right-aligned bubble
   if (turn.speaker === 'user') {
     return (
       <div className="flex justify-end">

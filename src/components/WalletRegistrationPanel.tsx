@@ -75,7 +75,7 @@ function buildSteps(state: WalletComplianceState | null | undefined): Step[] {
       label: 'Trade Registration',
       description:
         reg === 'approved' ? 'Registration approved by compliance.'
-        : reg === 'pending' ? 'Pending compliance review — we\'ll notify you when approved.'
+        : reg === 'pending' ? 'Pending compliance review - we\'ll notify you when approved.'
         : reg === 'under_review' ? 'Under compliance review.'
         : reg === 'rejected' ? 'Registration was rejected. You may re-apply.'
         : reg === 'revoked' ? 'Registration has been revoked. Contact support.'
@@ -89,7 +89,7 @@ function buildSteps(state: WalletComplianceState | null | undefined): Step[] {
         credIssued || credAccepted
           ? 'Platform has issued your trading credential on the XRP Ledger.'
           : regDone
-          ? 'Waiting for the platform to issue your credential — this is usually automatic.'
+          ? 'Waiting for the platform to issue your credential - this is usually automatic.'
           : 'Issued after registration is approved.',
       status: credIssueStatus(),
     },
@@ -157,7 +157,7 @@ export function WalletRegistrationPanel() {
       await callEdgeFunction('wallet-register', { wallet_id: activeWallet.id })
       toast.success('Registration request submitted. Pending compliance review.')
     } catch (err: any) {
-      // 409 = already registered — not an error, just refresh state
+      // 409 = already registered - not an error, just refresh state
       if (err.message?.includes('already has a registration')) {
         toast.info('Wallet is already registered. Refreshing status…')
       } else {
@@ -181,7 +181,7 @@ export function WalletRegistrationPanel() {
       if (result.ledger_status === 'accepted') {
         toast.success('Credential accepted. Your wallet is now trade-enabled.')
       } else if (result.qr_code) {
-        // Mainnet: show QR (simplified — production would open a modal)
+        // Mainnet: show QR (simplified - production would open a modal)
         toast.info('Scan the QR code in Xaman to accept your credential.', { duration: 10000 })
       }
       await refetch()

@@ -209,7 +209,7 @@ const TokenImageUpload = ({ value, onChange }: { value: string; onChange: (url: 
         </div>
       )}
       <p className="text-xs text-muted-foreground">
-        {mode === 'upload' ? 'JPG, PNG, WebP, SVG or GIF — max 5 MB' : 'IPFS or HTTPS link to a property photo / token logo'}
+        {mode === 'upload' ? 'JPG, PNG, WebP, SVG or GIF - max 5 MB' : 'IPFS or HTTPS link to a property photo / token logo'}
       </p>
     </div>
   );
@@ -343,7 +343,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
           <Label htmlFor="mpt-desc">Description</Label>
           <Textarea
             id="mpt-desc"
-            placeholder="Describe the property — location highlights, condition, investment thesis..."
+            placeholder="Describe the property - location highlights, condition, investment thesis..."
             value={params.description}
             onChange={e => set('description', e.target.value)}
             maxLength={280}
@@ -370,7 +370,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
             onChange={e => set('ticker', e.target.value.replace(/[^A-Za-z]/g, '').toUpperCase())}
             className="mt-1 uppercase"
           />
-          <p className="text-xs text-muted-foreground mt-1">3–5 uppercase letters, auto-generated from name if blank</p>
+          <p className="text-xs text-muted-foreground mt-1">3-5 uppercase letters, auto-generated from name if blank</p>
         </div>
 
         <div>
@@ -474,7 +474,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
           <div>
             <Label htmlFor="mpt-owner">Issuer Name *</Label>
             <Input id="mpt-owner" placeholder="Jane Doe or Acme Holdings" value={params.owner_name} onChange={e => set('owner_name', e.target.value)} maxLength={120} className="mt-1" />
-            <p className="text-xs text-muted-foreground mt-1">Required by XLS-89 — the entity issuing this token</p>
+            <p className="text-xs text-muted-foreground mt-1">Required by XLS-89 - the entity issuing this token</p>
           </div>
           <div>
             <Label htmlFor="mpt-email">Contact Email *</Label>
@@ -653,7 +653,7 @@ const MPTForm: React.FC<MPTFormProps> = ({ params, onChange, network }) => {
                 = {(params.transfer_fee / 1000).toFixed(3)}%
               </span>
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Fee collected by issuer on every transfer (0–50%)</p>
+            <p className="text-xs text-muted-foreground mt-1">Fee collected by issuer on every transfer (0-50%)</p>
           </div>
         )}
       </Card>

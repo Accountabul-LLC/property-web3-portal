@@ -88,7 +88,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   async function handleSubmit() {
     if (asset === 'RLUSD' && !rlusdAllowedForCampaign) {
       toast.info(allowedAssets.includes('RLUSD')
-        ? 'RLUSD is only supported on direct (evergreen) causes. This cause uses time-locked escrow — switch to XRP.'
+        ? 'RLUSD is only supported on direct (evergreen) causes. This cause uses time-locked escrow - switch to XRP.'
         : 'This cause does not accept RLUSD. Switch to XRP to donate now.')
       return
     }
@@ -215,13 +215,13 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
                   <>
                     Your donation is locked on the <strong>XRP Ledger</strong> until{' '}
                     <strong>{releaseDate}</strong>, then sent directly to the recipient's wallet.
-                    You sign the transaction in your connected wallet — no platform holds your funds.
+                    You sign the transaction in your connected wallet - no platform holds your funds.
                   </>
                 )}
               </p>
             </div>
 
-            {/* Asset toggle — only assets whitelisted by the cause */}
+            {/* Asset toggle - only assets whitelisted by the cause */}
             <div className="space-y-2">
               <Label>Asset</Label>
               <div className={`grid gap-2 ${allowedAssets.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -242,7 +242,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
               </div>
               {asset === 'RLUSD' && !rlusdAllowedForCampaign && (
                 <p className="text-xs text-amber-600 dark:text-amber-400">
-                  RLUSD is only available on direct (evergreen) causes — this one uses time-locked escrow. Switch to XRP.
+                  RLUSD is only available on direct (evergreen) causes - this one uses time-locked escrow. Switch to XRP.
                 </p>
               )}
               <p className="text-xs text-muted-foreground">

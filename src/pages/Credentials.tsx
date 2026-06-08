@@ -91,7 +91,7 @@ function RequirementsChecklist({ cred }: { cred: CredentialEligibilityResult }) 
             {req.display_label}
           </span>
           {!req.met && req.display_hint && (
-            <span className="text-xs text-muted-foreground ml-1">— {req.display_hint}</span>
+            <span className="text-xs text-muted-foreground ml-1">- {req.display_hint}</span>
           )}
         </li>
       ))}
@@ -138,7 +138,7 @@ const Credentials = () => {
     setActionInProgress(credential_key)
     try {
       await triggerAutoIssue(credential_key)
-      toast.success('Credential issued — check Ready to Accept section')
+      toast.success('Credential issued - check Ready to Accept section')
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to issue credential')
     } finally {
@@ -288,14 +288,14 @@ const Credentials = () => {
                         </CardHeader>
                         <CardContent className="pt-0 space-y-1">
                           {app?.status === 'applied' && (
-                            <p className="text-xs text-muted-foreground">Application submitted — awaiting review.</p>
+                            <p className="text-xs text-muted-foreground">Application submitted - awaiting review.</p>
                           )}
                           {app?.status === 'under_review' && (
                             <p className="text-xs text-muted-foreground">Under review by our compliance team.</p>
                           )}
                           {app?.status === 'approved' && (
                             <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-                              Approved — awaiting issuance.
+                              Approved - awaiting issuance.
                             </p>
                           )}
                           {app?.status === 'active' && (
@@ -354,14 +354,14 @@ const Credentials = () => {
               </section>
             )}
 
-            {/* ── Section 3a: Available Now — Instant Access (Class A) ── */}
+            {/* ── Section 3a: Available Now - Instant Access (Class A) ── */}
             {sections.auto_issuable.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
                   <Zap className="w-5 h-5 text-primary" />
                   Available Now
                 </h2>
-                <p className="text-sm text-muted-foreground mb-3">Instant Access — you qualify now, no review required.</p>
+                <p className="text-sm text-muted-foreground mb-3">Instant Access - you qualify now, no review required.</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {sections.auto_issuable.map((cred) => {
                     const inProgress = actionInProgress === cred.credential_key
@@ -391,14 +391,14 @@ const Credentials = () => {
               </section>
             )}
 
-            {/* ── Section 3b: Available Now — Apply (Class B, all docs on file) ── */}
+            {/* ── Section 3b: Available Now - Apply (Class B, all docs on file) ── */}
             {sections.eligible_apply.length > 0 && (
               <section>
                 <h2 className="text-lg font-semibold mb-1 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-500" />
                   Apply
                 </h2>
-                <p className="text-sm text-muted-foreground mb-3">Documents on file — admin review required.</p>
+                <p className="text-sm text-muted-foreground mb-3">Documents on file - admin review required.</p>
                 <div className="grid gap-3 sm:grid-cols-2">
                   {sections.eligible_apply.map((cred) => {
                     const inProgress = actionInProgress === cred.credential_key

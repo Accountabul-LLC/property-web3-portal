@@ -124,7 +124,7 @@ const Kyc = () => {
               </div>
               <div>
                 <p className="text-sm font-medium">Compliance review</p>
-                <p className="text-xs text-muted-foreground">Our team confirms the result — usually within minutes.</p>
+                <p className="text-xs text-muted-foreground">Our team confirms the result - usually within minutes.</p>
               </div>
             </div>
           </div>

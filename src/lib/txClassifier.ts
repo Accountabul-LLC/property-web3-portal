@@ -101,7 +101,7 @@ export function classifyTx({ tx, meta, address, network }: ClassifyInput): Class
     return null;
   }
 
-  // Escrow finished — funds delivered to Destination
+  // Escrow finished - funds delivered to Destination
   if (type === 'EscrowFinish') {
     if (tx.Destination !== address) return null;
     const delivered = parseAmount(meta?.delivered_amount);
@@ -120,7 +120,7 @@ export function classifyTx({ tx, meta, address, network }: ClassifyInput): Class
     };
   }
 
-  // Escrow cancelled — owner gets funds back
+  // Escrow cancelled - owner gets funds back
   if (type === 'EscrowCancel') {
     if (tx.Owner !== address && tx.Account !== address) return null;
     return {
@@ -142,7 +142,7 @@ export function classifyTx({ tx, meta, address, network }: ClassifyInput): Class
       title: amt
         ? `Incoming escrow: ${fmtAmount(amt.value)} ${amt.currency}`
         : `Incoming escrow`,
-      body: `From ${shortAddr(tx.Account)} — pending release`,
+      body: `From ${shortAddr(tx.Account)} - pending release`,
       amount: amt?.value,
       currency: amt?.currency,
       counterparty: tx.Account || null,

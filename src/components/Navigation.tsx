@@ -148,7 +148,7 @@ const Navigation = () => {
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
                     {isLocked(item.path) && <Lock className="w-3.5 h-3.5 flex-shrink-0 opacity-80" />}
-                    {/* lg–xl: short label; xl+: full label */}
+                    {/* lg-xl: short label; xl+: full label */}
                     <span className="lg:inline xl:hidden">{item.shortLabel ?? item.label}</span>
                     <span className="hidden xl:inline">{item.label}</span>
                     {isLocked(item.path) && (
@@ -295,7 +295,7 @@ const Navigation = () => {
         </div>
       </div>
 
-      {/* Mobile/tablet drawer (< lg) — rendered via portal to escape nav overflow */}
+      {/* Mobile/tablet drawer (< lg) - rendered via portal to escape nav overflow */}
       {isMobileMenuOpen && createPortal(
         <>
           <div
