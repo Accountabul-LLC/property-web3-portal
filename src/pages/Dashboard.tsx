@@ -349,6 +349,10 @@ const Dashboard = () => {
               <Pencil className="w-4 h-4" />
               Settings
             </Button>
+            <Button variant="outline" onClick={() => navigate('/list-property')} className="gap-2">
+              <Building2 className="w-4 h-4" />
+              List a Property
+            </Button>
             <Button onClick={() => navigate('/tokenize')} className="gap-2">
               <Plus className="w-4 h-4" />
               Tokenize Property
@@ -809,8 +813,15 @@ const Dashboard = () => {
 
         {properties.length === 0 ? (
           <Card className="p-8 text-center">
-            <p className="text-muted-foreground mb-4">You haven't submitted any properties yet.</p>
-            <Button onClick={() => navigate('/tokenize')}>Tokenize Your First Property</Button>
+            <p className="text-muted-foreground mb-4">You haven't posted any properties yet.</p>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button variant="outline" onClick={() => navigate('/list-property')}>
+                List a Property
+              </Button>
+              <Button onClick={() => navigate('/tokenize')}>
+                Tokenize a Property
+              </Button>
+            </div>
           </Card>
         ) : (
           <div className="space-y-3">
