@@ -279,13 +279,28 @@ const PropertyListingsSection = () => {
 
   return (
     <div className="min-h-screen bg-background py-12">
+      <MarketplaceDisclaimerModal open={disclaimerOpen} onAcknowledge={() => setDisclaimerOpen(false)} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">Real Estate Marketplace</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Discover tokenized real estate investment opportunities with transparent returns and fractional ownership.
+            Browse standard listings posted by businesses and tokenized fractional offerings — side by side.
           </p>
         </div>
+
+        <Card className="border-warning/30 bg-warning/5 mb-8">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+              <span className="text-muted-foreground">
+                Standard listings are posted by third-party businesses. Verify the lister and property before transacting.
+              </span>
+            </div>
+            <Button size="sm" onClick={() => navigate('/list-property')}>
+              <Plus className="w-4 h-4 mr-1" /> List a Property
+            </Button>
+          </CardContent>
+        </Card>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
