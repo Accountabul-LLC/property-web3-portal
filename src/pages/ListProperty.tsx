@@ -50,8 +50,10 @@ export default function ListProperty() {
     listing_price: '',
     contact_email: '',
     contact_phone: '',
-    image_url: '',
   });
+  const [photos, setPhotos] = useState<{ url: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (authLoading) return;
