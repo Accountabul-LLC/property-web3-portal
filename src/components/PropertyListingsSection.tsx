@@ -26,6 +26,13 @@ function PropertyCard({
   onToggleCompare?: (propertyId: string) => void;
 }) {
   const navigate = useNavigate();
+  const isStandard = property.listing_kind === 'standard';
+
+  const kindBadge = isStandard ? (
+    <Badge variant="secondary" className="bg-muted text-foreground border">Standard Listing</Badge>
+  ) : (
+    <Badge className="bg-gradient-primary text-primary-foreground border-0">Tokenized</Badge>
+  );
 
   const statusLabel = property.status === 'active' ? 'Listed' : property.status === 'approved' ? 'Approved' : property.status;
   const statusClass =
@@ -43,18 +50,19 @@ function PropertyCard({
           alt={property.title}
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex items-center gap-2">
           <PropertySaveButton
             propertyId={property.id}
             propertyStatus={property.status}
             className="bg-background/90 backdrop-blur-sm border-border shadow-sm"
           />
+          {kindBadge}
         </div>
         {showCompareToggle && onToggleCompare && (
           <button
             type="button"
             onClick={() => onToggleCompare(property.id)}
-            className={`absolute top-3 left-20 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm transition-colors ${
+            className={`absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm transition-colors ${
               selectedForCompare
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background/90 border-border text-foreground hover:bg-background'
