@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare, Mail, Phone, Plus } from 'lucide-react';
 import { useProperties, Property } from '@/hooks/useProperties';
 import { useAuth } from '@/hooks/useAuth';
 
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
 import PropertySaveButton from './property/PropertySaveButton';
+import MarketplaceDisclaimerModal, { hasDismissedMarketplaceDisclaimer } from './marketplace/MarketplaceDisclaimerModal';
 
 function PropertyCard({
   property,
