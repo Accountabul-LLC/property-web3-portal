@@ -38,7 +38,7 @@ export default function CauseCard({ campaign }: { campaign: Campaign }) {
             <Heart className="w-16 h-16 text-primary/30" />
           </div>
         )}
-        {campaign.status === 'completed' && (
+        {campaign.status === 'completed' && campaign.goal_amount != null && campaign.total_raised >= campaign.goal_amount && (
           <Badge className="absolute top-3 right-3 bg-green-600 text-white">Funded</Badge>
         )}
         <div className="absolute bottom-3 left-3">
