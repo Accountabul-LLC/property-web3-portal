@@ -128,7 +128,7 @@ export default function ListProperty() {
         listing_price: form.listing_price ? Number(form.listing_price.replace(/,/g, '')) : null,
         contact_email: form.contact_email.trim(),
         contact_phone: form.contact_phone.trim(),
-        images: form.image_url.trim() ? [form.image_url.trim()] : [],
+        images: photos.map((p) => p.url),
         vendor_profile_id: vendor.id,
       });
       toast.success('Listing published');
@@ -276,9 +276,55 @@ export default function ListProperty() {
             </div>
 
             <div>
-              <Label htmlFor="image">Cover image URL</Label>
-              <Input id="image" placeholder="https://..." value={form.image_url} onChange={(e) => update('image_url', e.target.value)} />
-              <p className="text-xs text-muted-foreground mt-1">Paste a hosted image URL for now. Multi-photo upload coming soon.</p>
+              <Label>Photos ({photos.length}/{MAX_PHOTOS})</Label>
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {photos.map((photo, idx) => (
+                  <div key={photo.path} className="relative group rounded-md overflow-hidden border bg-muted aspect-square">
+                    <img src={photo.url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(photo.path)}
+                      className="absolute top-1 right-1 rounded-full bg-background/90 border p-1 opacity-0 group-hover:opacity-100 transition"
+                      aria-label="Remove photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-[10px] uppercase tracking-wide bg-background/90 border rounded px-1.5 py-0.5">
+                        Cover
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {photos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="aspect-square rounded-md border-2 border-dashed flex flex-col items-center justify-center text-xs text-muted-foreground hover:bg-muted/50 transition disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 mb-1" />
+                        Add photos
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                hidden
+                onChange={(e) => handlePhotoUpload(e.target.files)}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Up to {MAX_PHOTOS} photos. First photo is the cover. Max 6MB each.
+              </p>
             </div>
 
             <div>
