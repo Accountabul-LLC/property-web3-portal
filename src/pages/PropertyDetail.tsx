@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import PhotoGallery from '../components/property/PhotoGallery';
 import PropertySummary from '../components/property/PropertySummary';
 import FinancialSidebar from '../components/property/FinancialSidebar';
+import StandardListingSidebar from '../components/property/StandardListingSidebar';
 import MarketStats from '../components/property/MarketStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import DetailsTab from '../components/property/DetailsTab';
