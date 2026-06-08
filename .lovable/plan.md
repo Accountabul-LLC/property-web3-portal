@@ -1,47 +1,44 @@
-# Merge Vendor and Business Auth
+## Security Audit — Exposed Secrets & Sensitive Data
 
-## Why
-`/auth/vendor` and `/auth/business` are functionally identical at the auth layer — both create an `account_type = 'business'` profile and require a company name. The only differences are copy, icon, and the post-signup redirect. A vendor is just a business that also wants to join the verified vendor network, so there's no reason to maintain two auth pages.
+Goal: Confirm the **published** site (`property-web3-portal.lovable.app`) does not expose any private keys, seed phrases, API secrets, or hardcoded credentials. The published build is the current `main` branch on GitHub (preview is ahead and not yet published), so auditing the repo's published-equivalent state covers the live site.
 
-## End State
-- One business auth route: `/auth/business`
-- A checkbox on the signup form: **"Also apply to join the verified vendor network"**
-  - Checked → after signup, redirect to `/vendors/apply`
-  - Unchecked → after signup, redirect to `/dashboard`
-- `/auth/vendor` route, page file, and all internal links removed (no redirect — old URL will 404)
-- `/auth/individual` stays as-is (genuinely different account type)
+### Scope
+- Client-side bundle only (anything in `src/`, `public/`, `index.html`, `.env` keys prefixed `VITE_`). This is what ships to browsers.
+- Edge functions are server-side and not exposed publicly — out of scope unless we find a leak path.
 
-## Changes
+### Audit Steps
 
-### 1. `src/components/auth/AuthForm.tsx`
-- Drop the `'vendor'` value from `AuthFormVariant` (keep `'individual' | 'business'`)
-- Remove `Store` icon and the vendor entry from `VARIANT_ICON`
-- Add an optional `showVendorOptIn?: boolean` prop and a new `vendorRedirect?: string` prop
-- When `showVendorOptIn` is true and variant is `'business'`, render a checkbox under the company-name field: "Also apply to join the verified vendor network"
-- On successful signup, if the box is checked, navigate to `vendorRedirect` (default `/vendors/apply`) instead of `redirectAfterSignup`
-- Remove the vendor entry from `otherVariantLinks` (only Individual ↔ Business cross-links remain)
+1. **Static scan of repo for secret patterns**
+   - `rg` for: `sEd`/`sEs` (XRPL seeds), `xrpl.Wallet.fromSeed`, `PRIVATE_KEY`, `SECRET`, `seed:`, `mnemonic`, `BEGIN RSA`, `BEGIN PRIVATE`, `sk_live`, `sk_test`, `ghp_`, `AIza`, `eyJhbGciOi...service_role`, `SUPABASE_SERVICE_ROLE`, hardcoded 32+ char hex strings.
+   - Scope to `src/`, `public/`, `index.html`, root config files. Exclude `supabase/functions/` (server-side).
 
-### 2. `src/pages/AuthBusiness.tsx`
-- Pass `showVendorOptIn` and keep `redirectAfterSignup="/dashboard"`
-- Update subtitle to mention vendor option, e.g. "Tokenize properties, manage your entity, and optionally join the verified vendor network."
+2. **Verify `.env` exposure surface**
+   - Confirm only `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` are referenced client-side (these are public/anon — safe by design).
+   - Flag any `VITE_*` var that looks like a secret.
 
-### 3. `src/App.tsx`
-- Remove the `AuthVendor` lazy import and the `<Route path="/auth/vendor" ... />` line
+3. **Check for accidentally-committed wallet artifacts**
+   - Search for `.json` files containing `seed`, `secret`, `master_seed`, `family_seed`.
+   - Search for `.pem`, `.key`, `.p12`, `id_rsa` files in the repo.
 
-### 4. `src/pages/AuthVendor.tsx`
-- Delete the file
+4. **Check client code for service-role / admin key usage**
+   - `rg "service_role"` across `src/` — must be zero hits.
+   - Confirm no edge-function secrets are imported into frontend.
 
-### 5. Update inbound links to point at `/auth/business`
-- `src/pages/VendorsDirectory.tsx` (2 places): `/auth/vendor` → `/auth/business`
-- `src/components/HeroSection.tsx` (1 place): `/auth/vendor` → `/auth/business`
+5. **Run Lovable's backend security scan**
+   - `security--run_security_scan` to surface RLS gaps, exposed tables, and misconfigurations on the live backend (same DB the published site uses).
 
-### 6. Verification
-- `rg "auth/vendor"` returns nothing
-- `rg "AuthVendor"` returns nothing
-- Build/duplicate-route check passes
-- Manually load `/auth/business` and confirm the new checkbox renders and toggles the post-signup redirect
+6. **Fetch the live published JS bundle (optional spot-check)**
+   - Pull `https://property-web3-portal.lovable.app` HTML + one bundled JS chunk, grep the minified output for the same secret patterns to confirm nothing snuck through the build.
 
-## Out of Scope
-- No DB schema changes (vendor network membership is tracked separately via `/vendors/apply`, not on `profiles`)
-- No changes to `/auth/individual`, `/vendors/*`, `/admin/vendors`, or the vendor onboarding flow itself
-- No changes to existing accounts — anyone who previously signed up at `/auth/vendor` is already a business account and can apply to the vendor network from the dashboard or `/vendors/apply` directly
+### Deliverable
+A short report listing:
+- Files/lines flagged (with severity), or "clean" per category.
+- Any backend RLS/policy findings from the scan.
+- Recommended fixes (if anything is found) — applied in a follow-up build-mode session, not this one.
+
+### Out of Scope
+- Edge function code review (server-only secrets).
+- Auth/UX changes.
+- Anything in the preview branch that isn't yet published.
+
+Approve and I'll run the audit.
