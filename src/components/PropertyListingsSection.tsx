@@ -337,6 +337,16 @@ const PropertyListingsSection = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={selectedKind} onValueChange={(v) => setSelectedKind(v as 'all' | 'standard' | 'tokenized')}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Listing kind" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Listings</SelectItem>
+                  <SelectItem value="standard">Standard Listings</SelectItem>
+                  <SelectItem value="tokenized">Tokenized</SelectItem>
+                </SelectContent>
+              </Select>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-full md:w-48">
                   <SelectValue placeholder="Status" />
