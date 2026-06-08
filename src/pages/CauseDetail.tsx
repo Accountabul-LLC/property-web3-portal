@@ -253,15 +253,15 @@ export default function CauseDetail() {
               </p>
               {isDirectCampaign ? (
                 <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
-                  <li>You sign a Payment transaction in Xaman — funds leave your wallet immediately</li>
+                  <li>You sign a Payment transaction in Xaman - funds leave your wallet immediately</li>
                   <li>The payment goes straight to the recipient wallet on the XRP Ledger</li>
                   <li>No platform wallet can reroute or intercept the funds</li>
                 </ol>
               ) : (
                 <ol className="space-y-1 text-xs text-muted-foreground list-decimal list-inside leading-relaxed">
-                  <li>You sign an EscrowCreate transaction in Xaman — funds leave your wallet immediately</li>
+                  <li>You sign an EscrowCreate transaction in Xaman - funds leave your wallet immediately</li>
                   <li>Funds are locked on the XRP Ledger, not in a bank account or platform wallet</li>
-                  <li>On <strong>{releaseDate}</strong>, EscrowFinish is called — funds go directly to the recipient</li>
+                  <li>On <strong>{releaseDate}</strong>, EscrowFinish is called - funds go directly to the recipient</li>
                   <li>No human can touch the funds between those two events</li>
                 </ol>
               )}
@@ -429,7 +429,7 @@ export default function CauseDetail() {
                 {isDirectCampaign
                   ? 'Direct donations are sent straight to the recipient after signing.'
                   : campaign.status === 'completed'
-                    ? 'Initial funding round complete — you can still donate directly to the recipient wallet.'
+                    ? 'Initial funding round complete - you can still donate directly to the recipient wallet.'
                     : releaseReady
                       ? 'Ready to release to the recipient.'
                       : `${unlockCountdown}. Exact unlock time: ${unlockTimestamp}`}
