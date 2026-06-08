@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Info, Building2 } from 'lucide-react';
+import { Loader2, Info, Building2, Upload, X } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Seo } from '@/components/Seo';
@@ -15,6 +15,10 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useListProperty } from '@/hooks/useListProperty';
+
+const MAX_PHOTOS = 8;
+const MAX_PHOTO_BYTES = 6 * 1024 * 1024; // 6MB
+const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 5; // 5 years
 
 interface VendorRow {
   id: string;
