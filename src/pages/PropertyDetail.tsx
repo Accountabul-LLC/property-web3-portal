@@ -151,6 +151,18 @@ const PropertyDetailPage: React.FC = () => {
       
       
       <main className="container mx-auto px-4 py-8">
+        {dbProperty?.listing_kind === 'standard' && (
+          <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
+            <p className="font-medium">Standard Listing — not a tokenized asset.</p>
+            <p className="text-muted-foreground mt-1">
+              This property is posted by a third-party business. Accountabul does not broker or escrow this sale.
+              Contact the lister directly and verify everything before sending money.
+              {dbProperty.contact_email ? <> Email: <a className="underline" href={`mailto:${dbProperty.contact_email}`}>{dbProperty.contact_email}</a>.</> : null}
+              {dbProperty.contact_phone ? <> Phone: <a className="underline" href={`tel:${dbProperty.contact_phone}`}>{dbProperty.contact_phone}</a>.</> : null}
+              {dbProperty.listing_price != null ? <> List price: <span className="font-medium text-foreground">${Number(dbProperty.listing_price).toLocaleString()}</span>.</> : null}
+            </p>
+          </div>
+        )}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <div className="lg:col-span-2 space-y-6">
             <PhotoGallery images={property.images} title={property.title} />
