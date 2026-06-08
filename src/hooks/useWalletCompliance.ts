@@ -38,7 +38,7 @@ export function useWalletCompliance(walletAddress: string | null | undefined) {
       )
 
       if (res.status === 401 || res.status === 403) {
-        // Session expired or revoked on the server — clear locally and bounce to /auth
+        // Session expired or revoked on the server - clear locally and bounce to /auth
         await supabase.auth.signOut({ scope: 'local' })
         if (typeof window !== 'undefined' && window.location.pathname !== '/auth') {
           window.location.assign('/auth')
@@ -64,7 +64,7 @@ export function complianceStepLabel(state: WalletComplianceState | null | undefi
   if (state.registration_status === 'not_started') return 'Request trade registration'
   if (state.registration_status === 'pending') return 'Registration pending review'
   if (state.registration_status === 'under_review') return 'Registration under compliance review'
-  if (state.registration_status === 'rejected') return 'Registration rejected — re-apply'
+  if (state.registration_status === 'rejected') return 'Registration rejected - re-apply'
   if (state.registration_status === 'revoked') return 'Registration revoked'
   if (state.credential_status === 'pending_issuance') return 'Credential issuance in progress'
   if (state.credential_status === 'issued') return 'Accept your trading credential'

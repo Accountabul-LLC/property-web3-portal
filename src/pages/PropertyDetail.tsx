@@ -154,7 +154,7 @@ const PropertyDetailPage: React.FC = () => {
       <main className="container mx-auto px-4 py-8">
         {dbProperty?.listing_kind === 'standard' && (
           <div className="mb-6 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
-            <p className="font-medium">Standard Listing — not a tokenized asset.</p>
+            <p className="font-medium">Standard Listing - not a tokenized asset.</p>
             <p className="text-muted-foreground mt-1">
               This property is posted by a third-party business. Accountabul does not broker or escrow this sale.
               Verify the lister and property before sending any money.

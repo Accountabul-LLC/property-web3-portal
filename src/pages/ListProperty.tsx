@@ -246,7 +246,7 @@ export default function ListProperty() {
           <h1 className="text-3xl font-bold">List a Property</h1>
           <p className="text-muted-foreground mt-1">
             Posting as <span className="font-medium text-foreground">{vendor.company_name}</span>.
-            This is a <span className="font-medium text-foreground">Standard Listing</span> — not a tokenized asset.
+            This is a <span className="font-medium text-foreground">Standard Listing</span> - not a tokenized asset.
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export default function ListProperty() {
             <Info className="w-5 h-5 text-warning shrink-0 mt-0.5" />
             <p className="text-muted-foreground">
               Standard listings go live immediately after you publish. By posting, you confirm you have the right
-              to advertise this property and that the information is accurate. Accountabul is a platform — we don't
+              to advertise this property and that the information is accurate. Accountabul is a platform - we don't
               broker, escrow, or verify these listings.
             </p>
           </CardContent>

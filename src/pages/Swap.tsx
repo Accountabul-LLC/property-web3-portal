@@ -686,14 +686,14 @@ const Swap = () => {
                 resolve();
               } else if (checkData?.cancelled || checkData?.expired) {
                 clearInterval(poll);
-                reject(new Error(checkData.cancelled ? 'Cancelled in Xaman' : 'Timed out — try again'));
+                reject(new Error(checkData.cancelled ? 'Cancelled in Xaman' : 'Timed out - try again'));
               }
             } catch (pErr: any) {
               clearInterval(poll);
               reject(pErr);
             }
           }, 2000);
-          setTimeout(() => { clearInterval(poll); reject(new Error('Timed out — try again')); }, 300000);
+          setTimeout(() => { clearInterval(poll); reject(new Error('Timed out - try again')); }, 300000);
         });
 
         setTrustlineRequired(null);
@@ -728,7 +728,7 @@ const Swap = () => {
     setQrCode('');
     setTxHash('');
 
-    // Synthetic property swap — simulate execution for demo purposes.
+    // Synthetic property swap - simulate execution for demo purposes.
     if ((txJson as any).__synthetic && sourceAsset.kind === 'property') {
       try {
         await new Promise((r) => setTimeout(r, 1200));
@@ -786,7 +786,7 @@ const Swap = () => {
   };
 
   // After a trustline was set up via the Swap click, auto-fire the swap once
-  // the fresh quote arrives — so the user only ever clicks "Swap" once.
+  // the fresh quote arrives - so the user only ever clicks "Swap" once.
   React.useEffect(() => {
     if (!pendingAutoSwapRef.current) return;
     if (trustlineRequired || sponsoringTrustline || loadingQuote) return;

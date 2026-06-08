@@ -10,7 +10,7 @@ const Mint = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
 
-  // SEC-006: Auth guard — redirect unauthenticated users before rendering any UI
+  // SEC-006: Auth guard - redirect unauthenticated users before rendering any UI
   useEffect(() => {
     if (!loading && !user) {
       navigate('/auth', { replace: true });

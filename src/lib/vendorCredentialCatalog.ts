@@ -1,5 +1,5 @@
 // Static catalog of vendor industries and the credentials that prove legitimacy.
-// Reference data only — not stored in DB.
+// Reference data only - not stored in DB.
 
 export interface CredentialDef {
   type: string;

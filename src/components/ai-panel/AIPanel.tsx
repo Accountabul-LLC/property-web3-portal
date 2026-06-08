@@ -127,7 +127,7 @@ const AIPanel = ({ loadedSession, onSaved, selectedFiles = [] }: Props) => {
 
           {awaitingUserInput && (
             <div className="text-xs text-center text-muted-foreground py-2">
-              Round {currentRound} / {params.rounds} complete — type below to add context or it will auto-continue
+              Round {currentRound} / {params.rounds} complete - type below to add context or it will auto-continue
             </div>
           )}
 

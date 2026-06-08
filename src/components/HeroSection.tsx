@@ -67,7 +67,7 @@ const HeroSection = ({ onGetStarted, onExploreMarketplace }: HeroSectionProps) =
             <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: '0.2s' }}>
               Fractional ownership. Secure transactions. Community-powered wealth.
               <br />
-              Tokenize, invest, and manage real estate portfolios—all powered by secure,
+              Tokenize, invest, and manage real estate portfolios-all powered by secure,
               transparent blockchain technology, and built for everyone.
             </p>
           </div>

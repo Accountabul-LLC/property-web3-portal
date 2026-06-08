@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, ExternalLink, AlertTriangle, Phone } from "lucide-react";
 import { MO_COUNTY_FRAUD_ALERTS } from "@/data/moCountyFraudAlerts";
 
-const PAGE_TITLE = "Missouri Deed Fraud Protection — Free Alerts by County";
+const PAGE_TITLE = "Missouri Deed Fraud Protection - Free Alerts by County";
 const PAGE_DESC =
-  "Free deed and title fraud alerts for Missouri homeowners. Sign up directly with your county Recorder of Deeds — St. Louis City, St. Louis County, and statewide.";
+  "Free deed and title fraud alerts for Missouri homeowners. Sign up directly with your county Recorder of Deeds - St. Louis City, St. Louis County, and statewide.";
 
 const DeedProtection = () => {
   useEffect(() => {
@@ -68,7 +68,7 @@ const DeedProtection = () => {
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Most Missouri counties offer a free service that emails you the moment any
             document is recorded against your property or name. It takes about two minutes
-            to sign up — and it's the single best defense against title theft.
+            to sign up - and it's the single best defense against title theft.
           </p>
         </header>
 
@@ -88,7 +88,7 @@ const DeedProtection = () => {
             <h2 className="font-semibold">How alerts protect you</h2>
             <p className="text-sm text-muted-foreground">
               Your county Recorder of Deeds emails you whenever a new document is filed
-              under your name — so you can catch a fraudulent recording within hours, not
+              under your name - so you can catch a fraudulent recording within hours, not
               months.
             </p>
           </Card>
@@ -97,7 +97,7 @@ const DeedProtection = () => {
             <h2 className="font-semibold">No middleman, no fees</h2>
             <p className="text-sm text-muted-foreground">
               These services are run directly by your county. We don't collect your data
-              — we just point you to the right place.
+              - we just point you to the right place.
             </p>
           </Card>
         </section>
@@ -131,7 +131,7 @@ const DeedProtection = () => {
                     target="_blank"
                     rel="noopener noreferrer"
                   >
-                    Sign up — free, ~2 minutes
+                    Sign up - free, ~2 minutes
                     <ExternalLink className="w-4 h-4 ml-2" />
                   </a>
                 </Button>

@@ -69,7 +69,7 @@ const AIAgentMarketplaceSection = () => {
           Hire specialized AI agents trained for real estate, property management, legal, finance, and more.
         </p>
         <p className="text-muted-foreground max-w-3xl mx-auto">
-          Connect with AI-powered virtual assistants to handle research, scheduling, analysis, and automation—24/7.
+          Connect with AI-powered virtual assistants to handle research, scheduling, analysis, and automation-24/7.
         </p>
       </header>
 
@@ -134,7 +134,7 @@ const AIAgentMarketplaceSection = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="font-semibold text-lg truncate">{agent.name} – {agent.type}</h3>
+                      <h3 className="font-semibold text-lg truncate">{agent.name} - {agent.type}</h3>
                       <Badge variant="secondary" className="text-xs">AI</Badge>
                     </div>
                     <div className="flex items-center space-x-1 mb-1">
@@ -206,7 +206,7 @@ const AIAgentMarketplaceSection = () => {
           {activeAgent && (
             <>
               <DialogHeader>
-                <DialogTitle>{activeAgent.name} – {activeAgent.type}</DialogTitle>
+                <DialogTitle>{activeAgent.name} - {activeAgent.type}</DialogTitle>
                 <DialogDescription>
                   Expanded capabilities, commands, and integrations for this AI agent.
                 </DialogDescription>

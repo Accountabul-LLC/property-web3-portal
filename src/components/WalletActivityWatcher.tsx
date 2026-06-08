@@ -175,7 +175,7 @@ function parsedToNotification(t: ParsedTx, address: string, network: Network) {
       ...base,
       kind: 'escrow_incoming' as const,
       title: amount ? `Incoming escrow: ${fmt(amount)} ${currency}` : `Incoming escrow`,
-      body: `From ${short(t.sender)} — pending release`,
+      body: `From ${short(t.sender)} - pending release`,
       amount: amount ?? undefined,
       currency,
       counterparty: t.sender ?? null,

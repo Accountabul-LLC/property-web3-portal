@@ -109,7 +109,7 @@ const MintWizard: React.FC = () => {
         'testnet'
       );
 
-      toast.success(`✅ Testnet wallet created — Funded with ${data.balance} XRP`);
+      toast.success(`✅ Testnet wallet created - Funded with ${data.balance} XRP`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Unknown error';
       toast.error(`Faucet error: ${message}`);
@@ -467,7 +467,7 @@ const MintWizard: React.FC = () => {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground mt-1">
-                Network: <strong className="capitalize">{network}</strong> — from global toggle
+                Network: <strong className="capitalize">{network}</strong> - from global toggle
               </p>
             </div>
 
@@ -532,7 +532,7 @@ const MintWizard: React.FC = () => {
                     <SelectItem value="none">No property (standalone token)</SelectItem>
                     {approvedProperties.map(p => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.title} — {p.city}, {p.state}
+                        {p.title} - {p.city}, {p.state}
                       </SelectItem>
                     ))}
                   </SelectContent>

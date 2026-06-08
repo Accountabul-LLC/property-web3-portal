@@ -24,7 +24,7 @@ const ReceiveModal = ({ isOpen, onClose, walletAddress, network = 'mainnet' }: R
       toast.success('Address copied to clipboard');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      toast.error('Copy failed — please copy the address manually');
+      toast.error('Copy failed - please copy the address manually');
     }
   };
 

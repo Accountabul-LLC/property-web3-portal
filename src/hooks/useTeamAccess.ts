@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-// Hardcoded sole admin email — defense-in-depth gate on top of the
+// Hardcoded sole admin email - defense-in-depth gate on top of the
 // public.user_roles check. Server-side RLS via has_role() is still the
 // authoritative enforcement; this prevents UI exposure if a stray row
 // ever appears in user_roles.
@@ -50,7 +50,7 @@ export function useTeamAccess() {
       return;
     }
 
-    // Hard email allowlist — only the designated admin email can pass,
+    // Hard email allowlist - only the designated admin email can pass,
     // even if a user_roles row exists for another account.
     if ((user.email ?? '').toLowerCase() !== ADMIN_EMAIL) {
       roleCache.set(user.id, false);

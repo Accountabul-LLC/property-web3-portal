@@ -29,7 +29,7 @@ const statusConfig = {
     color: 'text-blue-600',
     bg: 'bg-blue-50 dark:bg-blue-950/20',
     label: 'Submitted',
-    description: 'Your application has been submitted and is awaiting review. This typically takes 1–2 business days.',
+    description: 'Your application has been submitted and is awaiting review. This typically takes 1-2 business days.',
   },
   under_review: {
     icon: RefreshCw,

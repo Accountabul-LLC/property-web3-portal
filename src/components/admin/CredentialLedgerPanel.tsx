@@ -96,7 +96,7 @@ export function CredentialLedgerPanel() {
   }
 
   const truncate = (s: string | null | undefined, n = 12) =>
-    s ? `${s.slice(0, n)}…${s.slice(-6)}` : '—'
+    s ? `${s.slice(0, n)}…${s.slice(-6)}` : '-'
 
   return (
     <Card>
@@ -111,7 +111,7 @@ export function CredentialLedgerPanel() {
           </Button>
         </div>
         <CardDescription>
-          All XRPL credential records — issuance state, on-chain hashes, and admin actions.
+          All XRPL credential records - issuance state, on-chain hashes, and admin actions.
         </CardDescription>
       </CardHeader>
 
@@ -166,7 +166,7 @@ export function CredentialLedgerPanel() {
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="min-w-0">
                     <p className="font-mono text-xs break-all">
-                      {cred.user_wallets?.wallet_address ?? '—'}
+                      {cred.user_wallets?.wallet_address ?? '-'}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {cred.user_wallets?.network} · {cred.credential_type}

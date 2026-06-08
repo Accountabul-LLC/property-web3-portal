@@ -284,7 +284,7 @@ const PropertyListingsSection = () => {
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">Real Estate Marketplace</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Browse standard listings posted by businesses and tokenized fractional offerings — side by side.
+            Browse standard listings posted by businesses and tokenized fractional offerings - side by side.
           </p>
         </div>
 

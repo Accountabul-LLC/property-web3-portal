@@ -1,4 +1,4 @@
-// ActiveWalletContext — manages multi-wallet state, DB persistence, and audit logging
+// ActiveWalletContext - manages multi-wallet state, DB persistence, and audit logging
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -187,7 +187,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     localStorage.removeItem('wallet_address');
   }, []);
 
-  // Network is now a viewing context, not a wallet filter — show all active wallets
+  // Network is now a viewing context, not a wallet filter - show all active wallets
   const filteredWallets = wallets;
   const activeWallet = wallets.find(w => w.address === activeAddress) || null;
   const isConnected = !!activeWallet;
@@ -195,7 +195,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
   const setActiveNetwork = useCallback((network: XRPLNetwork) => {
     setActiveNetworkState(network);
     localStorage.setItem(NETWORK_KEY, network);
-    // No wallet switching — same wallet, different network view
+    // No wallet switching - same wallet, different network view
   }, []);
 
   const setActiveWallet = useCallback((address: string) => {
@@ -361,7 +361,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     addWallet(address, undefined, xamanName, undefined, undefined, activeNetwork);
     setConnectModalOpen(false);
     const displayName = xamanName || `${address.slice(0, 6)}...${address.slice(-4)}`;
-    toast.success(`✅ Wallet Connected — Signed in as ${displayName}`);
+    toast.success(`✅ Wallet Connected - Signed in as ${displayName}`);
   }, [activeNetwork, addWallet]);
 
   // 30-minute inactivity timeout: clears auth session + wallet context

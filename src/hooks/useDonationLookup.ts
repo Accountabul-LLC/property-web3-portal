@@ -37,7 +37,7 @@ export function useDonationLookup(walletAddress: string | null) {
         )
         .eq('donor_wallet_address', walletAddress);
 
-      // Donations where this wallet is the RECIPIENT — public view of escrowed/released only
+      // Donations where this wallet is the RECIPIENT - public view of escrowed/released only
       const { data: asRecipient } = await supabase
         .from('campaign_donations')
         .select(

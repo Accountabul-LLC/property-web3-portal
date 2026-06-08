@@ -166,7 +166,7 @@ export default function CauseApply() {
               and reach out to you at the email you provided.
             </p>
             <p className="text-sm text-muted-foreground mb-8">
-              Review typically takes 3–5 business days. If approved, your campaign will go live on the Causes page.
+              Review typically takes 3-5 business days. If approved, your campaign will go live on the Causes page.
             </p>
             <div className="flex gap-3 justify-center">
               <Button onClick={() => navigate('/causes')}>View Active Causes</Button>
@@ -206,7 +206,7 @@ export default function CauseApply() {
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 flex gap-3 mb-8">
           <Lock className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
           <div className="text-sm text-muted-foreground space-y-1">
-            <p><strong className="text-foreground">How funds work:</strong> Every donation goes into XRPL escrow — locked on-chain until your release date, then sent directly to your wallet. The Accountabul team never holds the funds.</p>
+            <p><strong className="text-foreground">How funds work:</strong> Every donation goes into XRPL escrow - locked on-chain until your release date, then sent directly to your wallet. The Accountabul team never holds the funds.</p>
             <p className="flex items-center gap-1">
               <Info className="w-3.5 h-3.5 flex-shrink-0" />
               You must provide a valid XRPL wallet address to receive funds.
@@ -232,7 +232,7 @@ export default function CauseApply() {
                 <FormLabel>Description *</FormLabel>
                 <FormControl>
                   <Textarea
-                    placeholder="Describe the cause, who it helps, and why it matters. Be specific — this is what donors will read."
+                    placeholder="Describe the cause, who it helps, and why it matters. Be specific - this is what donors will read."
                     rows={6}
                     {...field}
                   />
@@ -286,7 +286,7 @@ export default function CauseApply() {
                   <FormControl>
                     <Input type="number" min="0" placeholder="e.g. 50000" {...field} />
                   </FormControl>
-                  <p className="text-xs text-muted-foreground">Shown as a soft goal — donations continue past the goal.</p>
+                  <p className="text-xs text-muted-foreground">Shown as a soft goal - donations continue past the goal.</p>
                   <FormMessage />
                 </FormItem>
               )} />
@@ -295,7 +295,7 @@ export default function CauseApply() {
                 <div className="flex flex-col justify-center rounded-md border border-dashed border-border bg-muted/20 p-3">
                   <p className="text-sm font-medium text-foreground">Direct mode</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Donations forward to the recipient immediately. No release date — required because non-XRP assets can't be escrowed on XRPL.
+                    Donations forward to the recipient immediately. No release date - required because non-XRP assets can't be escrowed on XRPL.
                   </p>
                 </div>
               ) : (
@@ -422,7 +422,7 @@ export default function CauseApply() {
                   <FormLabel>Message to Review Team *</FormLabel>
                   <FormControl>
                     <Textarea
-                      placeholder="Tell us more about this cause — who is involved, any urgency, links to news coverage, legal documents, etc."
+                      placeholder="Tell us more about this cause - who is involved, any urgency, links to news coverage, legal documents, etc."
                       rows={4}
                       {...field}
                     />

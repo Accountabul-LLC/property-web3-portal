@@ -47,7 +47,7 @@ const IOUForm: React.FC<IOUFormProps> = ({ params, onChange }) => {
           className="mt-1 uppercase font-mono"
         />
         <p className="text-xs text-muted-foreground mt-1">
-          3 chars = standard XRPL currency. 4–20 chars (e.g. <span className="font-mono">RLUSD</span>) auto-encode to non-standard hex.
+          3 chars = standard XRPL currency. 4-20 chars (e.g. <span className="font-mono">RLUSD</span>) auto-encode to non-standard hex.
         </p>
       </div>
       <div>

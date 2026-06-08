@@ -58,7 +58,7 @@ export function useProfile() {
       if (cancelled) return;
 
       if (error && error.code === 'PGRST116') {
-        // Profile row missing — create it from user metadata
+        // Profile row missing - create it from user metadata
         const newProfile: any = {
           id: userId,
           email,

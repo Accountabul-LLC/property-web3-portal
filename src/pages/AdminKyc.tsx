@@ -165,10 +165,10 @@ const AdminKyc = () => {
                   <div className="border-t px-4 pb-4 pt-3">
                     {form ? (
                       <div className="grid grid-cols-2 gap-2 text-sm mb-4">
-                        <div><span className="text-muted-foreground">DOB:</span> {form.date_of_birth ?? '—'}</div>
-                        <div><span className="text-muted-foreground">Nationality:</span> {form.nationality ?? '—'}</div>
-                        <div><span className="text-muted-foreground">Residence:</span> {form.country_of_residence ?? '—'}</div>
-                        <div><span className="text-muted-foreground">Source of Funds:</span> {form.source_of_funds ?? '—'}</div>
+                        <div><span className="text-muted-foreground">DOB:</span> {form.date_of_birth ?? '-'}</div>
+                        <div><span className="text-muted-foreground">Nationality:</span> {form.nationality ?? '-'}</div>
+                        <div><span className="text-muted-foreground">Residence:</span> {form.country_of_residence ?? '-'}</div>
+                        <div><span className="text-muted-foreground">Source of Funds:</span> {form.source_of_funds ?? '-'}</div>
                         <div className="col-span-2">
                           <span className="text-muted-foreground">Address:</span>{' '}
                           {[form.address_line1, form.city, form.postal_code, form.country].filter(Boolean).join(', ')}

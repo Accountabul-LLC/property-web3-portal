@@ -1,14 +1,14 @@
 /**
- * AdminCredentials  —  /admin/credentials
+ * AdminCredentials  -  /admin/credentials
  *
  * Tabbed admin view for the credential application lifecycle:
- *   1. New Applications      — status = 'applied'
- *   2. Under Review          — status = 'under_review'
- *   3. Approved / To Issue   — status = 'approved'
- *   4. Issued / Awaiting     — status = 'issued_pending_acceptance'
- *   5. Active Credentials    — status = 'active'
- *   6. Expired               — status = 'expired'
- *   7. Issuer & Ledger       — IssuerWalletPanel + CredentialLedgerPanel
+ *   1. New Applications      - status = 'applied'
+ *   2. Under Review          - status = 'under_review'
+ *   3. Approved / To Issue   - status = 'approved'
+ *   4. Issued / Awaiting     - status = 'issued_pending_acceptance'
+ *   5. Active Credentials    - status = 'active'
+ *   6. Expired               - status = 'expired'
+ *   7. Issuer & Ledger       - IssuerWalletPanel + CredentialLedgerPanel
  */
 
 import { useEffect, useState } from 'react'
@@ -104,7 +104,7 @@ function AppRow({ app, actions }: AppRowProps) {
             <Badge variant="secondary" className="text-xs">{app.status}</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
-            User: {userName(app)} — Wallet: {shortWallet(app.wallet_address)}
+            User: {userName(app)} - Wallet: {shortWallet(app.wallet_address)}
           </p>
           <p className="text-xs text-muted-foreground">
             Applied: {new Date(app.applied_at).toLocaleString()}
@@ -365,7 +365,7 @@ const AdminCredentials = () => {
                       <Card className="mt-1 mb-1 border-dashed">
                         <CardContent className="pt-4">
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                            Submitted Evidence — {app.credential_catalog?.credential_name ?? app.credential_key}
+                            Submitted Evidence - {app.credential_catalog?.credential_name ?? app.credential_key}
                           </p>
                           <CredentialEvidencePanel
                             applicationId={app.id}
@@ -383,7 +383,7 @@ const AdminCredentials = () => {
 
           {/* ── Approved / Ready to Issue ─────────────────────────────────── */}
           <TabsContent value="approved">
-            <CardTitle className="text-base mb-4">Approved — Ready to Issue</CardTitle>
+            <CardTitle className="text-base mb-4">Approved - Ready to Issue</CardTitle>
             {appsLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
             ) : approvedApps.length === 0 ? (
@@ -408,7 +408,7 @@ const AdminCredentials = () => {
 
           {/* ── Issued / Awaiting Acceptance ──────────────────────────────── */}
           <TabsContent value="issued">
-            <CardTitle className="text-base mb-4">Issued — Awaiting User Acceptance</CardTitle>
+            <CardTitle className="text-base mb-4">Issued - Awaiting User Acceptance</CardTitle>
             {appsLoading ? (
               <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
             ) : issuedApps.length === 0 ? (
