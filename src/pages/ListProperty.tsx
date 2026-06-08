@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Loader2, Info, Building2 } from 'lucide-react';
+import { Loader2, Info, Building2, Upload, X } from 'lucide-react';
 import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Seo } from '@/components/Seo';
@@ -15,6 +15,10 @@ import AddressAutocomplete from '@/components/AddressAutocomplete';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useListProperty } from '@/hooks/useListProperty';
+
+const MAX_PHOTOS = 8;
+const MAX_PHOTO_BYTES = 6 * 1024 * 1024; // 6MB
+const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 5; // 5 years
 
 interface VendorRow {
   id: string;
@@ -46,8 +50,10 @@ export default function ListProperty() {
     listing_price: '',
     contact_email: '',
     contact_phone: '',
-    image_url: '',
   });
+  const [photos, setPhotos] = useState<{ url: string; path: string }[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -96,6 +102,62 @@ export default function ListProperty() {
 
   const update = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
+  const handlePhotoUpload = async (files: FileList | null) => {
+    if (!files || !user) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    const incoming = Array.from(files).slice(0, remaining);
+    if (incoming.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: { url: string; path: string }[] = [];
+      for (const file of incoming) {
+        if (file.size > MAX_PHOTO_BYTES) {
+          toast.error(`${file.name} is larger than 6MB`);
+          continue;
+        }
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not an image`);
+          continue;
+        }
+        const ext = file.name.split('.').pop() || 'jpg';
+        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('property-images')
+          .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+        if (upErr) {
+          console.error(upErr);
+          toast.error(`Upload failed: ${file.name}`);
+          continue;
+        }
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('property-images')
+          .createSignedUrl(path, SIGNED_URL_TTL);
+        if (signErr || !signed) {
+          console.error(signErr);
+          toast.error(`Could not link ${file.name}`);
+          continue;
+        }
+        uploaded.push({ url: signed.signedUrl, path });
+      }
+      if (uploaded.length) {
+        setPhotos((prev) => [...prev, ...uploaded]);
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = async (path: string) => {
+    setPhotos((prev) => prev.filter((p) => p.path !== path));
+    try {
+      await supabase.storage.from('property-images').remove([path]);
+    } catch (err) {
+      console.error('Failed to delete photo', err);
+    }
+  };
+
+
   const onSubmit = async () => {
     if (!vendor) return;
     if (!form.title.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim()) {
@@ -122,7 +184,7 @@ export default function ListProperty() {
         listing_price: form.listing_price ? Number(form.listing_price.replace(/,/g, '')) : null,
         contact_email: form.contact_email.trim(),
         contact_phone: form.contact_phone.trim(),
-        images: form.image_url.trim() ? [form.image_url.trim()] : [],
+        images: photos.map((p) => p.url),
         vendor_profile_id: vendor.id,
       });
       toast.success('Listing published');
@@ -270,9 +332,55 @@ export default function ListProperty() {
             </div>
 
             <div>
-              <Label htmlFor="image">Cover image URL</Label>
-              <Input id="image" placeholder="https://..." value={form.image_url} onChange={(e) => update('image_url', e.target.value)} />
-              <p className="text-xs text-muted-foreground mt-1">Paste a hosted image URL for now. Multi-photo upload coming soon.</p>
+              <Label>Photos ({photos.length}/{MAX_PHOTOS})</Label>
+              <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {photos.map((photo, idx) => (
+                  <div key={photo.path} className="relative group rounded-md overflow-hidden border bg-muted aspect-square">
+                    <img src={photo.url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(photo.path)}
+                      className="absolute top-1 right-1 rounded-full bg-background/90 border p-1 opacity-0 group-hover:opacity-100 transition"
+                      aria-label="Remove photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    {idx === 0 && (
+                      <span className="absolute bottom-1 left-1 text-[10px] uppercase tracking-wide bg-background/90 border rounded px-1.5 py-0.5">
+                        Cover
+                      </span>
+                    )}
+                  </div>
+                ))}
+                {photos.length < MAX_PHOTOS && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="aspect-square rounded-md border-2 border-dashed flex flex-col items-center justify-center text-xs text-muted-foreground hover:bg-muted/50 transition disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <>
+                        <Upload className="w-5 h-5 mb-1" />
+                        Add photos
+                      </>
+                    )}
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                hidden
+                onChange={(e) => handlePhotoUpload(e.target.files)}
+              />
+              <p className="text-xs text-muted-foreground mt-2">
+                Up to {MAX_PHOTOS} photos. First photo is the cover. Max 6MB each.
+              </p>
             </div>
 
             <div>

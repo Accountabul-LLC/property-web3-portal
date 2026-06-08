@@ -100,6 +100,12 @@ export default function VendorDashboard() {
 
               <div className="flex flex-wrap gap-3">
                 <Button asChild>
+                  <Link to="/list-property">
+                    List a Property
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline">
                   <Link to="/professionals">
                     View marketplace
                     <ArrowRight className="ml-2 h-4 w-4" />

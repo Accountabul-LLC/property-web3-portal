@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import PhotoGallery from '../components/property/PhotoGallery';
 import PropertySummary from '../components/property/PropertySummary';
 import FinancialSidebar from '../components/property/FinancialSidebar';
+import StandardListingSidebar from '../components/property/StandardListingSidebar';
 import MarketStats from '../components/property/MarketStats';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import DetailsTab from '../components/property/DetailsTab';
@@ -156,10 +157,7 @@ const PropertyDetailPage: React.FC = () => {
             <p className="font-medium">Standard Listing — not a tokenized asset.</p>
             <p className="text-muted-foreground mt-1">
               This property is posted by a third-party business. Accountabul does not broker or escrow this sale.
-              Contact the lister directly and verify everything before sending money.
-              {dbProperty.contact_email ? <> Email: <a className="underline" href={`mailto:${dbProperty.contact_email}`}>{dbProperty.contact_email}</a>.</> : null}
-              {dbProperty.contact_phone ? <> Phone: <a className="underline" href={`tel:${dbProperty.contact_phone}`}>{dbProperty.contact_phone}</a>.</> : null}
-              {dbProperty.listing_price != null ? <> List price: <span className="font-medium text-foreground">${Number(dbProperty.listing_price).toLocaleString()}</span>.</> : null}
+              Verify the lister and property before sending any money.
             </p>
           </div>
         )}
@@ -169,62 +167,91 @@ const PropertyDetailPage: React.FC = () => {
             <PropertySummary property={property} />
           </div>
           <div className="lg:col-span-1">
-            <FinancialSidebar property={property} />
+            {dbProperty?.listing_kind === 'standard' ? (
+              <StandardListingSidebar property={dbProperty} />
+            ) : (
+              <FinancialSidebar property={property} />
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <Suspense fallback={<ChartPanelSkeleton />}>
-            <PriceChart />
-          </Suspense>
-          <MarketStats property={property} />
-        </div>
-
-        <div className="w-full">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
-              <TabsTrigger value="details">Details</TabsTrigger>
-              <TabsTrigger value="financials">Financials</TabsTrigger>
-              <TabsTrigger value="orderbook">Order Book</TabsTrigger>
-              <TabsTrigger value="documents">Documents</TabsTrigger>
-              <TabsTrigger value="market">Market</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
-            </TabsList>
-            
-            <div className="mt-6">
-              <TabsContent value="details" className="space-y-6">
-                <DetailsTab property={property} />
-              </TabsContent>
-              <TabsContent value="financials" className="space-y-6">
-                {activeTab === 'financials' ? (
-                  <Suspense fallback={<ChartPanelSkeleton />}>
-                    <FinancialsTab property={property} />
-                  </Suspense>
-                ) : (
-                  <ChartPanelSkeleton />
-                )}
-              </TabsContent>
-              <TabsContent value="orderbook" className="space-y-6">
-                <OrderBook />
-              </TabsContent>
-              <TabsContent value="documents" className="space-y-6">
-                <DocumentsTab propertyId={id} />
-              </TabsContent>
-              <TabsContent value="market" className="space-y-6">
-                {activeTab === 'market' ? (
-                  <Suspense fallback={<ChartPanelSkeleton />}>
-                    <MarketTab property={property} />
-                  </Suspense>
-                ) : (
-                  <ChartPanelSkeleton />
-                )}
-              </TabsContent>
-              <TabsContent value="reviews" className="space-y-6">
-                <ReviewsTab propertyId={id} />
-              </TabsContent>
+        {dbProperty?.listing_kind === 'standard' ? (
+          <div className="w-full">
+            <Tabs value={activeTab === 'orderbook' || activeTab === 'financials' || activeTab === 'market' ? 'details' : activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="documents">Documents</TabsTrigger>
+                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              </TabsList>
+              <div className="mt-6">
+                <TabsContent value="details" className="space-y-6">
+                  <DetailsTab property={property} />
+                </TabsContent>
+                <TabsContent value="documents" className="space-y-6">
+                  <DocumentsTab propertyId={id} />
+                </TabsContent>
+                <TabsContent value="reviews" className="space-y-6">
+                  <ReviewsTab propertyId={id} />
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              <Suspense fallback={<ChartPanelSkeleton />}>
+                <PriceChart />
+              </Suspense>
+              <MarketStats property={property} />
             </div>
-          </Tabs>
-        </div>
+
+            <div className="w-full">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-6">
+                  <TabsTrigger value="details">Details</TabsTrigger>
+                  <TabsTrigger value="financials">Financials</TabsTrigger>
+                  <TabsTrigger value="orderbook">Order Book</TabsTrigger>
+                  <TabsTrigger value="documents">Documents</TabsTrigger>
+                  <TabsTrigger value="market">Market</TabsTrigger>
+                  <TabsTrigger value="reviews">Reviews</TabsTrigger>
+                </TabsList>
+
+                <div className="mt-6">
+                  <TabsContent value="details" className="space-y-6">
+                    <DetailsTab property={property} />
+                  </TabsContent>
+                  <TabsContent value="financials" className="space-y-6">
+                    {activeTab === 'financials' ? (
+                      <Suspense fallback={<ChartPanelSkeleton />}>
+                        <FinancialsTab property={property} />
+                      </Suspense>
+                    ) : (
+                      <ChartPanelSkeleton />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="orderbook" className="space-y-6">
+                    <OrderBook />
+                  </TabsContent>
+                  <TabsContent value="documents" className="space-y-6">
+                    <DocumentsTab propertyId={id} />
+                  </TabsContent>
+                  <TabsContent value="market" className="space-y-6">
+                    {activeTab === 'market' ? (
+                      <Suspense fallback={<ChartPanelSkeleton />}>
+                        <MarketTab property={property} />
+                      </Suspense>
+                    ) : (
+                      <ChartPanelSkeleton />
+                    )}
+                  </TabsContent>
+                  <TabsContent value="reviews" className="space-y-6">
+                    <ReviewsTab propertyId={id} />
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
+          </>
+        )}
       </main>
       
       <Footer />
