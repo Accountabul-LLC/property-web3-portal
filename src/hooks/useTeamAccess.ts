@@ -2,6 +2,12 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
+// Hardcoded sole admin email — defense-in-depth gate on top of the
+// public.user_roles check. Server-side RLS via has_role() is still the
+// authoritative enforcement; this prevents UI exposure if a stray row
+// ever appears in user_roles.
+const ADMIN_EMAIL = 'jibreelm.dev@gmail.com';
+
 // Module-level cache: admin role lookup is shared across all consumers so
 // page navigations don't re-trigger a loading flash.
 const roleCache = new Map<string, boolean>();
