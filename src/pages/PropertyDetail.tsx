@@ -157,10 +157,7 @@ const PropertyDetailPage: React.FC = () => {
             <p className="font-medium">Standard Listing — not a tokenized asset.</p>
             <p className="text-muted-foreground mt-1">
               This property is posted by a third-party business. Accountabul does not broker or escrow this sale.
-              Contact the lister directly and verify everything before sending money.
-              {dbProperty.contact_email ? <> Email: <a className="underline" href={`mailto:${dbProperty.contact_email}`}>{dbProperty.contact_email}</a>.</> : null}
-              {dbProperty.contact_phone ? <> Phone: <a className="underline" href={`tel:${dbProperty.contact_phone}`}>{dbProperty.contact_phone}</a>.</> : null}
-              {dbProperty.listing_price != null ? <> List price: <span className="font-medium text-foreground">${Number(dbProperty.listing_price).toLocaleString()}</span>.</> : null}
+              Verify the lister and property before sending any money.
             </p>
           </div>
         )}
@@ -170,7 +167,11 @@ const PropertyDetailPage: React.FC = () => {
             <PropertySummary property={property} />
           </div>
           <div className="lg:col-span-1">
-            <FinancialSidebar property={property} />
+            {dbProperty?.listing_kind === 'standard' ? (
+              <StandardListingSidebar property={dbProperty} />
+            ) : (
+              <FinancialSidebar property={property} />
+            )}
           </div>
         </div>
 
