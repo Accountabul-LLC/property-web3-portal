@@ -102,6 +102,62 @@ export default function ListProperty() {
 
   const update = (key: keyof typeof form, value: string) => setForm((f) => ({ ...f, [key]: value }));
 
+  const handlePhotoUpload = async (files: FileList | null) => {
+    if (!files || !user) return;
+    const remaining = MAX_PHOTOS - photos.length;
+    const incoming = Array.from(files).slice(0, remaining);
+    if (incoming.length === 0) return;
+    setUploading(true);
+    try {
+      const uploaded: { url: string; path: string }[] = [];
+      for (const file of incoming) {
+        if (file.size > MAX_PHOTO_BYTES) {
+          toast.error(`${file.name} is larger than 6MB`);
+          continue;
+        }
+        if (!file.type.startsWith('image/')) {
+          toast.error(`${file.name} is not an image`);
+          continue;
+        }
+        const ext = file.name.split('.').pop() || 'jpg';
+        const path = `${user.id}/${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('property-images')
+          .upload(path, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+        if (upErr) {
+          console.error(upErr);
+          toast.error(`Upload failed: ${file.name}`);
+          continue;
+        }
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('property-images')
+          .createSignedUrl(path, SIGNED_URL_TTL);
+        if (signErr || !signed) {
+          console.error(signErr);
+          toast.error(`Could not link ${file.name}`);
+          continue;
+        }
+        uploaded.push({ url: signed.signedUrl, path });
+      }
+      if (uploaded.length) {
+        setPhotos((prev) => [...prev, ...uploaded]);
+      }
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removePhoto = async (path: string) => {
+    setPhotos((prev) => prev.filter((p) => p.path !== path));
+    try {
+      await supabase.storage.from('property-images').remove([path]);
+    } catch (err) {
+      console.error('Failed to delete photo', err);
+    }
+  };
+
+
   const onSubmit = async () => {
     if (!vendor) return;
     if (!form.title.trim() || !form.address.trim() || !form.city.trim() || !form.state.trim()) {
