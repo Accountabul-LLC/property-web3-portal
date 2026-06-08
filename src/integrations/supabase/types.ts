@@ -1232,11 +1232,15 @@ export type Database = {
           bathrooms: number | null
           bedrooms: number | null
           city: string | null
+          contact_email: string | null
+          contact_phone: string | null
           created_at: string
           description: string | null
           estimated_value: number | null
           id: string
           images: string[] | null
+          listing_kind: string
+          listing_price: number | null
           market_cap: number | null
           owner_user_id: string | null
           owner_wallet: string | null
@@ -1253,6 +1257,7 @@ export type Database = {
           tokens_available: number | null
           total_tokens: number | null
           updated_at: string
+          vendor_profile_id: string | null
           year_built: number | null
           zip: string | null
         }
@@ -1264,11 +1269,15 @@ export type Database = {
           bathrooms?: number | null
           bedrooms?: number | null
           city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           estimated_value?: number | null
           id?: string
           images?: string[] | null
+          listing_kind?: string
+          listing_price?: number | null
           market_cap?: number | null
           owner_user_id?: string | null
           owner_wallet?: string | null
@@ -1285,6 +1294,7 @@ export type Database = {
           tokens_available?: number | null
           total_tokens?: number | null
           updated_at?: string
+          vendor_profile_id?: string | null
           year_built?: number | null
           zip?: string | null
         }
@@ -1296,11 +1306,15 @@ export type Database = {
           bathrooms?: number | null
           bedrooms?: number | null
           city?: string | null
+          contact_email?: string | null
+          contact_phone?: string | null
           created_at?: string
           description?: string | null
           estimated_value?: number | null
           id?: string
           images?: string[] | null
+          listing_kind?: string
+          listing_price?: number | null
           market_cap?: number | null
           owner_user_id?: string | null
           owner_wallet?: string | null
@@ -1317,6 +1331,7 @@ export type Database = {
           tokens_available?: number | null
           total_tokens?: number | null
           updated_at?: string
+          vendor_profile_id?: string | null
           year_built?: number | null
           zip?: string | null
         }
@@ -1327,6 +1342,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "wallet_profiles"
             referencedColumns: ["wallet_address"]
+          },
+          {
+            foreignKeyName: "properties_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_vendor_profile_id_fkey"
+            columns: ["vendor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_public_profiles"
+            referencedColumns: ["id"]
           },
         ]
       }

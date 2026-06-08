@@ -18,6 +18,7 @@ const lazyPage = <T extends Record<string, unknown>>(loader: () => Promise<{ def
 const Index = lazyPage(() => import("./pages/Index"));
 const Marketplace = lazyPage(() => import("./pages/Marketplace"));
 const Tokenize = lazyPage(() => import("./pages/Tokenize"));
+const ListProperty = lazyPage(() => import("./pages/ListProperty"));
 const Auth = lazyPage(() => import("./pages/Auth"));
 const AuthIndividual = lazyPage(() => import("./pages/AuthIndividual"));
 const AuthBusiness = lazyPage(() => import("./pages/AuthBusiness"));
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/marketplace" element={<Marketplace />} />
                 <Route path="/tokenize" element={<RouteGuard adminOnly><KycGate><Tokenize /></KycGate></RouteGuard>} />
+                <Route path="/list-property" element={<ListProperty />} />
                 <Route path="/professionals" element={<Professionals />} />
                 <Route path="/ai-agents" element={<RouteGuard adminOnly><AIAgents /></RouteGuard>} />
                 <Route path="/portfolio" element={<Portfolio />} />

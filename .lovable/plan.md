@@ -1,44 +1,58 @@
-## Security Audit — Exposed Secrets & Sensitive Data
 
-Goal: Confirm the **published** site (`property-web3-portal.lovable.app`) does not expose any private keys, seed phrases, API secrets, or hardcoded credentials. The published build is the current `main` branch on GitHub (preview is ahead and not yet published), so auditing the repo's published-equivalent state covers the live site.
+## Goal
 
-### Scope
-- Client-side bundle only (anything in `src/`, `public/`, `index.html`, `.env` keys prefixed `VITE_`). This is what ships to browsers.
-- Edge functions are server-side and not exposed publicly — out of scope unless we find a leak path.
+Today the only way a property reaches the marketplace is through the tokenization flow (`/tokenize` → admin approval → status `approved`/`active`). We're opening a second lane: any signed-in user with a **business (vendor) profile** can list a regular, non-tokenized property directly. The marketplace will mix both kinds of listings, badge them clearly, and gate entry behind a disclaimer.
 
-### Audit Steps
+## What we'll build
 
-1. **Static scan of repo for secret patterns**
-   - `rg` for: `sEd`/`sEs` (XRPL seeds), `xrpl.Wallet.fromSeed`, `PRIVATE_KEY`, `SECRET`, `seed:`, `mnemonic`, `BEGIN RSA`, `BEGIN PRIVATE`, `sk_live`, `sk_test`, `ghp_`, `AIza`, `eyJhbGciOi...service_role`, `SUPABASE_SERVICE_ROLE`, hardcoded 32+ char hex strings.
-   - Scope to `src/`, `public/`, `index.html`, root config files. Exclude `supabase/functions/` (server-side).
+### 1. Data model
+Add to `public.properties`:
+- `listing_kind text` — `'standard'` (non-tokenized) or `'tokenized'`. Default `'tokenized'` so existing rows stay correct.
+- `listing_price numeric` — sale/list price for standard listings (tokenized ones keep using token fields).
+- `vendor_profile_id uuid` — FK to `vendor_profiles.id`, set when a business posts a standard listing.
+- `contact_email text`, `contact_phone text` — how a buyer reaches the lister.
 
-2. **Verify `.env` exposure surface**
-   - Confirm only `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_SUPABASE_PROJECT_ID` are referenced client-side (these are public/anon — safe by design).
-   - Flag any `VITE_*` var that looks like a secret.
+RLS / status flow for standard listings:
+- Insert allowed only when the user has a row in `vendor_profiles` (verified or not) and `listing_kind = 'standard'`.
+- Standard listings skip the admin tokenization pipeline: they go straight to `status = 'active'` on submit (still editable/removable by owner; admins can take down).
+- Tokenized flow is unchanged.
 
-3. **Check for accidentally-committed wallet artifacts**
-   - Search for `.json` files containing `seed`, `secret`, `master_seed`, `family_seed`.
-   - Search for `.pem`, `.key`, `.p12`, `id_rsa` files in the repo.
+### 2. New "List a Property" flow for businesses
+- New route `/list-property` (separate from `/tokenize`) with a short form: title, address (Places autocomplete), property type, beds/baths/sqft, photos, description, list price, contact email/phone.
+- Gate: if user has no `vendor_profiles` row → redirect to `/vendor/onboarding` with a banner explaining a business profile is required.
+- Entry points: button on Dashboard, button on Marketplace ("List your property"), CTA on `VendorDashboard`.
+- The existing `/tokenize` page stays as-is for the tokenization path.
 
-4. **Check client code for service-role / admin key usage**
-   - `rg "service_role"` across `src/` — must be zero hits.
-   - Confirm no edge-function secrets are imported into frontend.
+### 3. Marketplace disclaimer modal
+- Shows on every visit to `/marketplace` by default.
+- "I understand — don't show this again" checkbox; if checked, store consent in `localStorage` (`marketplace_disclaimer_ack_v1` with timestamp). Future visits skip the modal.
+- Copy makes clear: listings are posted by third parties, may or may not be tokenized, platform is not a broker, do your own due diligence, verify the lister, etc.
+- Modal blocks the listings grid until acknowledged (single click for that visit, or permanent dismiss).
 
-5. **Run Lovable's backend security scan**
-   - `security--run_security_scan` to surface RLS gaps, exposed tables, and misconfigurations on the live backend (same DB the published site uses).
+### 4. Marketplace UI changes
+- Mix standard + tokenized listings in the same grid.
+- Each card shows a clear badge: **"Standard Listing"** (neutral) vs **"Tokenized"** (primary/brand color).
+- Filter chip row gets a new toggle: All / Standard / Tokenized.
+- Standard-listing card shows list price + contact CTA instead of token price / projected yield.
+- `PropertyDetail` page renders a different sidebar for `listing_kind = 'standard'`: list price, "Contact lister" button (mailto/tel), prominent "This is a standard listing — not a tokenized asset" notice. Tokenized layout untouched.
 
-6. **Fetch the live published JS bundle (optional spot-check)**
-   - Pull `https://property-web3-portal.lovable.app` HTML + one bundled JS chunk, grep the minified output for the same secret patterns to confirm nothing snuck through the build.
+### 5. Copy + safety
+- Disclaimer text drafted to mirror the Facebook-Marketplace-style "platform only" framing you described.
+- Small persistent banner at the top of `/marketplace` after dismissal: "Standard listings are posted by third parties. Verify before transacting."
 
-### Deliverable
-A short report listing:
-- Files/lines flagged (with severity), or "clean" per category.
-- Any backend RLS/policy findings from the scan.
-- Recommended fixes (if anything is found) — applied in a follow-up build-mode session, not this one.
+## Out of scope (for this pass)
+- Payments / escrow for standard listings.
+- Mandatory KYC or vendor verification before listing.
+- Messaging/inbox between buyer and lister (we'll just expose contact info).
+- Moderation queue (admins can still remove, but no pre-approval).
 
-### Out of Scope
-- Edge function code review (server-only secrets).
-- Auth/UX changes.
-- Anything in the preview branch that isn't yet published.
+## Technical notes
+- Migration adds the new columns + a new INSERT policy on `properties` that requires `EXISTS (vendor_profiles where user_id = auth.uid())` when `listing_kind = 'standard'`. Existing tokenization policies stay.
+- New hook `useListProperty` for the standard-listing form; `useProperties` extended to return `listing_kind` and updated filter params.
+- Disclaimer lives in `src/components/marketplace/MarketplaceDisclaimerModal.tsx`; storage key versioned so we can force re-consent later.
+- No edge function needed — standard listings are a plain insert under RLS.
 
-Approve and I'll run the audit.
+## Files touched (approx.)
+- New migration on `public.properties`.
+- New: `src/pages/ListProperty.tsx`, `src/components/marketplace/MarketplaceDisclaimerModal.tsx`, `src/hooks/useListProperty.ts`.
+- Edit: `src/App.tsx` (route), `src/pages/Marketplace.tsx`, `src/components/PropertyListingsSection.tsx` (badges + filter + modal mount), `src/components/property/*` (standard-listing sidebar), `src/hooks/useProperties.ts`, `src/pages/Dashboard.tsx` + `VendorDashboard.tsx` (CTA).

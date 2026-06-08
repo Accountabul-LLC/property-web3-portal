@@ -6,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare } from 'lucide-react';
+import { Search, MapPin, Bed, Bath, Square, TrendingUp, Loader2, ShieldAlert, CheckSquare, Mail, Phone, Plus } from 'lucide-react';
 import { useProperties, Property } from '@/hooks/useProperties';
 import { useAuth } from '@/hooks/useAuth';
 
 import { useSavedPropertyIds } from '@/hooks/useSavedProperties';
 import PropertySaveButton from './property/PropertySaveButton';
+import MarketplaceDisclaimerModal, { hasDismissedMarketplaceDisclaimer } from './marketplace/MarketplaceDisclaimerModal';
 
 function PropertyCard({
   property,
@@ -25,6 +26,13 @@ function PropertyCard({
   onToggleCompare?: (propertyId: string) => void;
 }) {
   const navigate = useNavigate();
+  const isStandard = property.listing_kind === 'standard';
+
+  const kindBadge = isStandard ? (
+    <Badge variant="secondary" className="bg-muted text-foreground border">Standard Listing</Badge>
+  ) : (
+    <Badge className="bg-gradient-primary text-primary-foreground border-0">Tokenized</Badge>
+  );
 
   const statusLabel = property.status === 'active' ? 'Listed' : property.status === 'approved' ? 'Approved' : property.status;
   const statusClass =
@@ -42,18 +50,19 @@ function PropertyCard({
           alt={property.title}
           className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 flex items-center gap-2">
           <PropertySaveButton
             propertyId={property.id}
             propertyStatus={property.status}
             className="bg-background/90 backdrop-blur-sm border-border shadow-sm"
           />
+          {kindBadge}
         </div>
         {showCompareToggle && onToggleCompare && (
           <button
             type="button"
             onClick={() => onToggleCompare(property.id)}
-            className={`absolute top-3 left-20 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm transition-colors ${
+            className={`absolute bottom-3 left-3 inline-flex items-center gap-2 rounded-md border px-3 py-1.5 text-xs font-medium shadow-sm backdrop-blur-sm transition-colors ${
               selectedForCompare
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'bg-background/90 border-border text-foreground hover:bg-background'
@@ -99,44 +108,77 @@ function PropertyCard({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">${property.price_per_token}</span>
-              <div className="flex items-center text-success text-sm font-medium">
-                <TrendingUp className="w-3 h-3 mr-1" />
-                {property.projected_rental_yield}% yield
+          {isStandard ? (
+            <>
+              <div className="space-y-1">
+                <div className="flex items-baseline justify-between">
+                  <span className="text-2xl font-bold">
+                    {property.listing_price != null
+                      ? `$${Number(property.listing_price).toLocaleString()}`
+                      : 'Contact for price'}
+                  </span>
+                  <span className="text-xs text-muted-foreground">List price</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Posted by a third-party business. Not a tokenized asset.
+                </p>
               </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              per token • {(property.tokens_available || 0).toLocaleString()} of {(property.total_tokens || 0).toLocaleString()} available
-            </p>
-          </div>
 
-          <div className="space-y-1">
-            <div className="w-full bg-muted rounded-full h-2">
-              <div
-                className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
-                style={{
-                  width: `${property.total_tokens
-                    ? ((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100
-                    : 0}%`,
-                }}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {property.total_tokens
-                ? Math.round(((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100)
-                : 0}% funded
-            </p>
-          </div>
+              <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                {property.contact_email ? (
+                  <span className="inline-flex items-center gap-1"><Mail className="w-3 h-3" /> {property.contact_email}</span>
+                ) : null}
+                {property.contact_phone ? (
+                  <span className="inline-flex items-center gap-1"><Phone className="w-3 h-3" /> {property.contact_phone}</span>
+                ) : null}
+              </div>
 
-          <Button
-            className="w-full"
-            variant={property.status === 'active' ? 'default' : 'secondary'}
-            onClick={() => navigate(`/property/${property.id}`)}
-          >
-            View Details
-          </Button>
+              <Button className="w-full" onClick={() => navigate(`/property/${property.id}`)}>
+                View Listing
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-2xl font-bold">${property.price_per_token}</span>
+                  <div className="flex items-center text-success text-sm font-medium">
+                    <TrendingUp className="w-3 h-3 mr-1" />
+                    {property.projected_rental_yield}% yield
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  per token • {(property.tokens_available || 0).toLocaleString()} of {(property.total_tokens || 0).toLocaleString()} available
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className="bg-gradient-primary h-2 rounded-full transition-all duration-300"
+                    style={{
+                      width: `${property.total_tokens
+                        ? ((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100
+                        : 0}%`,
+                    }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {property.total_tokens
+                    ? Math.round(((property.total_tokens - (property.tokens_available || 0)) / property.total_tokens) * 100)
+                    : 0}% funded
+                </p>
+              </div>
+
+              <Button
+                className="w-full"
+                variant={property.status === 'active' ? 'default' : 'secondary'}
+                onClick={() => navigate(`/property/${property.id}`)}
+              >
+                View Details
+              </Button>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -150,7 +192,13 @@ const PropertyListingsSection = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState('all');
   const [selectedStatus, setSelectedStatus] = React.useState('all');
+  const [selectedKind, setSelectedKind] = React.useState<'all' | 'standard' | 'tokenized'>('all');
   const [compareIds, setCompareIds] = React.useState<string[]>([]);
+  const [disclaimerOpen, setDisclaimerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!hasDismissedMarketplaceDisclaimer()) setDisclaimerOpen(true);
+  }, []);
 
   const { data: properties = [], isLoading } = useProperties();
   const { data: savedPropertyIds = [], isLoading: savedLoading } = useSavedPropertyIds();
@@ -170,7 +218,9 @@ const PropertyListingsSection = () => {
       (property.city || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === 'all' || property.property_type === selectedType;
     const matchesStatus = selectedStatus === 'all' || property.status === selectedStatus;
-    return matchesSearch && matchesType && matchesStatus;
+    const kind = property.listing_kind ?? 'tokenized';
+    const matchesKind = selectedKind === 'all' || kind === selectedKind;
+    return matchesSearch && matchesType && matchesStatus && matchesKind;
   };
 
   const filteredProperties = properties.filter(matchesFilters);
@@ -229,13 +279,28 @@ const PropertyListingsSection = () => {
 
   return (
     <div className="min-h-screen bg-background py-12">
+      <MarketplaceDisclaimerModal open={disclaimerOpen} onAcknowledge={() => setDisclaimerOpen(false)} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-12">
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold mb-4">Real Estate Marketplace</h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Discover tokenized real estate investment opportunities with transparent returns and fractional ownership.
+            Browse standard listings posted by businesses and tokenized fractional offerings — side by side.
           </p>
         </div>
+
+        <Card className="border-warning/30 bg-warning/5 mb-8">
+          <CardContent className="p-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-sm">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="w-4 h-4 text-warning mt-0.5 shrink-0" />
+              <span className="text-muted-foreground">
+                Standard listings are posted by third-party businesses. Verify the lister and property before transacting.
+              </span>
+            </div>
+            <Button size="sm" onClick={() => navigate('/list-property')}>
+              <Plus className="w-4 h-4 mr-1" /> List a Property
+            </Button>
+          </CardContent>
+        </Card>
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto mb-8">
@@ -270,6 +335,16 @@ const PropertyListingsSection = () => {
                       {type}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedKind} onValueChange={(v) => setSelectedKind(v as 'all' | 'standard' | 'tokenized')}>
+                <SelectTrigger className="w-full md:w-48">
+                  <SelectValue placeholder="Listing kind" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Listings</SelectItem>
+                  <SelectItem value="standard">Standard Listings</SelectItem>
+                  <SelectItem value="tokenized">Tokenized</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>

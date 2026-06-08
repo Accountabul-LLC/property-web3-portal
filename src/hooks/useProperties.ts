@@ -27,6 +27,11 @@ export interface Property {
   owner_wallet: string | null;
   created_at: string;
   updated_at: string;
+  listing_kind?: 'standard' | 'tokenized';
+  listing_price?: number | null;
+  vendor_profile_id?: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
 }
 
 export function useProperties() {
