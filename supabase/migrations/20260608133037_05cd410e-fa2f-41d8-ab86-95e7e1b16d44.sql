@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "submitters_read_own_campaigns" ON public.campaigns;
