@@ -192,7 +192,13 @@ const PropertyListingsSection = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedType, setSelectedType] = React.useState('all');
   const [selectedStatus, setSelectedStatus] = React.useState('all');
+  const [selectedKind, setSelectedKind] = React.useState<'all' | 'standard' | 'tokenized'>('all');
   const [compareIds, setCompareIds] = React.useState<string[]>([]);
+  const [disclaimerOpen, setDisclaimerOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!hasDismissedMarketplaceDisclaimer()) setDisclaimerOpen(true);
+  }, []);
 
   const { data: properties = [], isLoading } = useProperties();
   const { data: savedPropertyIds = [], isLoading: savedLoading } = useSavedPropertyIds();
@@ -212,7 +218,9 @@ const PropertyListingsSection = () => {
       (property.city || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = selectedType === 'all' || property.property_type === selectedType;
     const matchesStatus = selectedStatus === 'all' || property.status === selectedStatus;
-    return matchesSearch && matchesType && matchesStatus;
+    const kind = property.listing_kind ?? 'tokenized';
+    const matchesKind = selectedKind === 'all' || kind === selectedKind;
+    return matchesSearch && matchesType && matchesStatus && matchesKind;
   };
 
   const filteredProperties = properties.filter(matchesFilters);
