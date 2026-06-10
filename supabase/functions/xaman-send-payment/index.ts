@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { requireEdgeUser } from '../_shared/auth.ts';
 import { parseJsonBody } from '../_shared/auth.ts';
@@ -132,7 +133,7 @@ Deno.serve(async (req) => {
     console.error('Error in xaman-send-payment:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message
+      error: safeErrorMessage(error)
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,

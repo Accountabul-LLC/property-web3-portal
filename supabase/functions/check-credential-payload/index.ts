@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 /**
  * check-credential-payload
  *
@@ -253,7 +254,7 @@ function buildCors(req: Request): Record<string, string> {
 
   } catch (error) {
     console.error('Error in check-credential-payload:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500,
     })
   }

@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 // Sponsors a user's trustline by funding the 0.2 XRP reserve from a treasury
 // wallet, then either signing the TrustSet server-side on testnet (where we
 // hold the user's faucet seed) or returning the unsigned TrustSet JSON so
@@ -214,6 +215,6 @@ Deno.serve(async (req) => {
   } catch (error) {
     try { await client?.disconnect(); } catch {}
     console.error("sponsor-trustline error:", error);
-    return jsonError(error instanceof Error ? error.message : String(error), 500);
+    return jsonError(safeErrorMessage(error), 500);
   }
 });

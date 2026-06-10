@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { applyKycVerifications } from '../_shared/profile-verifications.ts'
 
@@ -165,7 +166,7 @@ function buildCors(req: Request): Record<string, string> {
     })
   } catch (error) {
     console.error('Error in kyc-admin-review:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

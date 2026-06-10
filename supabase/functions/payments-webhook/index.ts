@@ -9,6 +9,8 @@ import {
   stripePaymentIdFromEvent,
   stripeProviderReferenceFromEvent,
   stripeWebhookSignatureValid,
+  genericWebhookSignatureValid,
+  timingSafeEqualStrings,
 } from "../_shared/payments.ts";
 
 const json = (body: unknown, status = 200, corsHeaders: Record<string, string> = {}) =>
@@ -136,8 +138,17 @@ serve(async (req) => {
     }
 
     const webhookSecret = Deno.env.get("PAYMENTS_WEBHOOK_SECRET");
-    const providedSecret = req.headers.get("x-payments-webhook-secret") ?? req.headers.get("X-Payments-Webhook-Secret");
-    if (!webhookSecret || providedSecret !== webhookSecret) {
+    if (!webhookSecret) {
+      return json({ error: "Unauthorized" }, 401, corsHeaders);
+    }
+    // Preferred: HMAC signature with replay protection. Legacy static header
+    // is still accepted (timing-safe) until all senders migrate.
+    const signatureHeader = req.headers.get("x-payments-signature");
+    const providedSecret = req.headers.get("x-payments-webhook-secret");
+    const authorized = signatureHeader
+      ? await genericWebhookSignatureValid({ rawBody, signatureHeader, secret: webhookSecret })
+      : !!providedSecret && timingSafeEqualStrings(providedSecret, webhookSecret);
+    if (!authorized) {
       return json({ error: "Unauthorized" }, 401, corsHeaders);
     }
 

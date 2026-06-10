@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { parseJsonBody } from "../_shared/auth.ts";
 
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Build token payment error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

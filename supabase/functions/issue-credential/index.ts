@@ -218,8 +218,9 @@ Deno.serve(async (req) => {
     if (network === 'testnet' && issuer.secret_env_key) {
       const issuerSecret = Deno.env.get(issuer.secret_env_key)
       if (!issuerSecret) {
+        console.error(`Issuer secret env var ${issuer.secret_env_key} not configured`)
         return new Response(
-          JSON.stringify({ error: `Issuer secret env var ${issuer.secret_env_key} not configured` }),
+          JSON.stringify({ error: 'Issuer signing is not configured' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }

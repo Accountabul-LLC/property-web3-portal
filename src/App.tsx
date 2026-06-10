@@ -113,16 +113,16 @@ const App = () => (
 
                 <Route path="/kyc" element={<Kyc />} />
                 <Route path="/kyc/status" element={<KycStatus />} />
-                <Route path="/admin" element={<Admin />} />
-                <Route path="/admin/vendors" element={<AdminVendors />} />
-                <Route path="/admin/kyc" element={<AdminKyc />} />
-                <Route path="/admin/ai-panel" element={<AdminAIPanel />} />
-                <Route path="/admin/credentials" element={<AdminCredentials />} />
-                <Route path="/admin/payments" element={<AdminPayments />} />
-                <Route path="/admin/payments/console" element={<AdminPaymentsConsole />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/causes" element={<AdminCauses />} />
-                <Route path="/admin/pricing" element={<AdminPricing />} />
+                <Route path="/admin" element={<RouteGuard adminOnly><Admin /></RouteGuard>} />
+                <Route path="/admin/vendors" element={<RouteGuard adminOnly><AdminVendors /></RouteGuard>} />
+                <Route path="/admin/kyc" element={<RouteGuard adminOnly><AdminKyc /></RouteGuard>} />
+                <Route path="/admin/ai-panel" element={<RouteGuard adminOnly><AdminAIPanel /></RouteGuard>} />
+                <Route path="/admin/credentials" element={<RouteGuard adminOnly><AdminCredentials /></RouteGuard>} />
+                <Route path="/admin/payments" element={<RouteGuard adminOnly><AdminPayments /></RouteGuard>} />
+                <Route path="/admin/payments/console" element={<RouteGuard adminOnly><AdminPaymentsConsole /></RouteGuard>} />
+                <Route path="/admin/users" element={<RouteGuard adminOnly><AdminUsers /></RouteGuard>} />
+                <Route path="/admin/causes" element={<RouteGuard adminOnly><AdminCauses /></RouteGuard>} />
+                <Route path="/admin/pricing" element={<RouteGuard adminOnly><AdminPricing /></RouteGuard>} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/checkout/return" element={<CheckoutReturn />} />
                 <Route path="/account/billing" element={<AccountBilling />} />

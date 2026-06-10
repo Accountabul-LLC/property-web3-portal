@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { requireEdgeUser } from "../_shared/auth.ts";
@@ -86,7 +87,7 @@ serve(async (req) => {
     });
   } catch (error) {
     console.error('Wallet audit log error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

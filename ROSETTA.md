@@ -242,6 +242,18 @@ export function useMyData() {
   Humans curate this section periodically.
 -->
 
+### 2026-06-10 | claude (duplication audit + cleanup)
+- Full duplication/route-sprawl audit: all 48 routes wired, no orphaned pages, no dead hooks/edge functions; escrow vs smart-escrow, pricing vs payments, and the three credential-issue functions are intentional splits, not duplicates
+- Removed byte-identical duplicate `src/components/vendors/VendorBenefitsCard.tsx`; consolidated on `src/components/vendor/` (singular) and repointed VendorDashboard/VendorOnboarding imports
+- Biggest remaining cleanup (NOT done): ~35 edge functions carry inline copy-pasted `buildCors()` instead of `_shared/cors.ts` — consolidate in a dedicated pass with testing
+
+### 2026-06-10 | claude (security fixes)
+- `payments-webhook` generic path now supports HMAC signatures (`x-payments-signature: t=...,v1=...`, Stripe-style, 5-min replay window) via new `genericWebhookSignatureValid` in `_shared/payments.ts`; legacy `x-payments-webhook-secret` header still accepted but compared timing-safe — migrate senders, then drop the legacy path
+- New `_shared/errors.ts` `safeErrorMessage()`: 28 edge functions' top-level catch handlers now sanitize error responses (passes through deliberate user-facing messages, blocks Postgres/internal/secret-bearing ones)
+- `issue-credential` no longer returns the issuer secret env-var name in error bodies
+- All `/admin/*` routes in `App.tsx` now wrapped in `<RouteGuard adminOnly>` (pages keep their internal `useTeamAccess` checks as backup)
+- Gotcha: when adding a new edge function, return `safeErrorMessage(error)` in the catch handler, never raw `error.message`
+
 ### 2026-06-10 | claude (security scan)
 - Full-repo security scan (all edge functions, final RLS state, frontend, secrets sweep) — report at `docs/SECURITY_SCAN_2026-06-10.md`
 - No Critical findings; 2026-05-21 fixes intact, no RLS regressions through `20260608174637`

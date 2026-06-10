@@ -124,6 +124,56 @@ export const stripeProviderReferenceFromEvent = (event: any) =>
 
 export const stripeEventType = (event: any) => String(event?.type ?? "").trim().toLowerCase();
 
+export const timingSafeEqualStrings = (a: string, b: string) => {
+  const encoder = new TextEncoder();
+  const aBytes = encoder.encode(a);
+  const bBytes = encoder.encode(b);
+  if (aBytes.length !== bBytes.length) return false;
+  let mismatch = 0;
+  for (let i = 0; i < aBytes.length; i += 1) {
+    mismatch |= aBytes[i] ^ bBytes[i];
+  }
+  return mismatch === 0;
+};
+
+// Verifies `t=<unix seconds>,v1=<hex hmac-sha256 of "<t>.<rawBody>">` headers
+// (same scheme as Stripe) and rejects timestamps outside the tolerance window
+// to prevent replay.
+export const genericWebhookSignatureValid = async (params: {
+  rawBody: string;
+  signatureHeader: string;
+  secret: string;
+  toleranceSeconds?: number;
+}) => {
+  const { rawBody, signatureHeader, secret, toleranceSeconds = 300 } = params;
+  const parts = new Map<string, string>();
+  for (const part of signatureHeader.split(",")) {
+    const [k, v] = part.split("=");
+    if (k && v) parts.set(k.trim(), v.trim());
+  }
+  const timestamp = parts.get("t");
+  const signature = parts.get("v1");
+  if (!timestamp || !signature) return false;
+
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds)) return false;
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > toleranceSeconds) return false;
+
+  const payload = `${timestamp}.${rawBody}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const digest = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  const computed = Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
+  return timingSafeEqualStrings(computed, signature);
+};
+
 export const stripeWebhookSignatureValid = async (params: {
   rawBody: string;
   signatureHeader: string;

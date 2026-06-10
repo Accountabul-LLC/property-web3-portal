@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { parseJsonBody } from "../_shared/auth.ts";
@@ -444,7 +445,7 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('XRPL account data error:', error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

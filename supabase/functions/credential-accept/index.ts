@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 /**
  * credential-accept
  *
@@ -297,7 +298,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in credential-accept:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

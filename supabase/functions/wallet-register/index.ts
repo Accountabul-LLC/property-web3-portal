@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 /**
  * wallet-register
  *
@@ -183,7 +184,7 @@ function buildCors(req: Request): Record<string, string> {
 
   } catch (error) {
     console.error('Error in wallet-register:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     })

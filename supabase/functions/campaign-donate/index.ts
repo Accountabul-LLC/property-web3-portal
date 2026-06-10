@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 /**
  * campaign-donate
  *
@@ -510,7 +511,7 @@ Deno.serve(async (req) => {
 
   } catch (error) {
     console.error('Error in campaign-donate:', error)
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   }

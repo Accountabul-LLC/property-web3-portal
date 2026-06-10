@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors'
 import { fetchHistoricalXrpUsd } from '../_shared/xrp-price.ts'
 
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
       },
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: String(error?.message ?? error) }), {
+    return new Response(JSON.stringify({ error: safeErrorMessage(error) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })

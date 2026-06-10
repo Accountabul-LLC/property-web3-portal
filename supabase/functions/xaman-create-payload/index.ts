@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 import { parseJsonBody, requireEdgeUser } from '../_shared/auth.ts'
 
@@ -148,7 +149,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message
+        error: safeErrorMessage(error)
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

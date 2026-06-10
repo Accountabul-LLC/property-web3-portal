@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { parseJsonBody } from '../_shared/auth.ts';
 
@@ -182,7 +183,7 @@ Deno.serve(async (req) => {
     console.error('Submit signed error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

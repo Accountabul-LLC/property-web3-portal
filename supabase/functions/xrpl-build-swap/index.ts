@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { parseJsonBody } from "../_shared/auth.ts";
 
@@ -331,6 +332,6 @@ Deno.serve(async (req) => {
     });
   } catch (error) {
     console.error("Swap build error:", error);
-    return jsonError(error instanceof Error ? error.message : String(error), 500);
+    return jsonError(safeErrorMessage(error), 500);
   }
 });

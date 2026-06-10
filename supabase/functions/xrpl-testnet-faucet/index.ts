@@ -1,3 +1,4 @@
+import { safeErrorMessage } from "../_shared/errors.ts";
 import { parseJsonBody } from "../_shared/auth.ts";
 
 const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
@@ -94,7 +95,7 @@ Deno.serve(async (req) => {
     console.error('Testnet faucet error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: safeErrorMessage(error),
     }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
