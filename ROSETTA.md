@@ -225,7 +225,7 @@ export function useMyData() {
 
 - **`supabase/types.ts` is auto-generated** — never edit it; Lovable regenerates it on schema changes
 - **`src/components/ui/` is auto-generated** — shadcn components; edit only if you know what you're doing
-- **Security issue C1:** `wallet_secret` stored in plain text in `user_wallets` table (testnet only — do not use in production)
+- **Security issue C1 (RESOLVED 2026-05-21):** plaintext `wallet_secret` column was dropped from `user_wallets` (`20260521001000`); testnet seeds now live only in browser sessionStorage
 - **`verify_jwt = false` on all edge functions** — JWT is manually verified inside each function; Supabase gateway does NOT enforce it
 - **XRPL never called from browser** — all XRPL interactions go through edge functions; never import xrpl SDK in frontend
 - **Team access = `admin` role in `user_roles`** — no separate `team` role yet; to grant access: `insert into user_roles (user_id, role) values ('<uuid>', 'admin')`
@@ -241,6 +241,13 @@ export function useMyData() {
   Format: ### YYYY-MM-DD | agent-name
   Humans curate this section periodically.
 -->
+
+### 2026-06-10 | claude (security scan)
+- Full-repo security scan (all edge functions, final RLS state, frontend, secrets sweep) — report at `docs/SECURITY_SCAN_2026-06-10.md`
+- No Critical findings; 2026-05-21 fixes intact, no RLS regressions through `20260608174637`
+- Confirmed C1 resolved: `wallet_secret` column dropped in `20260521001000` — updated the stale Gotchas entry
+- Top remaining items: `payments-webhook` generic path uses static header secret (should be HMAC), raw `error.message` leaked in several functions' error responses (`issue-credential` even returns the issuer secret env-var NAME), `/admin/*` routes lack a shared route guard (pages self-check; server-side enforcement is fine), no rate limiting on faucet/payments-create
+- Gotcha: generated `types.ts` still declares `wallet_secret` though the column is gone — regenerate via Lovable
 
 ### 2026-05-25 | lovable
 - Fixed Causes edge function CORS for Lovable preview domains: `campaign-donate`, `campaign-check-donation`, and `campaign-release` now reflect allowed `lovable.app` / `lovableproject.com` origins instead of only `accountabul.com`.
