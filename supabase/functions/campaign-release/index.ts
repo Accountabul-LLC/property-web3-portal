@@ -1,3 +1,4 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 /**
  * campaign-release  (admin only)
  *
@@ -20,24 +21,11 @@ import { releaseCampaignEscrows } from '../_shared/campaign-release.ts'
 import { logAppAudit } from '../_shared/app-audit.ts'
 import { requireEdgeUser } from '../_shared/auth.ts'
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version'
 
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? ''
-  const fallbackOrigin = Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.com'
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === fallbackOrigin
-    || origin === 'https://accountabul.com'
 
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : fallbackOrigin,
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  }
-}
 
 Deno.serve(async (req) => {
-  const corsHeaders = buildCors(req)
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'))
 
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })

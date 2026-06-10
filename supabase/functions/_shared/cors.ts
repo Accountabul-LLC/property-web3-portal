@@ -40,15 +40,23 @@ function isOriginAllowed(origin: string, allowList: string[]): boolean {
   }
 }
 
-export function createCorsHeaders(origin: string | null) {
+export function createCorsHeaders(
+  origin: string | null,
+  options?: { extraAllowHeaders?: string[] },
+) {
   const allowedOrigins = loadAllowedOrigins();
   const allowedOrigin = origin && isOriginAllowed(origin, allowedOrigins)
     ? origin
     : allowedOrigins[0];
 
+  const allowHeaders = [
+    'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    ...(options?.extraAllowHeaders ?? []),
+  ].join(', ');
+
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+    'Access-Control-Allow-Headers': allowHeaders,
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     Vary: 'Origin',
   };

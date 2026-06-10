@@ -1,19 +1,10 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 import { safeErrorMessage } from "../_shared/errors.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { parseJsonBody } from "../_shared/auth.ts";
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app');
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'),
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  };
-}
+
 
 const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
@@ -356,7 +347,7 @@ function parseTransactions(txList: any[], wallet_address: string) {
 }
 
 serve(async (req) => {
-  const corsHeaders = buildCors(req);
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'));
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }

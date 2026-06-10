@@ -1,3 +1,4 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 import { safeErrorMessage } from "../_shared/errors.ts";
 // Sponsors a user's trustline by funding the 0.2 XRP reserve from a treasury
 // wallet, then either signing the TrustSet server-side on testnet (where we
@@ -7,17 +8,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 import { Client, Wallet, xrpToDrops } from "npm:xrpl@3.1.0";
 import { parseJsonBody } from "../_shared/auth.ts";
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app');
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'),
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  };
-}
+
 
 const NODES: Record<string, string> = {
   mainnet: "wss://s2.ripple.com",
@@ -42,7 +33,7 @@ function jsonError(message: string, status = 400, extra: Record<string, unknown>
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = buildCors(req);
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   let client: Client | null = null;

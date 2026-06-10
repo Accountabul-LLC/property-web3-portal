@@ -1,3 +1,4 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 /**
  * stripe-identity-create-session
  *
@@ -7,19 +8,9 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
 const STRIPE_IDENTITY_SETUP_MESSAGE = 'Stripe Identity is not enabled for the connected Stripe account. An account admin needs to activate Identity in Stripe, then try again.';
 
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app');
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'),
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  };
-}
+
 
 function isStripeIdentitySetupError(payload: any): boolean {
   return payload?.error?.code === 'identity_api_invalid_application'
@@ -38,7 +29,7 @@ function stripeSetupRequiredResponse(corsHeaders: Record<string, string>) {
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = buildCors(req);
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'));
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {

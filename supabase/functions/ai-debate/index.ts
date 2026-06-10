@@ -1,16 +1,7 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app');
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'),
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  };
-}const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-world asset) tokenization platform built on the XRP Ledger (XRPL). The platform tokenizes real estate as MPT, NFT, and IOU tokens. Users authenticate via Supabase Auth and connect XRPL wallets via Xaman.`
+const FALLBACK_CONTEXT = `You are an AI assistant for an internal RWA (real-world asset) tokenization platform built on the XRP Ledger (XRPL). The platform tokenizes real estate as MPT, NFT, and IOU tokens. Users authenticate via Supabase Auth and connect XRPL wallets via Xaman.`
 
 const TREE_CACHE_TTL_MS = 2 * 60 * 60 * 1000 // 2 hours
 
@@ -339,7 +330,7 @@ function buildSpeakerHistory(self: Speaker, topic: string, history: HistoryItem[
 // ─── Main handler ─────────────────────────────────────────────
 
 Deno.serve(async (req) => {
-  const corsHeaders = buildCors(req);
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'));
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }

@@ -1,19 +1,10 @@
+import { createCorsHeaders } from '../_shared/cors.ts';
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 import { importPKCS8, SignJWT } from "https://deno.land/x/jose@v5.2.2/index.ts";
 
-const ALLOW_HEADERS = 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version';
-function buildCors(req: Request): Record<string, string> {
-  const origin = req.headers.get('origin') ?? '';
-  const allowed = /^https:\/\/([a-z0-9-]+\.)*(lovable\.app|lovableproject\.com)$/i.test(origin)
-    || origin === (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app');
-  return {
-    'Access-Control-Allow-Origin': allowed ? origin : (Deno.env.get('APP_ALLOWED_ORIGIN') ?? 'https://accountabul.lovable.app'),
-    'Access-Control-Allow-Headers': ALLOW_HEADERS,
-    'Vary': 'Origin',
-  };
-}
+
 
 // Normalize PEM: fix literal \n, extra whitespace, missing headers
 function normalizePem(raw: string): string {
@@ -163,7 +154,7 @@ async function logAction(
 }
 
 serve(async (req) => {
-  const corsHeaders = buildCors(req);
+  const corsHeaders = createCorsHeaders(req.headers.get('origin'));
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {

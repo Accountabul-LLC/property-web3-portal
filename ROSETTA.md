@@ -242,6 +242,12 @@ export function useMyData() {
   Humans curate this section periodically.
 -->
 
+### 2026-06-10 | claude (CORS consolidation)
+- Replaced all 43 inline `buildCors()` copies in edge functions with `createCorsHeaders` from `_shared/cors.ts` (net -393 lines); CORS policy now lives in one file
+- `createCorsHeaders` gained an `options.extraAllowHeaders` param — `campaign-release-due` uses it for `x-accountabul-cron-secret`
+- Verified: deno check on shared modules, deno lint parse of all 43 files, runtime origin tests (lovable.app/lovableproject.com reflected, accountabul.com allowed, evil origins + suffix-spoofing rejected)
+- Gotcha: this sandbox's network policy blocks esm.sh, so full `deno check` of functions with remote imports isn't possible here — only syntax/lint + shared-module type-checks
+
 ### 2026-06-10 | claude (duplication audit + cleanup)
 - Full duplication/route-sprawl audit: all 48 routes wired, no orphaned pages, no dead hooks/edge functions; escrow vs smart-escrow, pricing vs payments, and the three credential-issue functions are intentional splits, not duplicates
 - Removed byte-identical duplicate `src/components/vendors/VendorBenefitsCard.tsx`; consolidated on `src/components/vendor/` (singular) and repointed VendorDashboard/VendorOnboarding imports
