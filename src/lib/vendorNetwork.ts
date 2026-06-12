@@ -75,6 +75,7 @@ export interface VendorPublicProfileRecord {
   industry_category: string | null
   business_description: string | null
   service_areas: string | null
+  place_of_business: string | null
   business_address_city: string | null
   business_address_state: string | null
   business_address_zip: string | null
