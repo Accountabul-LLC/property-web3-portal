@@ -2576,6 +2576,7 @@ export type Database = {
           id: string | null
           industry_category: string | null
           logo_url: string | null
+          place_of_business: string | null
           profile_headline: string | null
           public_profile_enabled: boolean | null
           service_areas: string | null
@@ -2597,6 +2598,7 @@ export type Database = {
           id?: string | null
           industry_category?: string | null
           logo_url?: string | null
+          place_of_business?: string | null
           profile_headline?: string | null
           public_profile_enabled?: boolean | null
           service_areas?: string | null
@@ -2618,6 +2620,7 @@ export type Database = {
           id?: string | null
           industry_category?: string | null
           logo_url?: string | null
+          place_of_business?: string | null
           profile_headline?: string | null
           public_profile_enabled?: boolean | null
           service_areas?: string | null
@@ -2724,6 +2727,7 @@ export type Database = {
           id: string | null
           industry_category: string | null
           logo_url: string | null
+          place_of_business: string | null
           profile_headline: string | null
           public_profile_enabled: boolean | null
           service_areas: string | null

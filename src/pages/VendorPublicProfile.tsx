@@ -51,7 +51,12 @@ export default function VendorPublicProfile() {
 
   const fullAddress = useMemo(() => {
     if (!vendor) return ''
-    return [vendor.business_address_city, vendor.business_address_state, vendor.business_address_zip]
+    return [
+      vendor.place_of_business,
+      vendor.business_address_city,
+      vendor.business_address_state,
+      vendor.business_address_zip,
+    ]
       .filter(Boolean)
       .join(', ')
   }, [vendor])
