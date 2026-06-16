@@ -13,6 +13,8 @@ import {
 } from '@/lib/walletNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+
 
 type Network = 'mainnet' | 'testnet';
 
