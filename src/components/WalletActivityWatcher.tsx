@@ -97,13 +97,17 @@ function donationNotification(
   return { ...base, kind: 'donation_received' as const, title: `Funds donated to you: ${amt}`, body: `Released${fromCampaign} from ${short(d.counterparty)}.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
 }
 
-async function backfill(address: string, network: Network) {
+async function backfill(
+  address: string,
+  network: Network,
+  fetchPortfolio: () => Promise<any>,
+) {
   try {
-    const [{ data, error }, donations] = await Promise.all([
-      supabase.functions.invoke('xrpl-account-data', { body: { wallet_address: address, network } }),
+    const [data, donations] = await Promise.all([
+      fetchPortfolio().catch(() => null),
       fetchDonationLookup(address),
     ]);
-    if (error || !data?.transactions) return;
+    if (!data?.transactions) return;
     const existing = new Set(listNotifications(address, network).map(n => n.tx_hash));
     const txs: ParsedTx[] = data.transactions;
     for (const t of [...txs].reverse()) {
@@ -120,6 +124,7 @@ async function backfill(address: string, network: Network) {
     /* non-blocking */
   }
 }
+
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
