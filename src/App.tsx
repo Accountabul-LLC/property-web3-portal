@@ -10,7 +10,17 @@ import { RouteGuard } from "./components/RouteGuard";
 import { RouteSeo } from "./components/RouteSeo";
 import { WalletActivityWatcher } from "./components/WalletActivityWatcher";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 
 const lazyPage = <T extends Record<string, unknown>>(loader: () => Promise<{ default: ComponentType<T> }>) =>
   lazy(loader);

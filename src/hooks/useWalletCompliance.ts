@@ -17,8 +17,13 @@ export function useWalletCompliance(walletAddress: string | null | undefined) {
   return useQuery<WalletComplianceState | null>({
     queryKey: ['wallet_compliance', walletAddress],
     enabled: !!walletAddress,
-    // Refresh every 30 seconds so status changes propagate without full reload
-    refetchInterval: 30_000,
+    // Refresh every 60 seconds so status changes propagate without full reload.
+    // staleTime + window-focus guard avoid redundant calls.
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: false,
+
     queryFn: async () => {
       if (!walletAddress) return null
 

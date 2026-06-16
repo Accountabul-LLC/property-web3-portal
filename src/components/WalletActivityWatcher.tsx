@@ -13,6 +13,8 @@ import {
 } from '@/lib/walletNotifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
+
 
 type Network = 'mainnet' | 'testnet';
 
@@ -95,13 +97,17 @@ function donationNotification(
   return { ...base, kind: 'donation_received' as const, title: `Funds donated to you: ${amt}`, body: `Released${fromCampaign} from ${short(d.counterparty)}.`, amount: d.amount, currency: d.currency, counterparty: d.counterparty };
 }
 
-async function backfill(address: string, network: Network) {
+async function backfill(
+  address: string,
+  network: Network,
+  fetchPortfolio: () => Promise<any>,
+) {
   try {
-    const [{ data, error }, donations] = await Promise.all([
-      supabase.functions.invoke('xrpl-account-data', { body: { wallet_address: address, network } }),
+    const [data, donations] = await Promise.all([
+      fetchPortfolio().catch(() => null),
       fetchDonationLookup(address),
     ]);
-    if (error || !data?.transactions) return;
+    if (!data?.transactions) return;
     const existing = new Set(listNotifications(address, network).map(n => n.tx_hash));
     const txs: ParsedTx[] = data.transactions;
     for (const t of [...txs].reverse()) {
@@ -118,6 +124,7 @@ async function backfill(address: string, network: Network) {
     /* non-blocking */
   }
 }
+
 
 function fmt(n: number) {
   return n.toLocaleString(undefined, { maximumFractionDigits: 6 });
@@ -188,17 +195,33 @@ function parsedToNotification(t: ParsedTx, address: string, network: Network) {
 export function WalletActivityWatcher() {
   const { activeAddress, activeNetwork } = useActiveWallet();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const network: Network = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const lastBackfillKey = useRef<string>('');
 
   // Run a backfill whenever the active wallet (or network) changes.
+  // Reuses the useXRPLPortfolio React Query cache to avoid duplicate edge fn calls.
   useEffect(() => {
     if (!activeAddress || !user) return;
     const key = `${network}:${activeAddress}`;
     if (lastBackfillKey.current === key) return;
     lastBackfillKey.current = key;
-    backfill(activeAddress, network);
-  }, [activeAddress, network, user]);
+    const fetchPortfolio = () =>
+      queryClient.fetchQuery({
+        queryKey: ['xrpl_portfolio', activeAddress, network],
+        queryFn: async () => {
+          const { data, error } = await supabase.functions.invoke('xrpl-account-data', {
+            body: { wallet_address: activeAddress, network },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          return data;
+        },
+        staleTime: 60_000,
+      });
+    backfill(activeAddress, network, fetchPortfolio);
+  }, [activeAddress, network, user, queryClient]);
+
 
 
   const handleTx = (evt: XRPLTransactionEvent) => {
