@@ -195,17 +195,33 @@ function parsedToNotification(t: ParsedTx, address: string, network: Network) {
 export function WalletActivityWatcher() {
   const { activeAddress, activeNetwork } = useActiveWallet();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const network: Network = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const lastBackfillKey = useRef<string>('');
 
   // Run a backfill whenever the active wallet (or network) changes.
+  // Reuses the useXRPLPortfolio React Query cache to avoid duplicate edge fn calls.
   useEffect(() => {
     if (!activeAddress || !user) return;
     const key = `${network}:${activeAddress}`;
     if (lastBackfillKey.current === key) return;
     lastBackfillKey.current = key;
-    backfill(activeAddress, network);
-  }, [activeAddress, network, user]);
+    const fetchPortfolio = () =>
+      queryClient.fetchQuery({
+        queryKey: ['xrpl_portfolio', activeAddress, network],
+        queryFn: async () => {
+          const { data, error } = await supabase.functions.invoke('xrpl-account-data', {
+            body: { wallet_address: activeAddress, network },
+          });
+          if (error) throw error;
+          if (data?.error) throw new Error(data.error);
+          return data;
+        },
+        staleTime: 60_000,
+      });
+    backfill(activeAddress, network, fetchPortfolio);
+  }, [activeAddress, network, user, queryClient]);
+
 
 
   const handleTx = (evt: XRPLTransactionEvent) => {
