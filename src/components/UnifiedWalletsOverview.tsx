@@ -194,11 +194,9 @@ export default function UnifiedWalletsOverview() {
       </div>
 
       <div className="space-y-1">
-        {summaries.map((s, idx) => {
+        {summaries.map((s) => {
           const isOpen = expanded.has(s.address);
-          const pData = portfolioQueries[idx].data;
-          const mData = metaQueries[idx].data;
-          const xrpUsd = mData?.xrpUsd ?? 0;
+          const pData = asPortfolio(accounts[s.address]);
           const tokenHoldings = pData?.token_holdings ?? [];
           const mptIssuances = pData?.mpt_issuances ?? [];
           const mptHoldings = pData?.mpt_holdings ?? [];
