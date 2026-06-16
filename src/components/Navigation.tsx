@@ -33,13 +33,16 @@ const Navigation = () => {
     queryKey: ['user-is-admin', user?.id],
     queryFn: async () => {
       if (!user) return false;
-      const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' });
-      if (isAdmin) return true;
-      const { data: isCompliance } = await supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' });
-      return !!isCompliance;
+      // Parallel role checks instead of serial
+      const [adminRes, complianceRes] = await Promise.all([
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'admin' }),
+        supabase.rpc('has_role', { _user_id: user.id, _role: 'compliance_officer' }),
+      ]);
+      return !!adminRes.data || !!complianceRes.data;
     },
     enabled: !!user,
-    staleTime: 60_000,
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   const { data: vendorSlug } = useQuery({

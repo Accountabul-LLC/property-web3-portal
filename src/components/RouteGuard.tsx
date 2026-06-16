@@ -34,7 +34,9 @@ export function RouteGuard({
     credentialKey ?? null
   )
 
-  if (authLoading || walletsLoading || (credentialKey && gateLoading) || (adminOnly && adminLoading)) {
+  // Only block on wallet loading when the route actually needs a wallet.
+  const waitingForWallets = requiresWallet && walletsLoading
+  if (authLoading || waitingForWallets || (credentialKey && gateLoading) || (adminOnly && adminLoading)) {
     return (
       <div className="flex items-center justify-center min-h-[40vh]">
         <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />

@@ -68,8 +68,10 @@ export default function UnifiedWalletsOverview() {
           }
           return { tokenMap: map, xrpUsd: r.xrp_usd || 0 };
         },
-        enabled: !!data,
-        staleTime: 8_000,
+        enabled: !!data && tokens.length > 0,
+        staleTime: 60_000,
+        gcTime: 5 * 60_000,
+        refetchOnWindowFocus: false,
       };
     }),
   });

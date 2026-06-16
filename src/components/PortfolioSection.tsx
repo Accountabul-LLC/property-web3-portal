@@ -94,7 +94,7 @@ const PortfolioSection = ({ overrideAddress, isReadOnly = false, focusTxHash = n
     queryClient.invalidateQueries({ queryKey: ['xrpl_portfolio', displayAddress, network] });
     queryClient.invalidateQueries({ queryKey: ['token_meta'] });
   };
-  useXRPLSubscription(displayAddress, network);
+  // XRPL subscription is handled globally by WalletActivityWatcher; no duplicate WS here.
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isSendOpen, setIsSendOpen] = useState(false);
   const [expandedToken, setExpandedToken] = useState<string | null>(null);
