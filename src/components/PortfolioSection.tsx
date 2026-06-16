@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Wallet, PieChart, ArrowUpDown, ArrowDownLeft, ArrowUpRight, Loader2, Coins, ExternalLink, QrCode, Send, Repeat, Settings, ShieldCheck, Globe, Users, BarChart3, ChevronDown, ChevronUp, Info, RefreshCw, DollarSign, Clock, FlaskConical, Droplets, Gem, Copy, Check } from 'lucide-react';
 import { useXRPLPortfolio, type MPTIssuance, type MPTHolding } from '@/hooks/useXRPLPortfolio';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
-import { useXRPLSubscription } from '@/hooks/useXRPLSubscription';
+// useXRPLSubscription intentionally not imported — global WalletActivityWatcher owns the WS.
 import { useTokenMeta } from '@/hooks/useTokenMeta';
 import { valueMptIssuance, sumMptIssuerUsd } from '@/lib/mptValuation';
 import { humanizeTx } from '@/lib/txLabels';
