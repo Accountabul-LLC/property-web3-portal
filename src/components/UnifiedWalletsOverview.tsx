@@ -305,7 +305,7 @@ export default function UnifiedWalletsOverview() {
 
                       {/* IOU tokens */}
                       {tokenHoldings.map((t) => {
-                        const meta = mData?.tokenMap.get(`${t.currency}:${t.issuer}`);
+                        const meta = tokenMap?.get(`${t.currency}:${t.issuer}`);
                         const display = meta?.name || decodeCurrency(t.currency);
                         const bal = Number(t.balance);
                         const usd = meta?.price ? bal * meta.price : 0;
