@@ -2483,6 +2483,27 @@ export type Database = {
         }
         Relationships: []
       }
+      xrpl_account_cache: {
+        Row: {
+          fetched_at: string
+          network: string
+          payload: Json
+          wallet_address: string
+        }
+        Insert: {
+          fetched_at?: string
+          network: string
+          payload: Json
+          wallet_address: string
+        }
+        Update: {
+          fetched_at?: string
+          network?: string
+          payload?: Json
+          wallet_address?: string
+        }
+        Relationships: []
+      }
       xrpl_issuer_wallets: {
         Row: {
           created_at: string
@@ -2513,6 +2534,51 @@ export type Database = {
           secret_env_key?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      xrpl_kv_cache: {
+        Row: {
+          fetched_at: string
+          key: string
+          value: Json
+        }
+        Insert: {
+          fetched_at?: string
+          key: string
+          value: Json
+        }
+        Update: {
+          fetched_at?: string
+          key?: string
+          value?: Json
+        }
+        Relationships: []
+      }
+      xrpl_token_meta_cache: {
+        Row: {
+          currency: string
+          fetched_at: string
+          issuer: string
+          market_cap_xrp: number | null
+          meta: Json | null
+          price_xrp: number | null
+        }
+        Insert: {
+          currency: string
+          fetched_at?: string
+          issuer: string
+          market_cap_xrp?: number | null
+          meta?: Json | null
+          price_xrp?: number | null
+        }
+        Update: {
+          currency?: string
+          fetched_at?: string
+          issuer?: string
+          market_cap_xrp?: number | null
+          meta?: Json | null
+          price_xrp?: number | null
         }
         Relationships: []
       }
