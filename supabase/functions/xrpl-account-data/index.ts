@@ -3,18 +3,56 @@ import { safeErrorMessage } from "../_shared/errors.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { z } from "https://esm.sh/zod@3.23.8";
 import { parseJsonBody } from "../_shared/auth.ts";
-
-
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 
 const MAINNET_NODES = ['https://s2.ripple.com:51234', 'https://s1.ripple.com:51234', 'https://xrplcluster.com'];
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com'];
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 30_000;           // L1 in-memory fresh window
+const FRESH_TTL_MS = 30_000;            // Postgres L2 fresh window
+const STALE_TTL_MS = 5 * 60_000;        // Stale-while-revalidate window
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 const accountDataRequestSchema = z.object({
   wallet_address: z.string().trim().regex(/^r[1-9A-HJ-NP-Za-km-z]{24,34}$/, 'wallet_address must be a valid XRPL address'),
   network: z.enum(['testnet', 'mainnet']).optional(),
 });
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const dbClient = supabaseUrl && supabaseServiceKey
+  ? createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } })
+  : null;
+
+// Single-flight: collapse concurrent fetches for the same wallet+network
+const inFlight = new Map<string, Promise<unknown>>();
+
+async function readPgCache(wallet: string, network: string): Promise<{ payload: unknown; ageMs: number } | null> {
+  if (!dbClient) return null;
+  try {
+    const { data } = await dbClient
+      .from('xrpl_account_cache')
+      .select('payload, fetched_at')
+      .eq('wallet_address', wallet)
+      .eq('network', network)
+      .maybeSingle();
+    if (!data) return null;
+    const ageMs = Date.now() - new Date(data.fetched_at as string).getTime();
+    return { payload: data.payload, ageMs };
+  } catch {
+    return null;
+  }
+}
+
+async function writePgCache(wallet: string, network: string, payload: unknown) {
+  if (!dbClient) return;
+  try {
+    await dbClient
+      .from('xrpl_account_cache')
+      .upsert({ wallet_address: wallet, network, payload, fetched_at: new Date().toISOString() }, { onConflict: 'wallet_address,network' });
+  } catch (e) {
+    console.error('xrpl_account_cache upsert failed:', e);
+  }
+}
 
 const responseCache = new Map<string, { data: unknown; expiresAt: number }>();
 
