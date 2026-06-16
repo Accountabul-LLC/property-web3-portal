@@ -89,6 +89,7 @@ export function useXRPLPortfolio(walletAddress: string | null, network: 'mainnet
     staleTime: 60_000,
     gcTime: 5 * 60_000,
     refetchInterval: 90_000,
+    refetchIntervalInBackground: false,
     refetchOnWindowFocus: false,
   });
 }
