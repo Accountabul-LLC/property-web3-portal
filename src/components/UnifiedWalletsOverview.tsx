@@ -4,7 +4,7 @@
 // reveal each wallet's assets without leaving the overview card.
 
 import { useMemo, useState } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +13,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { walletShortId } from '@/lib/walletLabel';
 import { sumMptIssuerUsd } from '@/lib/mptValuation';
+import { useXRPLPortfolioBatch } from '@/hooks/useXRPLPortfolioBatch';
 import type { XRPLPortfolioData } from '@/hooks/useXRPLPortfolio';
-import type { TokenMetaData, TokenMetaResult } from '@/hooks/useTokenMeta';
+import type { TokenMeta, TokenMetaData, TokenMetaResult } from '@/hooks/useTokenMeta';
 
 interface WalletSummary {
   address: string;
@@ -27,80 +28,84 @@ interface WalletSummary {
   isLoading: boolean;
 }
 
+// Narrow the batch payload to "successful" entries we can read like an XRPLPortfolioData.
+function asPortfolio(entry: any): XRPLPortfolioData | null {
+  if (!entry || 'error' in entry) return null;
+  return entry as XRPLPortfolioData;
+}
+
 export default function UnifiedWalletsOverview() {
   const navigate = useNavigate();
   const { wallets, activeAddress, activeNetwork, setActiveWallet } = useActiveWallet();
   const network: 'mainnet' | 'testnet' = activeNetwork === 'testnet' ? 'testnet' : 'mainnet';
   const isTestnet = network === 'testnet';
 
-  // Fetch all wallets in parallel
-  const portfolioQueries = useQueries({
-    queries: wallets.map((w) => ({
-      queryKey: ['xrpl_portfolio', w.address, network],
-      queryFn: async (): Promise<XRPLPortfolioData> => {
-        const { data, error } = await supabase.functions.invoke('xrpl-account-data', {
-          body: { wallet_address: w.address, network },
-        });
-        if (error) throw error;
-        if (data.error) throw new Error(data.error);
-        return data as XRPLPortfolioData;
-      },
-      staleTime: 30_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-    })),
+  // One batch edge call covers every connected wallet and seeds the per-wallet
+  // React Query cache (see useXRPLPortfolioBatch).
+  const addresses = useMemo(() => wallets.map((w) => w.address), [wallets]);
+  const { accounts, isLoading: batchLoading } = useXRPLPortfolioBatch(addresses, network);
+
+  // Deduplicated union of IOU tokens across all wallets, capped at 20 (the
+  // edge function's per-request limit). Single token-meta call instead of N.
+  const unionTokens = useMemo(() => {
+    const seen = new Map<string, { currency: string; issuer: string }>();
+    for (const addr of addresses) {
+      const p = asPortfolio(accounts[addr]);
+      if (!p) continue;
+      for (const t of p.token_holdings || []) {
+        const key = `${t.currency}:${t.issuer}`;
+        if (!seen.has(key)) seen.set(key, { currency: t.currency, issuer: t.issuer });
+      }
+    }
+    return Array.from(seen.values()).slice(0, 20);
+  }, [addresses, accounts]);
+
+  const metaKey = unionTokens.map((t) => `${t.currency}:${t.issuer}`).sort().join(',');
+  const metaQuery = useQuery({
+    queryKey: ['token_meta_batch', metaKey],
+    queryFn: async (): Promise<TokenMetaData> => {
+      const { data: r, error } = await supabase.functions.invoke('xrpl-token-meta', {
+        body: { tokens: unionTokens },
+      });
+      if (error) throw error;
+      const map = new Map<string, TokenMeta>();
+      for (const item of (r.tokens || []) as TokenMetaResult[]) {
+        if (item.meta) map.set(`${item.currency}:${item.issuer}`, item.meta);
+      }
+      return { tokenMap: map, xrpUsd: r.xrp_usd || 0 };
+    },
+    enabled: unionTokens.length > 0,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    refetchOnWindowFocus: false,
   });
 
-  // Token metadata per wallet (for IOU price lookups). Keyed on its tokens.
-  const metaQueries = useQueries({
-    queries: wallets.map((w, idx) => {
-      const data = portfolioQueries[idx].data;
-      const tokens = data?.token_holdings.map((t) => ({ currency: t.currency, issuer: t.issuer })) || [];
-      const key = tokens.map((t) => `${t.currency}:${t.issuer}`).sort().join(',');
-      return {
-        queryKey: ['token_meta', key],
-        queryFn: async (): Promise<TokenMetaData> => {
-          const { data: r, error } = await supabase.functions.invoke('xrpl-token-meta', { body: { tokens } });
-          if (error) throw error;
-          const map = new Map();
-          for (const item of (r.tokens || []) as TokenMetaResult[]) {
-            if (item.meta) map.set(`${item.currency}:${item.issuer}`, item.meta);
-          }
-          return { tokenMap: map, xrpUsd: r.xrp_usd || 0 };
-        },
-        enabled: !!data && tokens.length > 0,
-        staleTime: 60_000,
-        gcTime: 5 * 60_000,
-        refetchOnWindowFocus: false,
-      };
-    }),
-  });
+  const xrpUsd = metaQuery.data?.xrpUsd ?? 0;
+  const tokenMap = metaQuery.data?.tokenMap;
 
   const summaries: WalletSummary[] = useMemo(
     () =>
-      wallets.map((w, idx) => {
-        const q = portfolioQueries[idx];
-        const m = metaQueries[idx];
-        const xrpUsd = m.data?.xrpUsd ?? 0;
-        const xrpBal = q.data?.xrp_balance ?? 0;
+      wallets.map((w) => {
+        const data = asPortfolio(accounts[w.address]);
+        const xrpBal = data?.xrp_balance ?? 0;
         let total = xrpBal * xrpUsd;
-        for (const t of q.data?.token_holdings || []) {
-          const meta = m.data?.tokenMap.get(`${t.currency}:${t.issuer}`);
+        for (const t of data?.token_holdings || []) {
+          const meta = tokenMap?.get(`${t.currency}:${t.issuer}`);
           if (meta?.price && meta.price > 0) total += Number(t.balance) * meta.price;
         }
-        total += sumMptIssuerUsd(q.data?.mpt_issuances);
+        total += sumMptIssuerUsd(data?.mpt_issuances);
         return {
           address: w.address,
           label: w.label || w.xamanName || walletShortId(w.address),
           xrpBalance: xrpBal,
-          tokenCount: q.data?.token_holdings?.length ?? 0,
-          mptCount: (q.data?.mpt_issuances?.length ?? 0) + (q.data?.mpt_holdings?.length ?? 0),
+          tokenCount: data?.token_holdings?.length ?? 0,
+          mptCount: (data?.mpt_issuances?.length ?? 0) + (data?.mpt_holdings?.length ?? 0),
           totalUsd: total,
           hasUsd: total > 0,
-          isLoading: q.isLoading,
+          isLoading: batchLoading && !data,
         };
       }),
-    [wallets, portfolioQueries, metaQueries],
+    [wallets, accounts, tokenMap, xrpUsd, batchLoading],
   );
 
   const totals = useMemo(() => {
