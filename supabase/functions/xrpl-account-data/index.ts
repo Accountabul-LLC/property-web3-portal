@@ -403,74 +403,111 @@ serve(async (req) => {
     }
 
     const { wallet_address, network } = parsed.data;
+    const net = network || 'mainnet';
+    const nodes = net === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
+    const cacheKey = `${net}:${wallet_address}`;
 
-    const nodes = network === 'testnet' ? TESTNET_NODES : MAINNET_NODES;
-
-    const cacheKey = `${network || 'mainnet'}:${wallet_address}`;
-    const cached = getCached(cacheKey);
-    if (cached) {
-      return new Response(JSON.stringify(cached), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+    // L1: in-memory fresh
+    const memHit = getCached(cacheKey);
+    if (memHit) {
+      return new Response(JSON.stringify(memHit), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT-MEM' },
       });
     }
 
-    // Sequential requests with small delays to avoid rate limiting
-    const accountInfoRes = await xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]);
-    await delay(100);
-    const accountLinesRes = await xrplRequest(nodes, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]);
-    await delay(100);
-    const accountTxRes = await xrplRequest(nodes, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]);
-    await delay(100);
-    const mptIssuanceRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]);
-    await delay(100);
-    const mptHoldingRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]);
+    // Worker that does the full upstream fetch and writes both caches
+    const doFetch = async () => {
+      const accountInfoRes = await xrplRequest(nodes, 'account_info', [{ account: wallet_address, ledger_index: 'validated' }]);
+      await delay(100);
+      const accountLinesRes = await xrplRequest(nodes, 'account_lines', [{ account: wallet_address, ledger_index: 'validated' }]);
+      await delay(100);
+      const accountTxRes = await xrplRequest(nodes, 'account_tx', [{ account: wallet_address, ledger_index_min: -1, ledger_index_max: -1, limit: 20 }]);
+      await delay(100);
+      const mptIssuanceRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mpt_issuance', ledger_index: 'validated' }]);
+      await delay(100);
+      const mptHoldingRes = await xrplRequest(nodes, 'account_objects', [{ account: wallet_address, type: 'mptoken', ledger_index: 'validated' }]);
 
-    let xrpBalance = 0;
-    let ownerCount = 0;
-    const accountData = accountInfoRes.result?.account_data;
-    if (accountData?.Balance) {
-      xrpBalance = Number(accountData.Balance) / 1_000_000;
-    }
-    if (accountData?.OwnerCount !== undefined) {
-      ownerCount = Number(accountData.OwnerCount);
-    }
+      let xrpBalance = 0;
+      let ownerCount = 0;
+      const accountData = accountInfoRes.result?.account_data;
+      if (accountData?.Balance) xrpBalance = Number(accountData.Balance) / 1_000_000;
+      if (accountData?.OwnerCount !== undefined) ownerCount = Number(accountData.OwnerCount);
 
-    const baseReserve = 1;
-    const ownerReserve = 0.2;
-    const totalReserve = baseReserve + (ownerCount * ownerReserve);
-    const spendableXrp = Math.max(0, xrpBalance - totalReserve);
+      const baseReserve = 1;
+      const ownerReserve = 0.2;
+      const totalReserve = baseReserve + (ownerCount * ownerReserve);
+      const spendableXrp = Math.max(0, xrpBalance - totalReserve);
 
-    const tokenHoldings = (accountLinesRes.result?.lines || []).map((line: any) => ({
-      currency: line.currency,
-      issuer: line.account,
-      balance: Number(line.balance),
-      limit: Number(line.limit),
-    })).filter((t: any) => t.balance !== 0);
+      const tokenHoldings = (accountLinesRes.result?.lines || []).map((line: any) => ({
+        currency: line.currency,
+        issuer: line.account,
+        balance: Number(line.balance),
+        limit: Number(line.limit),
+      })).filter((t: any) => t.balance !== 0);
 
-    const transactions = parseTransactions(accountTxRes.result?.transactions || [], wallet_address);
+      const transactions = parseTransactions(accountTxRes.result?.transactions || [], wallet_address);
+      const mptIssuances = parseMPTIssuances(mptIssuanceRes.result?.account_objects || []);
+      const mptHoldings = parseMPTHoldings(mptHoldingRes.result?.account_objects || []);
 
-    // Parse MPT data
-    const mptIssuances = parseMPTIssuances(mptIssuanceRes.result?.account_objects || []);
-    const mptHoldings = parseMPTHoldings(mptHoldingRes.result?.account_objects || []);
+      const responseData = {
+        xrp_balance: xrpBalance,
+        reserve_xrp: totalReserve,
+        spendable_xrp: spendableXrp,
+        owner_count: ownerCount,
+        token_holdings: tokenHoldings,
+        transactions,
+        mpt_issuances: mptIssuances,
+        mpt_holdings: mptHoldings,
+        account: wallet_address,
+        network: net,
+      };
 
-    const responseData = {
-      xrp_balance: xrpBalance,
-      reserve_xrp: totalReserve,
-      spendable_xrp: spendableXrp,
-      owner_count: ownerCount,
-      token_holdings: tokenHoldings,
-      transactions,
-      mpt_issuances: mptIssuances,
-      mpt_holdings: mptHoldings,
-      account: wallet_address,
-      network: network || 'mainnet',
+      setCache(cacheKey, responseData);
+      await writePgCache(wallet_address, net, responseData);
+      return responseData;
     };
 
-    setCache(cacheKey, responseData);
+    // Single-flight wrapper
+    const runDedup = (): Promise<unknown> => {
+      const existing = inFlight.get(cacheKey);
+      if (existing) return existing;
+      const p = doFetch().finally(() => inFlight.delete(cacheKey));
+      inFlight.set(cacheKey, p);
+      return p;
+    };
 
+    // L2: Postgres cache
+    const pgHit = await readPgCache(wallet_address, net);
+    if (pgHit && pgHit.ageMs < FRESH_TTL_MS) {
+      // Fresh: serve immediately
+      setCache(cacheKey, pgHit.payload);
+      return new Response(JSON.stringify(pgHit.payload), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'HIT-PG' },
+      });
+    }
+    if (pgHit && pgHit.ageMs < STALE_TTL_MS) {
+      // Stale-while-revalidate: serve stale, refresh in background
+      try {
+        // @ts-ignore EdgeRuntime is provided by Supabase Edge Functions
+        if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime?.waitUntil) {
+          // @ts-ignore
+          EdgeRuntime.waitUntil(runDedup().catch(() => {}));
+        } else {
+          runDedup().catch(() => {});
+        }
+      } catch { /* non-blocking */ }
+      setCache(cacheKey, pgHit.payload);
+      return new Response(JSON.stringify(pgHit.payload), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'STALE-PG' },
+      });
+    }
+
+    // Cold: must wait for upstream
+    const responseData = await runDedup();
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
     });
+
 
   } catch (error) {
     console.error('XRPL account data error:', error);
