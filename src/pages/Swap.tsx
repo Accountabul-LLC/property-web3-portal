@@ -119,6 +119,7 @@ const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
   const { data: compliance } = useWalletCompliance(activeAddress);
+  const kycGate = useKycGate();
   const portfolioNetwork = activeNetwork;
   const { data: portfolio } = useXRPLPortfolio(activeAddress, portfolioNetwork);
   const { data: propertyHoldings = [] } = usePropertyHoldings(activeAddress);
