@@ -176,6 +176,7 @@ const MintWizard: React.FC = () => {
           body: { tx_json: txJson, wallet_address: mintAddress, network, wallet_secret: walletSecret },
         });
 
+        if (kycGate.handleEdgeResponse(submitData, submitError)) { setLoading(false); return; }
         if (submitError) throw new Error(submitError.message);
         if (!submitData?.success) throw new Error(submitData?.error || 'Failed to submit transaction');
 
@@ -250,6 +251,7 @@ const MintWizard: React.FC = () => {
           body: { tx_json: txJson },
         });
 
+        if (kycGate.handleEdgeResponse(signData, signError)) { setLoading(false); return; }
         if (signError) throw new Error(signError.message);
         if (!signData?.success) throw new Error(signData?.error || 'Failed to create signing request');
 
