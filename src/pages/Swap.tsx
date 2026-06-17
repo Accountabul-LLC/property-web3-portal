@@ -669,10 +669,12 @@ const Swap = () => {
       }
 
       if (data.requires_signature && data.tx_json) {
+        try { await kycGate.guard(); } catch (gErr) { if (kycGate.handleThrown(gErr)) return; throw gErr; }
         toast.info(`Confirm ${tokenLabel} in Xaman to continue`);
         const { data: xData, error: xErr } = await supabase.functions.invoke('xaman-send-payment', {
           body: { tx_json: data.tx_json },
         });
+        if (kycGate.handleEdgeResponse(xData, xErr)) return;
         if (xErr) throw xErr;
         if (!xData?.success) throw new Error(xData?.error || 'Unable to open Xaman');
 
