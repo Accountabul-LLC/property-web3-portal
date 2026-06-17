@@ -13,6 +13,7 @@ import type { Campaign } from '@/hooks/useCampaigns'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio'
 import NetworkToggle from '@/components/NetworkToggle'
+import { useKycGate } from '@/hooks/useKycGate'
 
 function shortAddr(a: string) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : ''
