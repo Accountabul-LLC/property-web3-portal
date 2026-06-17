@@ -24,6 +24,7 @@ import { safeErrorMessage } from "../_shared/errors.ts";
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4'
+import { requireKyc } from '../_shared/require-kyc.ts'
 
 const TESTNET_NODES = ['https://s.altnet.rippletest.net:51234', 'https://testnet.xrpl-labs.com']
 const MAX_RETRIES = 2
@@ -91,6 +92,10 @@ Deno.serve(async (req) => {
         status: 401,
       })
     }
+
+    // SEC-014: hard KYC gate.
+    const kycGate = await requireKyc(user.id, corsHeaders)
+    if (kycGate instanceof Response) return kycGate
 
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey)
 
