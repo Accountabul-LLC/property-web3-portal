@@ -57,6 +57,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
   const [deepLink, setDeepLink] = useState('')
   const [payloadUuid, setPayloadUuid] = useState('')
   const [pollInterval, setPollInterval] = useState<ReturnType<typeof setInterval> | null>(null)
+  const kycGate = useKycGate()
 
   const isPartialDecimal = (value: string) => /^\d*\.?\d*$/.test(value)
   const isPlainDecimal = (value: string) => /^\d+(\.\d+)?$/.test(value)
@@ -107,6 +108,14 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
     }
     setLoading(true)
     try {
+      // Hard KYC gate before opening Xaman.
+      try {
+        await kycGate.guard()
+      } catch (gErr) {
+        if (kycGate.handleThrown(gErr)) return
+        throw gErr
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         toast.error('Please sign in to donate')
@@ -130,6 +139,7 @@ export default function DonateModal({ campaign, open, onClose }: Props) {
       })
 
       const json = await res.json()
+      if (kycGate.handleEdgeResponse(json, null)) return
       if (!res.ok) throw new Error(json.error || 'Failed to create donation')
 
       setQrUrl(json.qr_code)
