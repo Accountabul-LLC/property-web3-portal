@@ -56,6 +56,7 @@ const iouSchema = z.object({
 const MintWizard: React.FC = () => {
   const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork, getWalletSecret } = useActiveWallet();
   const { user } = useAuth();
+  const kycGate = useKycGate();
   const { data: approvedProperties = [] } = useApprovedProperties();
 
   const [step, setStep] = useState<MintStep>('type');
