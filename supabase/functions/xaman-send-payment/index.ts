@@ -3,6 +3,8 @@ import { safeErrorMessage } from "../_shared/errors.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.4';
 import { requireEdgeUser } from '../_shared/auth.ts';
 import { parseJsonBody } from '../_shared/auth.ts';
+import { requireKyc } from '../_shared/require-kyc.ts';
+
 
 
 
@@ -27,6 +29,10 @@ Deno.serve(async (req) => {
     const auth = await requireEdgeUser(req, corsHeaders);
     if (auth instanceof Response) return auth;
     const { user } = auth;
+
+    // SEC-014: hard KYC gate. Admins bypass; everyone else must be 'approved'.
+    const kycGate = await requireKyc(user.id, corsHeaders);
+    if (kycGate instanceof Response) return kycGate;
 
     const body = await parseJsonBody<{ tx_json?: Record<string, unknown> }>(req, corsHeaders);
     if (body instanceof Response) return body;
