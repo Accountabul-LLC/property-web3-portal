@@ -181,6 +181,7 @@ export function WalletRegistrationPanel() {
     if (!compliance?.credential_id) return
     setActionLoading('credential_accept')
     try {
+      try { await kycGate.guard() } catch (gErr) { if (kycGate.handleThrown(gErr)) return; throw gErr }
       const walletSecret = activeWallet?.address ? getWalletSecret(activeWallet.address) : null
       const result = await callEdgeFunction('credential-accept', {
         credential_id: compliance.credential_id,
@@ -194,6 +195,7 @@ export function WalletRegistrationPanel() {
       }
       await refetch()
     } catch (err: any) {
+      if (kycGate.handleThrown(err)) return
       toast.error(err.message)
     } finally {
       setActionLoading(null)
