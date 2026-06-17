@@ -128,6 +128,7 @@ export function WalletRegistrationPanel() {
   const { activeWallet, getWalletSecret } = useActiveWallet()
   const { data: compliance, isLoading, refetch } = useWalletCompliance(activeWallet?.address)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const kycGate = useKycGate()
 
   const steps = buildSteps(compliance)
 
@@ -148,7 +149,12 @@ export function WalletRegistrationPanel() {
       }
     )
     const json = await res.json()
-    if (!res.ok) throw new Error(json.error || res.statusText)
+    if (!res.ok) {
+      // Surface kyc_required so the caller can redirect rather than just toast.
+      const kyc = kycErrorFromEdgeResponse(json)
+      if (kyc) throw kyc
+      throw new Error(json.error || res.statusText)
+    }
     return json
   }
 
