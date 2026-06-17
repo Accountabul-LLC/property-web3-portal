@@ -9,6 +9,7 @@ import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useTokenMeta, type TokenMeta } from '@/hooks/useTokenMeta';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useKycGate } from '@/hooks/useKycGate';
 import {
   ArrowLeftRight,
   ArrowUpDown,
@@ -118,6 +119,7 @@ const Swap = () => {
   const navigate = useNavigate();
   const { activeWallet, activeAddress, activeNetwork, openConnectModal } = useActiveWallet();
   const { data: compliance } = useWalletCompliance(activeAddress);
+  const kycGate = useKycGate();
   const portfolioNetwork = activeNetwork;
   const { data: portfolio } = useXRPLPortfolio(activeAddress, portfolioNetwork);
   const { data: propertyHoldings = [] } = usePropertyHoldings(activeAddress);
@@ -667,10 +669,12 @@ const Swap = () => {
       }
 
       if (data.requires_signature && data.tx_json) {
+        try { await kycGate.guard(); } catch (gErr) { if (kycGate.handleThrown(gErr)) return; throw gErr; }
         toast.info(`Confirm ${tokenLabel} in Xaman to continue`);
         const { data: xData, error: xErr } = await supabase.functions.invoke('xaman-send-payment', {
           body: { tx_json: data.tx_json },
         });
+        if (kycGate.handleEdgeResponse(xData, xErr)) return;
         if (xErr) throw xErr;
         if (!xData?.success) throw new Error(xData?.error || 'Unable to open Xaman');
 
@@ -746,9 +750,11 @@ const Swap = () => {
     }
 
     try {
+      try { await kycGate.guard(); } catch (gErr) { if (kycGate.handleThrown(gErr)) { setSigning(false); return; } throw gErr; }
       const { data, error } = await supabase.functions.invoke('xaman-send-payment', {
         body: { tx_json: txJson },
       });
+      if (kycGate.handleEdgeResponse(data, error)) { setSigning(false); return; }
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Failed to create Xaman payload');
 

@@ -20,6 +20,7 @@ import {
   plainDecimalSchema,
   xrplAddressSchema,
 } from '@/lib/formValidation';
+import { useKycGate } from '@/hooks/useKycGate';
 
 type TokenType = 'nft' | 'mpt' | 'iou';
 type Network = 'testnet' | 'mainnet';
@@ -55,6 +56,7 @@ const iouSchema = z.object({
 const MintWizard: React.FC = () => {
   const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork, getWalletSecret } = useActiveWallet();
   const { user } = useAuth();
+  const kycGate = useKycGate();
   const { data: approvedProperties = [] } = useApprovedProperties();
 
   const [step, setStep] = useState<MintStep>('type');
@@ -122,6 +124,15 @@ const MintWizard: React.FC = () => {
     setLoading(true);
     setMintError(null);
 
+    // Hard KYC gate before any signing path (Xaman OR testnet faucet).
+    try {
+      await kycGate.guard();
+    } catch (gErr) {
+      if (kycGate.handleThrown(gErr)) { setLoading(false); return; }
+      setLoading(false);
+      throw gErr;
+    }
+
     try {
       if (tokenType === 'nft') {
         const parsed = nftSchema.safeParse(nftParams);
@@ -165,6 +176,7 @@ const MintWizard: React.FC = () => {
           body: { tx_json: txJson, wallet_address: mintAddress, network, wallet_secret: walletSecret },
         });
 
+        if (kycGate.handleEdgeResponse(submitData, submitError)) { setLoading(false); return; }
         if (submitError) throw new Error(submitError.message);
         if (!submitData?.success) throw new Error(submitData?.error || 'Failed to submit transaction');
 
@@ -239,6 +251,7 @@ const MintWizard: React.FC = () => {
           body: { tx_json: txJson },
         });
 
+        if (kycGate.handleEdgeResponse(signData, signError)) { setLoading(false); return; }
         if (signError) throw new Error(signError.message);
         if (!signData?.success) throw new Error(signData?.error || 'Failed to create signing request');
 

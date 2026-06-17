@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useWalletCompliance, WalletComplianceState } from '@/hooks/useWalletCompliance'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useKycGate } from '@/hooks/useKycGate'
+import { kycErrorFromEdgeResponse } from '@/lib/signing/errors'
 
 type StepStatus = 'done' | 'pending' | 'action' | 'waiting' | 'error'
 
@@ -126,6 +128,7 @@ export function WalletRegistrationPanel() {
   const { activeWallet, getWalletSecret } = useActiveWallet()
   const { data: compliance, isLoading, refetch } = useWalletCompliance(activeWallet?.address)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const kycGate = useKycGate()
 
   const steps = buildSteps(compliance)
 
@@ -146,7 +149,12 @@ export function WalletRegistrationPanel() {
       }
     )
     const json = await res.json()
-    if (!res.ok) throw new Error(json.error || res.statusText)
+    if (!res.ok) {
+      // Surface kyc_required so the caller can redirect rather than just toast.
+      const kyc = kycErrorFromEdgeResponse(json)
+      if (kyc) throw kyc
+      throw new Error(json.error || res.statusText)
+    }
     return json
   }
 
@@ -173,6 +181,7 @@ export function WalletRegistrationPanel() {
     if (!compliance?.credential_id) return
     setActionLoading('credential_accept')
     try {
+      try { await kycGate.guard() } catch (gErr) { if (kycGate.handleThrown(gErr)) return; throw gErr }
       const walletSecret = activeWallet?.address ? getWalletSecret(activeWallet.address) : null
       const result = await callEdgeFunction('credential-accept', {
         credential_id: compliance.credential_id,
@@ -186,6 +195,7 @@ export function WalletRegistrationPanel() {
       }
       await refetch()
     } catch (err: any) {
+      if (kycGate.handleThrown(err)) return
       toast.error(err.message)
     } finally {
       setActionLoading(null)
