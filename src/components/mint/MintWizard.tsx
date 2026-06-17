@@ -124,6 +124,15 @@ const MintWizard: React.FC = () => {
     setLoading(true);
     setMintError(null);
 
+    // Hard KYC gate before any signing path (Xaman OR testnet faucet).
+    try {
+      await kycGate.guard();
+    } catch (gErr) {
+      if (kycGate.handleThrown(gErr)) { setLoading(false); return; }
+      setLoading(false);
+      throw gErr;
+    }
+
     try {
       if (tokenType === 'nft') {
         const parsed = nftSchema.safeParse(nftParams);
