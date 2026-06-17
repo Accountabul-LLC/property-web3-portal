@@ -7,6 +7,8 @@ import { toast } from 'sonner'
 import { supabase } from '@/integrations/supabase/client'
 import { useWalletCompliance, WalletComplianceState } from '@/hooks/useWalletCompliance'
 import { useActiveWallet } from '@/contexts/ActiveWalletContext'
+import { useKycGate } from '@/hooks/useKycGate'
+import { kycErrorFromEdgeResponse } from '@/lib/signing/errors'
 
 type StepStatus = 'done' | 'pending' | 'action' | 'waiting' | 'error'
 
