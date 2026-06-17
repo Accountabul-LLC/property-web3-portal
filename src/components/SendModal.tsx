@@ -65,6 +65,7 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
   const [showScanner, setShowScanner] = useState(false);
   
   const queryClient = useQueryClient();
+  const kycGate = useKycGate();
 
   const shortenAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 
@@ -163,9 +164,21 @@ const SendModal = ({ isOpen, onClose, walletAddress, xrpBalance = 0, tokenHoldin
     setErrorMsg('');
 
     try {
+      // Hard KYC gate — refuse to open Xaman if the user isn't verified.
+      try {
+        await kycGate.guard();
+      } catch (gErr) {
+        if (kycGate.handleThrown(gErr)) {
+          setStep('review');
+          return;
+        }
+        throw gErr;
+      }
+
       const { data, error } = await supabase.functions.invoke('xaman-send-payment', {
         body: { tx_json: buildResult.tx_json },
       });
+      if (kycGate.handleEdgeResponse(data, error)) { setStep('review'); return; }
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Failed to create signing request');
 
