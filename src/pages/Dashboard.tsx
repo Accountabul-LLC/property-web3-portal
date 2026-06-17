@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import Navigation from '@/components/Navigation';
 import { WalletRegistrationPanel } from '@/components/WalletRegistrationPanel';
@@ -85,7 +86,19 @@ const Dashboard = () => {
     zip: '',
     country: 'US',
   });
-  const [properties, setProperties] = useState<DashboardProperty[]>([]);
+  const { data: properties = [] } = useQuery({
+    queryKey: ['user-properties', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('properties')
+        .select('id, title, status, city, state, created_at')
+        .eq('owner_user_id', user!.id)
+        .order('created_at', { ascending: false });
+      return (data ?? []) as DashboardProperty[];
+    },
+    enabled: !!user,
+    staleTime: 30_000,
+  });
   const [saving, setSaving] = useState(false);
   const [editingWalletAddr, setEditingWalletAddr] = useState<string | null>(null);
   const [walletLabel, setWalletLabel] = useState('');
@@ -162,19 +175,6 @@ const Dashboard = () => {
     }
   }, [profile]);
 
-
-  useEffect(() => {
-    if (!user) return;
-    const fetchProperties = async () => {
-      const { data } = await supabase
-        .from('properties')
-        .select('id, title, status, city, state, created_at')
-        .eq('owner_user_id', user.id)
-        .order('created_at', { ascending: false });
-      if (data) setProperties(data as DashboardProperty[]);
-    };
-    fetchProperties();
-  }, [user]);
 
   const handleSave = async () => {
     // Validation

@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
+import { useKycStatus } from '@/hooks/useKycStatus'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import { ShieldCheck, Loader2, Camera, FileText, UserCheck, ArrowRight } from 'lucide-react'
@@ -15,29 +16,20 @@ const STRIPE_IDENTITY_SETUP_COPY =
 const Kyc = () => {
   const navigate = useNavigate()
   const { user, loading: authLoading } = useAuth()
+  const { status: kycStatus, isLoading: kycLoading } = useKycStatus()
   const [starting, setStarting] = useState(false)
-  const [checkingStatus, setCheckingStatus] = useState(true)
   const [setupError, setSetupError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (authLoading) return
+    if (authLoading || kycLoading) return
     if (!user) {
       navigate('/auth')
       return
     }
-    // If already submitted / approved / under_review, jump straight to status page
-    ;(async () => {
-      const { data } = await (supabase.from('kyc_cases') as any)
-        .select('status')
-        .eq('user_id', user.id)
-        .maybeSingle()
-      if (data?.status && ['submitted', 'under_review', 'approved'].includes(data.status)) {
-        navigate('/kyc/status')
-        return
-      }
-      setCheckingStatus(false)
-    })()
-  }, [user, authLoading])
+    if (['submitted', 'under_review', 'approved'].includes(kycStatus)) {
+      navigate('/kyc/status')
+    }
+  }, [user, authLoading, kycStatus, kycLoading, navigate])
 
   const startVerification = async () => {
     setStarting(true)
@@ -71,7 +63,7 @@ const Kyc = () => {
     }
   }
 
-  if (authLoading || checkingStatus) {
+  if (authLoading || kycLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
