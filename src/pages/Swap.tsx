@@ -750,9 +750,11 @@ const Swap = () => {
     }
 
     try {
+      try { await kycGate.guard(); } catch (gErr) { if (kycGate.handleThrown(gErr)) { setSigning(false); return; } throw gErr; }
       const { data, error } = await supabase.functions.invoke('xaman-send-payment', {
         body: { tx_json: txJson },
       });
+      if (kycGate.handleEdgeResponse(data, error)) { setSigning(false); return; }
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Failed to create Xaman payload');
 
