@@ -20,6 +20,7 @@ import {
   plainDecimalSchema,
   xrplAddressSchema,
 } from '@/lib/formValidation';
+import { useKycGate } from '@/hooks/useKycGate';
 
 type TokenType = 'nft' | 'mpt' | 'iou';
 type Network = 'testnet' | 'mainnet';
