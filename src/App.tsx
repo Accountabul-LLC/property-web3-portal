@@ -75,6 +75,8 @@ const VendorOnboarding = lazyPage(() => import("./pages/VendorOnboarding"));
 const VendorDashboard = lazyPage(() => import("./pages/VendorDashboard"));
 const VendorsDirectory = lazyPage(() => import("./pages/VendorsDirectory"));
 const VendorPublicProfile = lazyPage(() => import("./pages/VendorPublicProfile"));
+const LegalPacket = lazyPage(() => import("./pages/LegalPacket"));
+const DailyOperatingExpenses = lazyPage(() => import("./pages/DailyOperatingExpenses"));
 
 const NotFound = lazyPage(() => import("./pages/NotFound"));
 
@@ -149,6 +151,9 @@ const App = () => (
                 <Route path="/vendors/dashboard" element={<VendorDashboard />} />
                 <Route path="/vendors/status" element={<Navigate to="/vendors/dashboard" replace />} />
                 <Route path="/vendors/:slug" element={<VendorPublicProfile />} />
+                <Route path="/legal" element={<Navigate to="/legal/privacy" replace />} />
+                <Route path="/legal/:section" element={<LegalPacket />} />
+                <Route path="/operations/doe" element={<DailyOperatingExpenses />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

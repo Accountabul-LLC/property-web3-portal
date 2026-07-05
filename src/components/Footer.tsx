@@ -17,6 +17,7 @@ const Footer = () => {
       { label: 'Help Center', href: '#' },
       { label: 'AI Assistant', href: '#' },
       { label: 'Settings', href: '/settings' },
+      { label: 'DOE Sheet', href: '/operations/doe' },
       { label: 'Contact Us', href: '#' },
       { label: 'Community Forum', href: '#' },
       { label: 'MO Deed Fraud Protection', href: '/protection/deed-fraud' },
@@ -28,10 +29,11 @@ const Footer = () => {
       { label: 'NFT Collection', href: '/marketplace' },
     ],
     Legal: [
-      { label: 'Privacy Policy', href: '#' },
-      { label: 'Terms of Service', href: '#' },
-      { label: 'Compliance', href: '#' },
-      { label: 'Security', href: '#' },
+      { label: 'Legal Packet', href: '/legal' },
+      { label: 'Privacy Policy', href: '/legal/privacy' },
+      { label: 'Terms of Service', href: '/legal/terms' },
+      { label: 'Compliance', href: '/legal/compliance' },
+      { label: 'Security', href: '/legal/security' },
     ],
   }
 
@@ -97,13 +99,13 @@ const Footer = () => {
 
         <div className="mt-12 pt-8 border-t border-border flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div className="text-sm text-muted-foreground">
-            © {currentYear} Accountabul. All rights reserved.
+            Copyright {currentYear} Accountabul. All rights reserved.
           </div>
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <span>Built on XRPL</span>
-            <span>•</span>
+            <span>|</span>
             <span>Verified & Secure</span>
-            <span>•</span>
+            <span>|</span>
             <span>Community Governed</span>
           </div>
         </div>

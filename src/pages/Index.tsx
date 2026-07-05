@@ -4,6 +4,7 @@ import Navigation from '@/components/Navigation';
 import HeroSection from '@/components/HeroSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
 import ValuePropositionSection from '@/components/ValuePropositionSection';
+import PortalOperationsSection from '@/components/PortalOperationsSection';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import NewsletterSection from '@/components/NewsletterSection';
 import Footer from '@/components/Footer';
@@ -38,6 +39,7 @@ const Index = () => {
       <HeroSection onGetStarted={handleGetStarted} onExploreMarketplace={handleExploreMarketplace} />
       <HowItWorksSection />
       <ValuePropositionSection />
+      <PortalOperationsSection />
       <TestimonialsSection />
       <NewsletterSection />
       <Footer />
