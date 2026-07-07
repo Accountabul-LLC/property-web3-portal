@@ -54,10 +54,12 @@ function refreshXrpPrice(): Promise<number> {
   if (inFlightXrpPrice) return inFlightXrpPrice;
   inFlightXrpPrice = (async () => {
     try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 5000);
       const res = await fetch(
         'https://api.coingecko.com/api/v3/simple/price?ids=ripple&vs_currencies=usd',
-        { headers: { 'Accept': 'application/json' } }
-      );
+        { headers: { 'Accept': 'application/json' }, signal: ctrl.signal }
+      ).finally(() => clearTimeout(timer));
       if (!res.ok) return 0;
       const data = await res.json();
       const value = Number(data?.ripple?.usd ?? 0);
