@@ -105,8 +105,10 @@ async function fetchAndStoreToken(currency: string, issuer: string): Promise<Cac
   const p = (async () => {
     const identifier = `${currency}:${issuer}`;
     const url = `https://s1.xrplmeta.org/token/${encodeURIComponent(identifier)}`;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' }, signal: ctrl.signal });
       if (!res.ok) {
         console.error(`xrplmeta error for ${identifier}: ${res.status}`);
         return;
