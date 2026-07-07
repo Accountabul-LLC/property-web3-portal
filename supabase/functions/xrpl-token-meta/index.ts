@@ -146,6 +146,7 @@ async function fetchAndStoreToken(currency: string, issuer: string): Promise<Cac
     } catch (e) {
       console.error(`Error fetching ${identifier}:`, e);
     } finally {
+      clearTimeout(timer);
       inFlightTokens.delete(key);
     }
   })();
