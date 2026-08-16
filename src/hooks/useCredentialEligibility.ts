@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 
 export interface RequirementResult {
   requirement_key: string
