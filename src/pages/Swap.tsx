@@ -1012,13 +1012,13 @@ const Swap = () => {
                         ? 'Preparing swap...'
                         : signing
                           ? 'Opening Xaman...'
-                          : !sourceAmount
+                          : isSyntheticQuote(txJson)
+                            ? 'Property swaps: prototype / coming later'
+                            : !sourceAmount
                             ? 'Enter an amount'
                             : insufficientBalance
                               ? 'Insufficient balance'
                               : trustlineRequired
-                                : isSyntheticQuote(txJson)
-                                  ? 'Property swaps: prototype / coming later'
                                 ? `Swap for ${decodeCurrency(trustlineRequired.currency)}`
                                 : !quoteReady
                                   ? 'Quote unavailable'
