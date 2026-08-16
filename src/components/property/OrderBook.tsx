@@ -7,9 +7,6 @@ import { Badge } from '../ui/badge';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { useTokenOrders } from '@/hooks/usePropertyData';
 import { useParams } from 'react-router-dom';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
-import { useKycStatus } from '@/hooks/useKycStatus';
-import { useWalletRegistration } from '@/hooks/useWalletRegistration';
 import PrototypeNotice from '@/components/PrototypeNotice';
 import { PROTOTYPE_DISABLED_LABEL } from '@/lib/prototypeSafety';
 
@@ -20,9 +17,6 @@ const OrderBook: React.FC = () => {
   const [quantity, setQuantity] = React.useState('');
 
   const { data: orders = [], isLoading } = useTokenOrders(id);
-  const { activeAddress } = useActiveWallet();
-  const { isApproved: kycApproved } = useKycStatus();
-  const { isRegistered, isPending } = useWalletRegistration(activeAddress);
 
   // Order placement is not implemented in this prototype. The control stays
   // visible so the intended flow is clear, but it can never be submitted.
@@ -40,7 +34,7 @@ const OrderBook: React.FC = () => {
       {/* Quick Trade Panel */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Trade</CardTitle>
+          <CardTitle>Trade panel (prototype)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
