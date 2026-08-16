@@ -1,8 +1,14 @@
 # MPT Minting — Property Web3 Portal (RWA)
 
-> **Status**: testnet-only
+> **Status**: prototype, testnet-only. Signing is always done in Xaman.
 > **Standard**: XLS-33 (MPToken), XLS-89 (compressed metadata)
-> **Last Updated**: 2026-03-06
+> **Last Updated**: 2026-06-18
+
+> **Scope warning:** minting here submits `MPTokenIssuanceCreate`, which creates an **issuance definition**
+> on the ledger. It does not create holders, does not authorize anyone, and does not distribute anything.
+> Holder authorization (`MPTokenAuthorize`) and distribution payments are **not implemented**. A created
+> issuance is not evidence of a funded, distributed, or tradable token, and it says nothing about ownership
+> of any real-world property.
 
 ---
 
@@ -28,10 +34,10 @@ User (Browser)
     │
     ├─ xrpl-build-mint  (build MPTokenIssuanceCreate tx_json)
     │
-    └─ [testnet faucet wallet]          [mainnet / Xaman wallet]
-        xrpl-submit-signed               xaman-send-payment
-        (auto-sign, no QR)              → QR code displayed
-                                        → xaman-check-payload polls
+    └─ xaman-send-payment  → QR code displayed
+                           → xaman-check-payload polls for the result
+
+    (There is no server-side signing path. The app never holds a wallet seed.)
 ```
 
 ---
@@ -42,9 +48,9 @@ User (Browser)
 
 User selects token type (`nft` | `mpt` | `iou`) and a signing wallet. Network (mainnet/testnet) is **derived from the selected wallet's `network` field** — the user does not choose network independently.
 
-Two signing paths exist:
-- **Xaman QR** — any wallet with `provider !== 'testnet_faucet'`
-- **Auto-sign (testnet)** — wallet with `provider === 'testnet_faucet'`, server signs using stored `wallet_secret`
+One signing path exists: **Xaman QR**. The previous testnet auto-sign path, which sent a `wallet_secret` to
+`xrpl-submit-signed`, was removed on 2026-06-18. Faucet wallets can still be generated for testnet
+exploration, but their seed is discarded and cannot be used to sign in this app.
 
 ### Step 2: MPT Form
 
@@ -64,13 +70,7 @@ Calls `xrpl-build-mint` edge function with:
 
 Edge function returns `tx_json` (a `MPTokenIssuanceCreate` transaction).
 
-**Testnet auto-sign path**:
-- Calls `xrpl-submit-signed` with `tx_json` + `wallet_address` + `network`
-- Edge function fetches `wallet_secret` from `user_wallets` table
-- Signs and submits to testnet XRPL nodes
-- Returns `tx_hash`
-
-**Xaman signing path**:
+**Xaman signing path** (the only path):
 - Calls `xaman-send-payment` with `tx_json`
 - Returns `uuid` + `qr_code` URL
 - Frontend polls `xaman-check-payload` every 3 seconds
@@ -233,10 +233,10 @@ The testnet faucet feature allows developers to create a pre-funded testnet wall
 **Flow**:
 1. User clicks "Generate Testnet Wallet" in MintWizard
 2. `xrpl-testnet-faucet` edge function calls the XRPL testnet faucet API
-3. Returns `{ address, secret, balance }` — **100 XRP funded**
-4. `addWallet()` is called with `provider: 'testnet_faucet'`, `network: 'testnet'`, and `walletSecret: secret`
-5. The `wallet_secret` is stored in `user_wallets` DB table (⚠️ security issue — see CODE_AUDIT.md C1)
-6. This wallet is then available for auto-sign minting on testnet
+3. Returns a funded testnet address
+4. `addWallet()` is called with `provider: 'testnet_faucet'`, `network: 'testnet'`. **No secret is stored**,
+   neither in the database nor in the browser.
+5. The wallet can be viewed and used for reads. Signing still requires Xaman.
 
 **Identifying a faucet wallet**: `selectedWallet.provider === 'testnet_faucet'`
 
@@ -246,7 +246,10 @@ The testnet faucet feature allows developers to create a pre-funded testnet wall
 
 1. **Move MPT to mainnet** — XLS-33 is in active development on XRPL. Track amendment status and enable mainnet support when available.
 
-2. **Remove test data generation from `MPTForm`** — gate behind `import.meta.env.DEV` or remove entirely.
+2. **Implement holder authorization and distribution** — `MPTokenAuthorize` plus distribution payments are
+   required before an issuance means anything to a holder. This is the largest gap today.
+
+3. **Remove test data generation from `MPTForm`** — gate behind `import.meta.env.DEV` or remove entirely.
 
 3. **Validate XLS-89 byte size on the frontend** — show a real-time byte counter so users know if their metadata will be trimmed before submitting.
 
@@ -256,6 +259,6 @@ The testnet faucet feature allows developers to create a pre-funded testnet wall
 
 6. **Support metadata update** — XRPL allows updating `MPTokenMetadata` via `MPTokenIssuanceSet`. Add an edit flow for updating token metadata after minting.
 
-7. **Fix stale closure timeout bug** — see CODE_AUDIT.md C2.
+8. **Fix stale closure timeout bug** — see CODE_AUDIT.md C2.
 
-8. **Fix interval leak on unmount** — see CODE_AUDIT.md C3.
+9. **Fix interval leak on unmount** — see CODE_AUDIT.md C3.
