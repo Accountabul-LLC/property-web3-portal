@@ -292,7 +292,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
       .eq('wallet_address', address)
       .eq('user_id', user.id);
 
-    saveWalletSecret(address, null);
+    purgeLegacyWalletSecrets();
 
     setWallets(prev => {
       const updated = prev.filter(w => w.address !== address);
@@ -324,7 +324,7 @@ export function ActiveWalletProvider({ children }: { children: React.ReactNode }
     if (!user) return;
 
     wallets.forEach(w => logAuditEvent(w.address, 'disconnect_all', user.id));
-    wallets.forEach(w => saveWalletSecret(w.address, null));
+    purgeLegacyWalletSecrets();
 
     await supabase
       .from('user_wallets')
