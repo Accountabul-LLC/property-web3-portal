@@ -225,7 +225,10 @@ export function useMyData() {
 
 - **`supabase/types.ts` is auto-generated** — never edit it; Lovable regenerates it on schema changes
 - **`src/components/ui/` is auto-generated** — shadcn components; edit only if you know what you're doing
-- **Security issue C1 (RESOLVED 2026-05-21):** plaintext `wallet_secret` column was dropped from `user_wallets` (`20260521001000`); testnet seeds now live only in browser sessionStorage
+- **No wallet secrets anywhere (2026-06-18):** the `wallet_secret` column was dropped from `user_wallets` (`20260521001000`) and browser-side seed storage has now been removed too. The app stores no seed and sends no seed to any edge function. All mint/issuance signing goes through Xaman. Legacy `accountabul_wallet_secret_*` sessionStorage keys are purged on load. Do not reintroduce custodial secrets.
+- **Testnet is the default network** — `DEFAULT_NETWORK` in `src/lib/prototypeSafety.ts`; switching to mainnet requires an explicit confirmation in `NetworkToggle`.
+- **Public trading is disabled** — buy/sell, order placement, property swaps, and pools are placeholders. No synthetic transaction hashes may ever be generated.
+- **MPT status:** `MPTokenIssuanceCreate` creates an issuance *definition* only. Holder authorization (`MPTokenAuthorize`) and distribution payments are not implemented.
 - **`verify_jwt = false` on all edge functions** — JWT is manually verified inside each function; Supabase gateway does NOT enforce it
 - **XRPL never called from browser** — all XRPL interactions go through edge functions; never import xrpl SDK in frontend
 - **Team access = `admin` role in `user_roles`** — no separate `team` role yet; to grant access: `insert into user_roles (user_id, role) values ('<uuid>', 'admin')`
@@ -278,8 +281,8 @@ export function useMyData() {
 - **Stripe webhook** (`stripe-identity-webhook`): removed dev fallback that accepted unverified events; secret is now required
 - **Faucet** (`xrpl-testnet-faucet`): added JWT auth check — anonymous calls now return 401
 - **check-credential-payload**: added admin/compliance_officer role check + payload ownership check (`admin_user_id` must match requesting user)
-- **Known remaining risk**: `wallet_secret` column in `user_wallets` still stores testnet private keys in plaintext — do not deploy to mainnet without encrypting or removing this column
-- **To do before mainnet**: set `APP_ALLOWED_ORIGIN` secret, set `STRIPE_IDENTITY_WEBHOOK_SECRET`, remove `wallet_secret` or encrypt with Vault
+- **Known remaining risk (RESOLVED later):** the `wallet_secret` column was dropped and client-side seed handling removed on 2026-06-18
+- **To do before mainnet**: set `APP_ALLOWED_ORIGIN` secret, set `STRIPE_IDENTITY_WEBHOOK_SECRET` (the `wallet_secret` removal is done)
 
 ### 2026-03-07 | claude-sonnet-4-6 (session 2)
 - Built XRPL issuer wallet infrastructure — seed NEVER stored in DB, only pointer (secret_env_key)
@@ -297,7 +300,8 @@ export function useMyData() {
 ### 2026-03-07 | claude-sonnet-4-6
 - Built Phase 1A compliance wallet layer (Permissioned DEX design pivot — Credentials native, MPT as ecosystem badge)
 - Migration `20260307200000_compliance_wallet_layer.sql`: tables wallet_registrations, wallet_credentials, permission_profiles, wallet_permission_assignments; function is_wallet_trade_enabled()
-- Edge functions: wallet-register (user requests), wallet-approve (admin approves + auto-issues CredentialCreate on testnet via ACCOUNTABUL_ISSUER_SECRET), credential-accept (user accepts CredentialAccept testnet auto-sign / mainnet Xaman), compliance-check (full state query)
+- Edge functions: wallet-register (user requests), wallet-approve (admin approves + issues CredentialCreate on testnet via ACCOUNTABUL_ISSUER_SECRET, server-side only), credential-accept (acceptance is signed in Xaman; the client no longer sends any wallet secret), compliance-check (full state query)
+  - NOTE (2026-06-18): the historical "testnet auto-sign" client path described above was removed.
 - Frontend: useWalletCompliance hook (react-query, polls every 30s), WalletRegistrationPanel (6-step UI with actions), TradeGuard (wraps any trade-gated UI)
 - config.toml: added wallet-register, wallet-approve, credential-accept, compliance-check (all verify_jwt=false, manual JWT check inside)
 - Credential type ACCOUNTABUL_TRADE_APPROVED hex-encoded as CredentialType field; XRPL CredentialCreate issuer=platform, subject=user wallet
@@ -374,3 +378,13 @@ export function useMyData() {
 
 <!-- rosetta:version:1.0 -->
 <!-- rosetta:last-updated:2026-05-29 -->
+
+### 2026-06-18 | lovable
+- Hackathon credibility and safety patch. Public copy now describes the prototype honestly: fabricated metrics, testimonials, and compliance badges removed from the homepage.
+- Added `src/lib/prototypeSafety.ts` (DEFAULT_NETWORK=testnet, TRADING_ENABLED=false, synthetic-quote guard, `assertNoWalletSecret`) with unit tests in `src/lib/prototypeSafety.test.ts`.
+- Added `src/components/PrototypeNotice.tsx` and placed it on public surfaces (home, swap, pools, property sidebars, order book).
+- Removed the faucet auto-sign mint path and every client transmission of `wallet_secret` (`MintWizard`, `WalletSelector`, `WalletRegistrationPanel`, `useCredentialEligibility`, `ActiveWalletContext`). `addWallet` no longer takes a secret argument.
+- Removed the DEMO transaction-hash generator from `Swap.tsx`; synthetic property quotes can no longer be submitted.
+- Added `test` and `typecheck` npm scripts plus a vitest config. No second lockfile was added.
+- Gotcha: generated `types.ts` still declares `wallet_secret` on `user_wallets` even though the column is gone; it is unused by the app.
+

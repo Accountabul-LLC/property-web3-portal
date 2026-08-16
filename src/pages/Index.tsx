@@ -5,7 +5,7 @@ import HeroSection from '@/components/HeroSection';
 import HowItWorksSection from '@/components/HowItWorksSection';
 import ValuePropositionSection from '@/components/ValuePropositionSection';
 import PortalOperationsSection from '@/components/PortalOperationsSection';
-import TestimonialsSection from '@/components/TestimonialsSection';
+
 import NewsletterSection from '@/components/NewsletterSection';
 import Footer from '@/components/Footer';
 import MembershipModal from '@/components/MembershipModal';
@@ -31,8 +31,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Accountabul | Digital Real Estate Asset Management"
-        description="Secure digital marketplace for tokenized real estate. Streamline property issuance, treasury operations, and portfolio tracking on the XRP Ledger."
+        title="Accountabul | XRPL Real Estate Prototype"
+        description="Hackathon prototype exploring property listings, community funding campaigns, and XRPL testnet issuance with non-custodial Xaman signing."
         path="/"
       />
       <Navigation />
@@ -40,7 +40,6 @@ const Index = () => {
       <HowItWorksSection />
       <ValuePropositionSection />
       <PortalOperationsSection />
-      <TestimonialsSection />
       <NewsletterSection />
       <Footer />
       

@@ -8,6 +8,8 @@ import { useWalletCompliance } from '@/hooks/useWalletCompliance';
 import { useXRPLPortfolio } from '@/hooks/useXRPLPortfolio';
 import { useTokenMeta, type TokenMeta } from '@/hooks/useTokenMeta';
 import { supabase } from '@/integrations/supabase/client';
+import { canSubmitSwap, isSyntheticQuote } from '@/lib/prototypeSafety';
+import PrototypeNotice from '@/components/PrototypeNotice';
 import { toast } from 'sonner';
 import { useKycGate } from '@/hooks/useKycGate';
 import {
@@ -732,20 +734,13 @@ const Swap = () => {
     setQrCode('');
     setTxHash('');
 
-    // Synthetic property swap - simulate execution for demo purposes.
-    if ((txJson as any).__synthetic && sourceAsset.kind === 'property') {
-      try {
-        await new Promise((r) => setTimeout(r, 1200));
-        const fakeHash = 'DEMO' + Math.random().toString(16).slice(2, 10).toUpperCase().padEnd(60, '0');
-        setTxHash(fakeHash);
-        toast.success(
-          `Simulated: sold ${sourceAmount} ${sourceAsset.symbol} for ${
-            estimatedReceive ? Number(estimatedReceive).toLocaleString(undefined, { maximumFractionDigits: 4 }) : '0'
-          } ${assetSymbol(destAsset, getMeta(destAsset))}`,
-        );
-      } finally {
-        setSigning(false);
-      }
+    // Property swaps are quoted locally and have no on-ledger path. They are
+    // never submitted and never produce a transaction hash.
+    if (!canSubmitSwap(txJson)) {
+      setSigning(false);
+      const message = 'Property swaps are not implemented yet. This quote is an estimate only and cannot be submitted.';
+      setError(message);
+      toast.info(message);
       return;
     }
 
@@ -826,6 +821,12 @@ const Swap = () => {
               </span>
             </div>
           </div>
+
+          <PrototypeNotice className="mb-4">
+            Swaps use XRPL path finding and are signed in Xaman. Property token swaps are quotes only and cannot be
+            submitted. Nothing here is investment advice or a promise of liquidity.
+          </PrototypeNotice>
+
 
           {!activeWallet ? (
             <Card className="p-6 border-dashed flex flex-col items-center text-center gap-4">
@@ -1008,7 +1009,8 @@ const Swap = () => {
                         loadingQuote ||
                         !sourceAmount ||
                         insufficientBalance ||
-                        (!quoteReady && !trustlineRequired)
+                        (!quoteReady && !trustlineRequired) ||
+                        isSyntheticQuote(txJson)
                       }
                       onClick={handleSwap}
                     >
@@ -1017,7 +1019,9 @@ const Swap = () => {
                         ? 'Preparing swap...'
                         : signing
                           ? 'Opening Xaman...'
-                          : !sourceAmount
+                          : isSyntheticQuote(txJson)
+                            ? 'Property swaps: prototype / coming later'
+                            : !sourceAmount
                             ? 'Enter an amount'
                             : insufficientBalance
                               ? 'Insufficient balance'

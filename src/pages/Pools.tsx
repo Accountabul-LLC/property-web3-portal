@@ -3,6 +3,7 @@ import Navigation from '@/components/Navigation';
 import Footer from '@/components/Footer';
 import { Card } from '@/components/ui/card';
 import { Droplets } from 'lucide-react';
+import PrototypeNotice from '@/components/PrototypeNotice';
 
 const Pools = () => {
   return (
@@ -15,10 +16,14 @@ const Pools = () => {
             <h1 className="text-3xl font-bold">Liquidity Pools</h1>
           </div>
           <p className="text-muted-foreground max-w-2xl">
-            Provide liquidity to XRP Ledger AMM pools for property tokens and supported assets.
-            Earn a share of swap fees in proportion to your contribution.
+            Planned feature: provide liquidity to XRP Ledger AMM pools for supported assets. This page is a
+            placeholder while the flow is designed.
           </p>
         </header>
+
+        <PrototypeNotice className="mb-6">
+          Liquidity pools are not implemented. Nothing on this page connects to an AMM, and no fees can be earned.
+        </PrototypeNotice>
 
         <Card className="p-8 text-center border-dashed">
           <Droplets className="w-10 h-10 text-muted-foreground mx-auto mb-4" />

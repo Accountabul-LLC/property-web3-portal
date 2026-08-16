@@ -1,7 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
-import { useActiveWallet } from '@/contexts/ActiveWalletContext'
 
 export interface RequirementResult {
   requirement_key: string
@@ -66,7 +65,6 @@ function groupBySections(results: CredentialEligibilityResult[]): CredentialSect
 
 export function useCredentialEligibility(walletAddress: string | null) {
   const { user } = useAuth()
-  const { getWalletSecret } = useActiveWallet()
   const qc = useQueryClient()
 
   const { data, isLoading, refetch } = useQuery<{ results: CredentialEligibilityResult[]; sections: CredentialSections } | null>({
@@ -95,9 +93,9 @@ export function useCredentialEligibility(walletAddress: string | null) {
   }
 
   async function acceptCredential(wallet_credential_id: string) {
+    // No secret leaves the browser. Acceptance is signed in Xaman.
     await callEdgeFn('credential-accept', {
       credential_id: wallet_credential_id,
-      wallet_secret: getWalletSecret(walletAddress),
     })
     qc.invalidateQueries({ queryKey: ['credential-eligibility', walletAddress, user?.id] })
   }

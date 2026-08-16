@@ -125,7 +125,7 @@ function StepIcon({ status }: { status: StepStatus }) {
 }
 
 export function WalletRegistrationPanel() {
-  const { activeWallet, getWalletSecret } = useActiveWallet()
+  const { activeWallet } = useActiveWallet()
   const { data: compliance, isLoading, refetch } = useWalletCompliance(activeWallet?.address)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const kycGate = useKycGate()
@@ -182,10 +182,9 @@ export function WalletRegistrationPanel() {
     setActionLoading('credential_accept')
     try {
       try { await kycGate.guard() } catch (gErr) { if (kycGate.handleThrown(gErr)) return; throw gErr }
-      const walletSecret = activeWallet?.address ? getWalletSecret(activeWallet.address) : null
+      // No secret leaves the browser. Acceptance is signed in Xaman.
       const result = await callEdgeFunction('credential-accept', {
         credential_id: compliance.credential_id,
-        wallet_secret: walletSecret,
       })
       if (result.ledger_status === 'accepted') {
         toast.success('Credential accepted. Your wallet is now trade-enabled.')

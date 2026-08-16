@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
-import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, FlaskConical, QrCode, AlertTriangle, Wallet, Building2 } from 'lucide-react';
+import { Coins, Image, Layers, ArrowLeft, ArrowRight, Loader2, QrCode, AlertTriangle, Wallet, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -54,7 +54,7 @@ const iouSchema = z.object({
 });
 
 const MintWizard: React.FC = () => {
-  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork, getWalletSecret } = useActiveWallet();
+  const { activeAddress, activeWallet, isConnected, addWallet, wallets, setActiveWallet, activeNetwork } = useActiveWallet();
   const { user } = useAuth();
   const kycGate = useKycGate();
   const { data: approvedProperties = [] } = useApprovedProperties();
@@ -92,7 +92,6 @@ const MintWizard: React.FC = () => {
     return iouSchema.safeParse(iouParams).success;
   };
 
-  const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';
 
   const handleGenerateFaucetWallet = useCallback(async () => {
     if (!user) return;
@@ -107,7 +106,6 @@ const MintWizard: React.FC = () => {
         'Testnet Faucet Wallet',
         null,
         'testnet_faucet',
-        data.secret,
         'testnet'
       );
 
@@ -164,89 +162,9 @@ const MintWizard: React.FC = () => {
 
       const txJson = buildData.tx_json;
 
-      // Branch: testnet faucet wallet → auto-sign server-side
-      if (network === 'testnet' && isTestnetFaucetWallet) {
-        setMintStatus('pending');
-        const walletSecret = getWalletSecret(mintAddress);
-        if (!walletSecret) {
-          throw new Error('This testnet wallet secret is only available in the current browser session. Reconnect the wallet and try again.');
-        }
-
-        const { data: submitData, error: submitError } = await supabase.functions.invoke('xrpl-submit-signed', {
-          body: { tx_json: txJson, wallet_address: mintAddress, network, wallet_secret: walletSecret },
-        });
-
-        if (kycGate.handleEdgeResponse(submitData, submitError)) { setLoading(false); return; }
-        if (submitError) throw new Error(submitError.message);
-        if (!submitData?.success) throw new Error(submitData?.error || 'Failed to submit transaction');
-
-        // Determine or create the property to link
-        let linkedPropertyId = selectedPropertyId;
-
-        // Auto-create a property record from MPT metadata if no approved property was linked
-        if (!linkedPropertyId && tokenType === 'mpt') {
-          const p = getParams() as MPTParams;
-          const estVal = p.estimated_value ? Number(String(p.estimated_value).replace(/,/g, '')) : null;
-          const totalTk = p.max_amount ? Number(p.max_amount) : null;
-          const propRow = {
-            owner_user_id: user.id,
-            owner_wallet: mintAddress,
-            title: p.name || 'Untitled Property Token',
-            address: p.property_address || null,
-            city: p.city || null,
-            state: p.state || null,
-            zip: p.zip || null,
-            property_type: p.property_type || null,
-            bedrooms: p.bedrooms ? Math.round(Number(p.bedrooms)) : null,
-            bathrooms: p.bathrooms ? Math.round(Number(p.bathrooms)) : null,
-            square_feet: p.square_feet ? Math.round(Number(p.square_feet)) : null,
-            year_built: p.year_built ? Math.round(Number(p.year_built)) : null,
-            estimated_value: estVal,
-            description: p.description || null,
-            images: p.image_url ? [p.image_url] : [],
-            total_tokens: totalTk,
-            tokens_available: totalTk,
-            price_per_token: estVal && totalTk ? Math.round(estVal / totalTk) : null,
-            status: 'active',
-          };
-          const { data: newProp, error: propErr } = await supabase
-            .from('properties' as never)
-            .insert(propRow as never)
-            .select('id')
-            .single();
-          if (propErr) {
-            console.error('[MintWizard] Failed to create property listing:', propErr);
-            toast.error('Token minted but marketplace listing failed. Contact support.');
-          }
-          if (newProp && typeof newProp === 'object' && 'id' in (newProp as any)) linkedPropertyId = String((newProp as any).id);
-        }
-
-        // Save mint record as validated
-        await supabase.from('token_mints' as never).insert({
-          user_id: user.id,
-          wallet_address: mintAddress,
-          token_type: tokenType,
-          network,
-          request_json: getParams(),
-          tx_json: txJson,
-          status: 'validated',
-          tx_hash: submitData.tx_hash,
-          property_id: linkedPropertyId,
-        } as never);
-
-              // Activate linked property (if it was pre-existing and approved)
-              if (selectedPropertyId) {
-          await supabase.from('properties' as never)
-            .update({ status: 'active', updated_at: new Date().toISOString() } as never)
-            .eq('id', selectedPropertyId);
-        }
-
-        setMintStatus('validated');
-        setTxHash(submitData.tx_hash || null);
-        toast.success('✅ Token minted successfully!');
-
-      } else {
-        // Mainnet / Xaman flow: send to Xaman for QR-code signing
+      // Signing always happens in Xaman. The app never holds or transmits a wallet seed.
+      {
+        // Xaman flow: send to Xaman for QR-code signing
         const { data: signData, error: signError } = await supabase.functions.invoke('xaman-send-payment', {
           body: { tx_json: txJson },
         });
@@ -366,7 +284,7 @@ const MintWizard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [getParams, getWalletSecret, isTestnetFaucetWallet, mintAddress, mintStatus, network, selectedPropertyId, tokenType, user]);
+  }, [getParams, mintAddress, mintStatus, network, selectedPropertyId, tokenType, user]);
 
   const handleReset = () => {
     setStep('type');
@@ -589,15 +507,9 @@ const MintWizard: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Signing</span>
-                {network === 'testnet' && isTestnetFaucetWallet ? (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <FlaskConical className="w-3 h-3" /> Auto-sign (testnet)
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <QrCode className="w-3 h-3" /> Xaman QR
-                  </Badge>
-                )}
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <QrCode className="w-3 h-3" /> Xaman QR
+                </Badge>
               </div>
               <hr className="border-border" />
               {tokenType === 'nft' && (
@@ -640,7 +552,7 @@ const MintWizard: React.FC = () => {
               </Button>
               <Button onClick={handleSubmit} disabled={loading} variant="hero">
                 {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
+                {'Sign in Xaman & Submit'}
               </Button>
             </div>
           </>

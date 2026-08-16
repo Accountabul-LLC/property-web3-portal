@@ -7,9 +7,8 @@ import { Badge } from '../ui/badge';
 import { TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
 import { useTokenOrders } from '@/hooks/usePropertyData';
 import { useParams } from 'react-router-dom';
-import { useActiveWallet } from '@/contexts/ActiveWalletContext';
-import { useKycStatus } from '@/hooks/useKycStatus';
-import { useWalletRegistration } from '@/hooks/useWalletRegistration';
+import PrototypeNotice from '@/components/PrototypeNotice';
+import { PROTOTYPE_DISABLED_LABEL } from '@/lib/prototypeSafety';
 
 const OrderBook: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -18,22 +17,11 @@ const OrderBook: React.FC = () => {
   const [quantity, setQuantity] = React.useState('');
 
   const { data: orders = [], isLoading } = useTokenOrders(id);
-  const { activeAddress } = useActiveWallet();
-  const { isApproved: kycApproved } = useKycStatus();
-  const { isRegistered, isPending } = useWalletRegistration(activeAddress);
 
-  function getOrderButtonState(): { label: string; disabled: boolean } {
-    if (!activeAddress) return { label: 'Connect Wallet', disabled: true };
-    if (!kycApproved) return { label: 'Complete KYC to Trade', disabled: true };
-    if (isPending) return { label: 'Registration Pending Review', disabled: true };
-    if (!isRegistered) return { label: 'Register Wallet to Trade', disabled: true };
-    return {
-      label: `Place ${orderType === 'buy' ? 'Buy' : 'Sell'} Order`,
-      disabled: !price || !quantity,
-    };
-  }
-
-  const { label: orderButtonLabel, disabled: orderButtonDisabled } = getOrderButtonState();
+  // Order placement is not implemented in this prototype. The control stays
+  // visible so the intended flow is clear, but it can never be submitted.
+  const orderButtonLabel = `Place ${orderType === 'buy' ? 'buy' : 'sell'} order (${PROTOTYPE_DISABLED_LABEL})`;
+  const orderButtonDisabled = true;
 
   const buyOrders = orders.filter(o => o.side === 'buy').sort((a, b) => b.price - a.price);
   const sellOrders = orders.filter(o => o.side === 'sell').sort((a, b) => a.price - b.price);
@@ -46,7 +34,7 @@ const OrderBook: React.FC = () => {
       {/* Quick Trade Panel */}
       <Card>
         <CardHeader>
-          <CardTitle>Quick Trade</CardTitle>
+          <CardTitle>Trade panel (prototype)</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -71,9 +59,13 @@ const OrderBook: React.FC = () => {
                 <div className="text-sm text-muted-foreground">
                   Total: ${(Number(price) * Number(quantity) || 0).toLocaleString()}
                 </div>
-                <Button className="w-full" disabled={orderButtonDisabled}>
+                <Button className="w-full" disabled={orderButtonDisabled} aria-disabled="true">
                   {orderButtonLabel}
                 </Button>
+                <PrototypeNotice variant="inline">
+                  Order placement is not connected to any exchange or ledger. Prices shown below are placeholder
+                  records stored in the app database, not live market data.
+                </PrototypeNotice>
               </div>
             </div>
 
