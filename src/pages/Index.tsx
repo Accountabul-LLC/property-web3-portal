@@ -31,8 +31,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background">
       <Seo
-        title="Accountabul | Digital Real Estate Asset Management"
-        description="Secure digital marketplace for tokenized real estate. Streamline property issuance, treasury operations, and portfolio tracking on the XRP Ledger."
+        title="Accountabul | XRPL Real Estate Prototype"
+        description="Hackathon prototype exploring property listings, community funding campaigns, and XRPL testnet issuance with non-custodial Xaman signing."
         path="/"
       />
       <Navigation />
