@@ -10,6 +10,8 @@ import { useParams } from 'react-router-dom';
 import { useActiveWallet } from '@/contexts/ActiveWalletContext';
 import { useKycStatus } from '@/hooks/useKycStatus';
 import { useWalletRegistration } from '@/hooks/useWalletRegistration';
+import PrototypeNotice from '@/components/PrototypeNotice';
+import { PROTOTYPE_DISABLED_LABEL } from '@/lib/prototypeSafety';
 
 const OrderBook: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -63,9 +65,13 @@ const OrderBook: React.FC = () => {
                 <div className="text-sm text-muted-foreground">
                   Total: ${(Number(price) * Number(quantity) || 0).toLocaleString()}
                 </div>
-                <Button className="w-full" disabled={orderButtonDisabled}>
+                <Button className="w-full" disabled={orderButtonDisabled} aria-disabled="true">
                   {orderButtonLabel}
                 </Button>
+                <PrototypeNotice variant="inline">
+                  Order placement is not connected to any exchange or ledger. Prices shown below are placeholder
+                  records stored in the app database, not live market data.
+                </PrototypeNotice>
               </div>
             </div>
 
