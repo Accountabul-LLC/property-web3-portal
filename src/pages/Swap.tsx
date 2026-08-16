@@ -821,6 +821,12 @@ const Swap = () => {
             </div>
           </div>
 
+          <PrototypeNotice className="mb-4">
+            Swaps use XRPL path finding and are signed in Xaman. Property token swaps are quotes only and cannot be
+            submitted. Nothing here is investment advice or a promise of liquidity.
+          </PrototypeNotice>
+
+
           {!activeWallet ? (
             <Card className="p-6 border-dashed flex flex-col items-center text-center gap-4">
               <Wallet className="w-10 h-10 text-primary" />
