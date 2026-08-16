@@ -35,10 +35,9 @@ const WalletSelector = ({ compact = false }: WalletSelectorProps) => {
 
       const address = data.address;
       const balance = data.balance || 0;
-      const secret = data.secret || null;
 
-      // Add it via context; the testnet seed stays in the browser session only
-      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', secret, 'testnet');
+      // The faucet seed is never stored or used by the app. Signing happens in Xaman.
+      await addWallet(address, `Testnet ${address.slice(0, 6)}`, null, 'testnet_faucet', 'testnet');
 
       toast.success(`🧪 Testnet Wallet Created - Funded with ${balance} XRP at ${address.slice(0, 8)}...${address.slice(-4)}`);
       setIsOpen(false);
