@@ -92,7 +92,6 @@ const MintWizard: React.FC = () => {
     return iouSchema.safeParse(iouParams).success;
   };
 
-  const isTestnetFaucetWallet = selectedWallet?.provider === 'testnet_faucet';
 
   const handleGenerateFaucetWallet = useCallback(async () => {
     if (!user) return;
@@ -508,15 +507,9 @@ const MintWizard: React.FC = () => {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">Signing</span>
-                {network === 'testnet' && isTestnetFaucetWallet ? (
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <FlaskConical className="w-3 h-3" /> Auto-sign (testnet)
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="flex items-center gap-1">
-                    <QrCode className="w-3 h-3" /> Xaman QR
-                  </Badge>
-                )}
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <QrCode className="w-3 h-3" /> Xaman QR
+                </Badge>
               </div>
               <hr className="border-border" />
               {tokenType === 'nft' && (
@@ -559,7 +552,7 @@ const MintWizard: React.FC = () => {
               </Button>
               <Button onClick={handleSubmit} disabled={loading} variant="hero">
                 {loading ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
-                {network === 'testnet' && isTestnetFaucetWallet ? 'Auto-Sign & Submit' : 'Sign & Submit'}
+                {'Sign in Xaman & Submit'}
               </Button>
             </div>
           </>
